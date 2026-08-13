@@ -1,0 +1,11 @@
+{
+  "display_name": "预设条目对比、编辑与拖拽迁移",
+  "loading_order": 110,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "Codex",
+  "version": "2.4.0",
+  "auto_update": false
+}
