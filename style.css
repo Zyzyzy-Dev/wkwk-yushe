@@ -45,3 +45,12 @@
 .pcm-op-enabled{color:#55c98e;cursor:pointer}.pcm-op-disabled{color:#999;opacity:.8;cursor:pointer}
 .pcm-uninjected{border-color:#d8a44a}.pcm-uninjected>.pcm-group-head{color:#e6b85f}.pcm-free-select{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid var(--SmartThemeBorderColor);font-size:11px;white-space:nowrap}.pcm-free-select input{margin:0}
 .pcm-uninjected-toggle{width:100%;border:0;border-radius:0;color:inherit;text-align:left;cursor:pointer}.pcm-uninjected-toggle:hover{background:color-mix(in srgb,#d8a44a 14%,rgba(0,0,0,.07))}.pcm-uninjected-toggle>.pcm-group-caret{flex:0 0 12px;font-size:9px}.pcm-uninjected-toggle>span:nth-child(2){flex:1}.pcm-uninjected .pcm-group-body[hidden]{display:none!important}.pcm-uninjected.pcm-collapsed{background:rgba(0,0,0,.015)}.pcm-free-selected{opacity:.68;outline:2px solid #e6b85f;outline-offset:-2px;background:color-mix(in srgb,#e6b85f 14%,rgba(0,0,0,.12))!important}.pcm-free-selected:hover{opacity:.82}
+
+/* Disabled prompts: gray the whole row so enabled entries stand out at a glance. */
+.pcm-row.pcm-row-disabled .pcm-name{color:color-mix(in srgb,var(--SmartThemeBodyColor) 45%,#8a8a8a)}
+.pcm-row.pcm-row-disabled .pcm-open>code{opacity:.28}
+.pcm-row.pcm-row-disabled .pcm-badge{opacity:.5;filter:grayscale(.45)}
+.pcm-row.pcm-row-disabled .pcm-op-tag{opacity:.6}
+.pcm-row.pcm-row-disabled .pcm-name,.pcm-row.pcm-row-disabled .pcm-open>code,.pcm-row.pcm-row-disabled .pcm-badge{transition:color .15s,opacity .15s}
+.pcm-row.pcm-row-disabled:hover .pcm-name{color:color-mix(in srgb,var(--SmartThemeBodyColor) 70%,#8a8a8a)}
+.pcm-row.pcm-row-disabled.active .pcm-name{color:color-mix(in srgb,var(--SmartThemeBodyColor) 80%,#8a8a8a)}
