@@ -42,3 +42,4 @@
   .pcm-pane::after{content:"";display:block;min-height:1px}
   .pcm-list{overscroll-behavior-y:auto!important}
 }
+ .pcm-op-enabled{color:#55c98e}.pcm-op-disabled{color:#999;opacity:.8}
