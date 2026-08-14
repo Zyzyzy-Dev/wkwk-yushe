@@ -71,4 +71,5 @@
 .pcm-diff-add{background:rgba(46,160,67,.16);color:#7ee2a0}
 .pcm-diff-del{background:rgba(220,53,69,.14);color:#ff9a9a}
 .pcm-diff-ctx{opacity:.55}
+.pcm-diff-fold{opacity:.45;text-align:center;font-size:10px;padding:3px;letter-spacing:1px}
 @media(max-width:900px){.pcm-diff{max-height:42vh;font-size:10px;margin:8px 10px 0}.pcm-diff-bar{padding:8px 10px 0}}
