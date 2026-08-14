@@ -102,3 +102,9 @@
    diff colors. The layer is text-transparent and pointer-events:none, so
    editing, selection and the caret are unaffected. */
 .pcm-editwrap.live>.pcm-diff-backdrop{z-index:2;background:transparent!important}
+
+/* Auto-save: the compare head wraps so the new toggle fits on small screens; the status note pulses briefly. */
+.pcm-compare-head{flex-wrap:wrap}
+.pcm-autosave-note{grid-column:1/-1;justify-self:end;align-self:center;padding:2px 8px;border-radius:4px;font-size:10px;color:#55c98e;opacity:0;transition:opacity .25s;pointer-events:none}
+.pcm-autosave-note.show{opacity:1;animation:pcmAutosavePulse 1.2s ease}
+@keyframes pcmAutosavePulse{0%{background:color-mix(in srgb,#55c98e 32%,transparent)}100%{background:transparent}}
