@@ -78,8 +78,8 @@
 /* Row action buttons (copy / delete), multi-device: hover-reveal on desktop, always visible on touch, larger on small screens. */
 .pcm-row-actions{display:inline-flex;gap:2px;flex:0 0 auto}
 .pcm-row-action{padding:2px 5px;border:0;background:none;opacity:0;cursor:pointer;font-size:11px;line-height:1;color:var(--SmartThemeBodyColor);transition:opacity .15s}
-.pcm-row:hover .pcm-row-action,.pcm-row.active .pcm-row-action{opacity:.55}
+.pcm-row:not(.pcm-row-disabled) .pcm-row-action{opacity:.65}.pcm-row.pcm-row-disabled:hover .pcm-row-action,.pcm-row.pcm-row-disabled.active .pcm-row-action{opacity:.55}
 .pcm-row-action:hover{opacity:1}
 .pcm-row-action.pcm-row-del:hover{color:#ff8989}
-@media(hover:none){.pcm-row-action{opacity:.5}}
+@media(hover:none){.pcm-row-action{opacity:.5}.pcm-row:not(.pcm-row-disabled) .pcm-row-action{opacity:.75}}
 @media(max-width:700px){.pcm-row-action{font-size:13px;padding:4px 7px}}
