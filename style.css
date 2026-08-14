@@ -63,3 +63,12 @@
 .pcm-row.pcm-row-disabled{opacity:.55;transition:opacity .15s}
 .pcm-row.pcm-row-disabled:hover{opacity:.85}
 .pcm-row.pcm-row-disabled.active{opacity:.72}
+
+/* Inline diff view for prompt content comparison. */
+.pcm-diff-bar{padding:10px 16px 0}
+.pcm-diff{margin:10px 16px 0;padding:6px 0;border:1px solid var(--SmartThemeBorderColor);border-radius:6px;background:#0002;font-family:var(--monoFontFamily,monospace);font-size:11px;line-height:1.55;max-height:340px;overflow:auto}
+.pcm-diff>div{padding:1px 10px;white-space:pre-wrap;overflow-wrap:anywhere}
+.pcm-diff-add{background:rgba(46,160,67,.16);color:#7ee2a0}
+.pcm-diff-del{background:rgba(220,53,69,.14);color:#ff9a9a}
+.pcm-diff-ctx{opacity:.55}
+@media(max-width:900px){.pcm-diff{max-height:42vh;font-size:10px;margin:8px 10px 0}.pcm-diff-bar{padding:8px 10px 0}}
