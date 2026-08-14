@@ -58,3 +58,8 @@
 /* The ignore-whitespace toggle reuses the free-select chip; keep both header toggles compact on small screens. */
 @media(max-width:900px){.pcm-free-select{padding:5px 7px;font-size:10px;gap:5px}}
 @media(max-width:520px){.pcm-free-select{padding:4px 6px;font-size:9px}}
+
+/* Disabled prompts: dim the whole row like SillyTavern's prompt manager. */
+.pcm-row.pcm-row-disabled{opacity:.55;transition:opacity .15s}
+.pcm-row.pcm-row-disabled:hover{opacity:.85}
+.pcm-row.pcm-row-disabled.active{opacity:.72}
