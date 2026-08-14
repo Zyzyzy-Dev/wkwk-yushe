@@ -66,14 +66,14 @@
 
 /* In-editor live diff: transparent textarea over a synced highlight backdrop. */
 .pcm-editwrap{position:relative}
-.pcm-diff-backdrop{position:absolute;inset:0;margin:0;border:0;white-space:pre-wrap;overflow-wrap:anywhere;overflow:hidden;color:var(--SmartThemeBodyColor);pointer-events:none;box-sizing:border-box;contain:layout paint}
+.pcm-diff-backdrop{position:absolute;inset:0;margin:0;border:0;white-space:pre-wrap;overflow-wrap:anywhere;overflow:hidden;color:transparent;-webkit-text-fill-color:transparent;text-shadow:none;pointer-events:none;box-sizing:border-box;contain:layout paint}
 .pcm-diff-backdrop>span{display:block;min-height:1.55em;border-radius:2px}
 .pcm-diff-backdrop .add{background:rgba(46,160,67,.28)}
 .pcm-diff-backdrop .del{background:rgba(220,53,69,.26)}
 .pcm-diff-backdrop .add .a{background:rgba(46,160,67,.55);border-radius:2px}
 .pcm-diff-backdrop .del .d{background:rgba(220,53,69,.5);border-radius:2px}
 .pcm-editwrap>.pcm-live-area{position:relative;z-index:1;width:100%;box-sizing:border-box}
-.pcm-editwrap.live>.pcm-live-area{background:transparent!important;color:transparent;caret-color:var(--SmartThemeBodyColor)}
+.pcm-editwrap.live>.pcm-live-area{background:transparent!important;color:var(--SmartThemeBodyColor)!important;-webkit-text-fill-color:var(--SmartThemeBodyColor)!important;text-shadow:none!important;caret-color:var(--SmartThemeBodyColor)}
 .pcm-editwrap.live>.pcm-live-area::selection{background:rgba(90,140,255,.35)}
 .pcm-editwrap:not(.live)>.pcm-diff-backdrop{display:none}
 
@@ -85,3 +85,20 @@
 .pcm-row-action.pcm-row-del:hover{color:#ff8989}
 @media(hover:none){.pcm-row-action{opacity:.5}.pcm-row:not(.pcm-row-disabled) .pcm-row-action{opacity:.75}}
 @media(max-width:700px){.pcm-row-action{font-size:13px;padding:4px 7px}}
+
+/* Enable/disable toggle switch, styled like the native SillyTavern prompt toggle. */
+.pcm-switch{display:inline-flex;align-items:center;justify-content:center;width:34px;height:26px;padding:0;border:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 80%,transparent);border-radius:6px;background:color-mix(in srgb,var(--SmartThemeBodyColor) 6%,transparent);cursor:pointer;flex:0 0 auto;box-sizing:border-box}
+.pcm-switch-track{position:relative;display:block;width:22px;height:12px;border-radius:6px;background:color-mix(in srgb,var(--SmartThemeBodyColor) 28%,transparent);transition:background .15s}
+.pcm-switch-knob{position:absolute;top:1px;left:1px;width:10px;height:10px;border-radius:50%;background:color-mix(in srgb,var(--SmartThemeBodyColor) 72%,#7a7a7a);transition:left .15s,background .15s}
+.pcm-switch.pcm-op-enabled{border-color:color-mix(in srgb,#36b47d 70%,transparent)}
+.pcm-switch.pcm-op-enabled .pcm-switch-track{background:#2e8b6d}
+.pcm-switch.pcm-op-enabled .pcm-switch-knob{left:11px;background:#eafff4}
+.pcm-switch.pcm-op-disabled .pcm-switch-track{background:color-mix(in srgb,var(--SmartThemeBodyColor) 20%,transparent)}
+/* Live diff: the backdrop only paints highlights; theme text tricks must not leak through. */
+.pcm-diff-backdrop,.pcm-diff-backdrop *{color:transparent!important;-webkit-text-fill-color:transparent!important;text-shadow:none!important}
+
+/* Live diff: paint the highlight layer above the textarea, so an opaque
+   textarea background from a beautification theme can no longer hide the
+   diff colors. The layer is text-transparent and pointer-events:none, so
+   editing, selection and the caret are unaffected. */
+.pcm-editwrap.live>.pcm-diff-backdrop{z-index:2;background:transparent!important}
