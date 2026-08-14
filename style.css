@@ -54,3 +54,7 @@
 .pcm-row.pcm-row-disabled .pcm-name,.pcm-row.pcm-row-disabled .pcm-open>code,.pcm-row.pcm-row-disabled .pcm-badge{transition:color .15s,opacity .15s}
 .pcm-row.pcm-row-disabled:hover .pcm-name{color:color-mix(in srgb,var(--SmartThemeBodyColor) 70%,#8a8a8a)}
 .pcm-row.pcm-row-disabled.active .pcm-name{color:color-mix(in srgb,var(--SmartThemeBodyColor) 80%,#8a8a8a)}
+
+/* The ignore-whitespace toggle reuses the free-select chip; keep both header toggles compact on small screens. */
+@media(max-width:900px){.pcm-free-select{padding:5px 7px;font-size:10px;gap:5px}}
+@media(max-width:520px){.pcm-free-select{padding:4px 6px;font-size:9px}}
