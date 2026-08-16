@@ -136,7 +136,7 @@
   .pcm-inline-chat{grid-column:1/-1!important;gap:6px!important}
   .pcm-inline-chat>.pcm-control>input{height:30px!important;min-height:30px!important}
   .pcm-inline-content{margin-top:2px!important}
-  .pcm-version-editor .pcm-inline-form>.pcm-primary{grid-column:auto!important;justify-self:end!important;width:auto!important;min-width:0!important;height:32px!important;padding:5px 12px!important;font-size:11px!important;margin-top:4px!important}
+  .pcm-version-editor .pcm-inline-form>.pcm-primary{grid-column:1/-1!important;justify-self:end!important;width:auto!important;min-width:0!important;height:32px!important;padding:5px 12px!important;font-size:11px!important;margin-top:4px!important}
 }
 /* 超小屏(≤520px)四字段改 2 列，避免过窄难用 */
 @media(max-width:520px){
