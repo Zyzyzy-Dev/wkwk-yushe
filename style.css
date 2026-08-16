@@ -116,3 +116,29 @@
 .pcm-toast-success{border-color:#36b47d;color:#7ee0b0}
 .pcm-toast-warning{border-color:#d8a44a;color:#e6b85f}
 .pcm-toast-error{border-color:#ff8989;color:#ff9a9a}
+/* 触屏设备（手机/平板）禁用行级 content-visibility：contain-intrinsic-size 的占位高度与真实行高不一致会造成
+   布局错位，onTouchStart/elementFromPoint 据此命中会偏到别的行（分组路径下行高更不均、嵌套更深，尤其明显），
+   表现为长按选中跳成另一条、拖到下方迟迟不渲染、拖拽开始瞬间列表高度突变导致视角下滑错位。预设条目量级下触屏全量渲染无性能压力；桌面端(pointer:fine)保留该优化。 */
+@media(pointer:coarse),(hover:none){.pcm-row{content-visibility:visible!important;contain-intrinsic-size:none!important}}
+/* 放大移动端旧版预设可见空间：旧版(上)面板高度加大、新版(下)略收。手机(≤520px)旧 34→44dvh/新 50→46dvh；
+   小平板(521~900px)旧 36→42dvh/新 52→48dvh。均置于末尾覆盖前述 nth-child 高度规则。 */
+@media(max-width:520px){.pcm-pane:nth-child(1){height:44dvh!important}.pcm-pane:nth-child(2){height:46dvh!important}}
+@media(min-width:521px) and (max-width:900px){.pcm-pane:nth-child(1){height:42dvh!important}.pcm-pane:nth-child(2){height:48dvh!important}}
+/* 移动端编辑工作区紧凑化：①姓名/身份/触发器/位置四字段改 4 列横排、标签与控件横排压缩占位；②编辑器卡片内边距收窄；
+   ③「保持旧版/新版条目」按钮由整行右对齐改为宽度自适应、不再占满整行。仅 ≤900px 生效，桌面端不变。 */
+@media(max-width:900px){
+  .pcm-version-editor{padding:8px!important}
+  .pcm-version-forms{gap:8px!important;margin-top:10px!important}
+  .pcm-inline-form{grid-template-columns:repeat(4,1fr)!important;gap:6px!important}
+  .pcm-inline-form>.pcm-control{display:flex!important;flex-direction:column!important;gap:2px!important;min-width:0!important}
+  .pcm-inline-form>.pcm-control>span{font-size:9px!important;opacity:.6!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .pcm-inline-form>.pcm-control>input,.pcm-inline-form>.pcm-control>select{height:30px!important;min-height:30px!important;padding:3px 6px!important;font-size:11px!important}
+  .pcm-inline-chat{grid-column:1/-1!important;gap:6px!important}
+  .pcm-inline-chat>.pcm-control>input{height:30px!important;min-height:30px!important}
+  .pcm-inline-content{margin-top:2px!important}
+  .pcm-version-editor .pcm-inline-form>.pcm-primary{grid-column:1/-1!important;justify-self:end!important;width:auto!important;min-width:0!important;height:32px!important;padding:5px 12px!important;font-size:11px!important;margin-top:4px!important}
+}
+/* 超小屏(≤520px)四字段改 2 列，避免过窄难用 */
+@media(max-width:520px){
+  .pcm-inline-form{grid-template-columns:1fr 1fr!important}
+}
