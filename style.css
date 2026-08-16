@@ -120,3 +120,7 @@
    布局错位，onTouchStart/elementFromPoint 据此命中会偏到别的行（分组路径下行高更不均、嵌套更深，尤其明显），
    表现为长按选中跳成另一条、拖到下方迟迟不渲染、拖拽开始瞬间列表高度突变导致视角下滑错位。预设条目量级下触屏全量渲染无性能压力；桌面端(pointer:fine)保留该优化。 */
 @media(pointer:coarse),(hover:none){.pcm-row{content-visibility:visible!important;contain-intrinsic-size:none!important}}
+/* 放大移动端旧版预设可见空间：旧版(上)面板高度加大、新版(下)略收。手机(≤520px)旧 34→44dvh/新 50→46dvh；
+   小平板(521~900px)旧 36→42dvh/新 52→48dvh。均置于末尾覆盖前述 nth-child 高度规则。 */
+@media(max-width:520px){.pcm-pane:nth-child(1){height:44dvh!important}.pcm-pane:nth-child(2){height:46dvh!important}}
+@media(min-width:521px) and (max-width:900px){.pcm-pane:nth-child(1){height:42dvh!important}.pcm-pane:nth-child(2){height:48dvh!important}}
