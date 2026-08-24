@@ -244,8 +244,11 @@
 .pcm-dialog.pcm-theme-night .pcm-header{background:linear-gradient(180deg,#8ec07c14,transparent 70%)}
 .pcm-dialog.pcm-theme-night .pcm-header h2{background:linear-gradient(90deg,#ebdbb2 30%,#b8bb26dd);-webkit-background-clip:text;background-clip:text}
 .pcm-dialog.pcm-theme-night .pcm-close:hover{background:#fb49341f;color:#fb4934;box-shadow:0 0 0 3px #fb493426}
-.pcm-dialog.pcm-theme-night input,.pcm-dialog.pcm-theme-night textarea{background:var(--pcm-input-bg)!important;border-color:var(--pcm-input-bd)!important;color:#ebdbb2!important}
-.pcm-dialog.pcm-theme-night select{background-color:#1d2021!important;border:1px solid #504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night input{background:var(--pcm-input-bg)!important;border-color:var(--pcm-input-bd)!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night .pcm-inline-form input{background:#fffefa!important;border:1px solid #504945!important;color:#3c3836!important}
+.pcm-dialog.pcm-theme-night select{background:#fffefa!important;border:1px solid #504945!important;color:#3c3836!important}
+.pcm-dialog.pcm-theme-night .pcm-app textarea{background:#fffefa!important;border:1px solid #504945!important;color:#3c3836!important;-webkit-text-fill-color:#3c3836!important;caret-color:#3c3836!important;text-shadow:none!important}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-live-area{color:#3c3836!important;-webkit-text-fill-color:#3c3836!important;caret-color:#3c3836!important}
 .pcm-dialog.pcm-theme-night .menu_button{background:#3c3836!important;border-color:#504945!important;color:#ebdbb2!important}
 .pcm-dialog.pcm-theme-night .menu_button:hover{background:#504945!important;border-color:#665c52!important;color:#ffefc9!important}
 .pcm-dialog.pcm-theme-night .pcm-import{background:#3c3836!important;border-color:#504945!important;color:#ebdbb2!important}
@@ -277,10 +280,10 @@
 .pcm-dialog.pcm-theme-night .pcm-free-selected{outline-color:#fabd2f;background:#fabd2f1f!important}
 .pcm-dialog.pcm-theme-night .pcm-group-selected{outline-color:#b8bb26;background:#b8bb261a!important}
 .pcm-dialog.pcm-theme-night .pcm-group-finish{color:#b8bb26!important}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#b8bb2640}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#fb49343d}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#b8bb2673}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#fb493466}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e30}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d00062b}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e59}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d00064d}
 .pcm-dialog.pcm-theme-night .pcm-row-disabled .pcm-name{color:#a89984}
 
 /* ---------- 日间：Gruvbox Light ---------- */
