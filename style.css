@@ -146,3 +146,191 @@
 }
 /* 桌面指针拖拽中显示抓取光标（v1.4.6） */
 .pcm-touch-dragging .pcm-row{cursor:grabbing}
+
+/* ============================================================
+   UI 美化层（v1.5.1）：仅追加视觉规则，不改布局尺寸与拖拽/滚动逻辑。
+   颜色基于酒馆主题变量 + color-mix，自动适配亮/暗主题。
+   ============================================================ */
+
+/* ---------- 对话框：圆角 + 分层阴影 ---------- */
+.pcm-dialog{border-radius:14px;border-color:color-mix(in srgb,var(--SmartThemeBorderColor) 80%,transparent);box-shadow:0 24px 80px #000a,0 4px 18px #0006}
+.pcm-app{border-radius:inherit}
+@media(max-width:900px){.pcm-dialog{border-radius:0!important;box-shadow:none!important}}
+
+/* ---------- 头部：渐变底色 + 标题渐变字 ---------- */
+.pcm-header{background:linear-gradient(180deg,color-mix(in srgb,#36b47d 8%,transparent),transparent 70%)}
+.pcm-header h2{font-weight:700;background:linear-gradient(90deg,var(--SmartThemeBodyColor) 30%,color-mix(in srgb,#36b47d 60%,var(--SmartThemeBodyColor)));-webkit-background-clip:text;background-clip:text}
+.pcm-close{border-radius:8px;transition:background .15s,color .15s,box-shadow .15s}
+.pcm-close:hover{background:#ff89891f;color:#ff8989;box-shadow:0 0 0 3px #ff898922}
+
+/* ---------- 按钮：圆角、悬停浮起、主按钮发光 ---------- */
+.pcm-dialog .menu_button{border-radius:8px;transition:transform .12s ease,box-shadow .12s ease,border-color .15s ease,background .15s ease,filter .12s ease}
+.pcm-dialog .menu_button:hover{transform:translateY(-1px)}
+.pcm-dialog .menu_button:active{transform:translateY(0);transition-duration:.05s}
+.pcm-dialog .pcm-primary{background:linear-gradient(135deg,#1d8a60,#18734f)!important;border-color:#36b47d!important;box-shadow:0 2px 10px #36b47d40}
+.pcm-dialog .pcm-primary:hover{box-shadow:0 4px 16px #36b47d66;filter:brightness(1.07)}
+
+/* ---------- 输入框/下拉：聚焦光环 ---------- */
+.pcm-tools input,.pcm-tools select,.pcm-project-bar input,.pcm-project-bar select{border-radius:8px;transition:border-color .15s,box-shadow .15s}
+.pcm-tools input:focus,.pcm-tools select:focus,.pcm-project-bar input:focus,.pcm-project-bar select:focus{outline:none;border-color:#36b47db3;box-shadow:0 0 0 3px #36b47d26}
+
+/* ---------- 键盘焦点可见性 ---------- */
+.pcm-dialog .menu_button:focus-visible,.pcm-row-action:focus-visible,.pcm-switch:focus-visible{outline:2px solid #36b47d;outline-offset:2px}
+
+/* ---------- 双栏识别：旧版=琥珀点，新版=翡翠点 ---------- */
+.pcm-pane-head h3{display:flex;align-items:center;gap:7px}
+.pcm-pane-head h3::before{content:"";width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.pcm-pane:first-child .pcm-pane-head h3::before{background:#e6b85f;box-shadow:0 0 8px #e6b85f66}
+.pcm-pane:last-child .pcm-pane-head h3::before{background:#36b47d;box-shadow:0 0 8px #36b47d66}
+
+/* ---------- 列表行：悬停高亮 + 选中左侧强调条 ---------- */
+.pcm-row{transition:background .13s ease}
+.pcm-row:hover{background:color-mix(in srgb,#36b47d 6%,transparent)}
+.pcm-row.active{background:color-mix(in srgb,#36b47d 11%,transparent);box-shadow:inset 3px 0 0 #36b47d}
+.pcm-name{font-weight:600}
+
+/* ---------- 徽章：胶囊化 + 半透明配色（亮暗通用） ---------- */
+.pcm-badge{border-radius:999px;font-weight:600;padding:2px 8px}
+.pcm-changed{color:#c77b21;background:#c77b2126;border-color:#c77b2159}
+.pcm-removed{color:#e05d5d;background:#e05d5d26;border-color:#e05d5d59}
+.pcm-added{color:#4aa8e0;background:#4aa8e026;border-color:#4aa8e059}
+.pcm-same{color:color-mix(in srgb,var(--SmartThemeBodyColor) 72%,transparent);background:color-mix(in srgb,var(--SmartThemeBodyColor) 12%,transparent);border-color:color-mix(in srgb,var(--SmartThemeBodyColor) 22%,transparent)}
+
+/* ---------- 对比面板：入场动画 + 圆角取值框 ---------- */
+.pcm-compare{animation:pcm-slide-up .22s ease}
+@keyframes pcm-slide-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.pcm-compare{animation:none}.pcm-dialog .menu_button,.pcm-row,.pcm-close{transition:none}}
+.pcm-value{border-radius:8px;transition:border-color .15s}
+.pcm-field.changed .pcm-value{border-color:color-mix(in srgb,#ffb45d 45%,var(--SmartThemeBorderColor))}
+
+/* ---------- 分组与选择器弹窗 ---------- */
+.pcm-group-head{transition:background .13s ease}
+.pcm-group-head:hover{background:color-mix(in srgb,var(--SmartThemeBodyColor) 5%,transparent)}
+.pcm-picker-panel{border-radius:14px;box-shadow:0 18px 60px #0008,0 4px 16px #0005}
+.pcm-picker.open .pcm-picker-panel{animation:pcm-slide-up .18s ease}
+
+/* ---------- 提示气泡：毛玻璃 ---------- */
+.pcm-toast{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:10px}
+
+/* ---------- 滚动条：细圆角，悬停加深 ---------- */
+.pcm-list::-webkit-scrollbar,.pcm-compare::-webkit-scrollbar,.pcm-picker-panel::-webkit-scrollbar{width:10px;height:10px}
+.pcm-list::-webkit-scrollbar-thumb,.pcm-compare::-webkit-scrollbar-thumb,.pcm-picker-panel::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--SmartThemeBodyColor) 22%,transparent);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
+.pcm-list::-webkit-scrollbar-thumb:hover,.pcm-compare::-webkit-scrollbar-thumb:hover,.pcm-picker-panel::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--SmartThemeBodyColor) 38%,transparent);border:2px solid transparent;background-clip:padding-box}
+.pcm-list::-webkit-scrollbar-track,.pcm-compare::-webkit-scrollbar-track,.pcm-picker-panel::-webkit-scrollbar-track{background:transparent}
+
+/* ============================================================
+   配色切换层（v1.6.0）：自适应 / 日间 / 夜间(Gruvbox Dark)。
+   技巧：在 .pcm-dialog 根上重定义 --SmartTheme* 变量，
+   全部既有规则无需修改即随主题联动；再对少量硬编码色做覆盖。
+   切换按钮由 index.js 注入（[data-theme-toggle]），选择存 localStorage。
+   ============================================================ */
+
+/* ---------- 切换按钮：小图标（叶子=自适应 / 太阳=日间 / 月亮=夜间） ---------- */
+.pcm-dialog .pcm-theme-toggle{flex:0 0 auto;display:inline-flex!important;align-items:center;justify-content:center;width:32px;height:32px;padding:0!important;color:var(--SmartThemeBodyColor);opacity:.85}
+.pcm-dialog .pcm-theme-toggle:hover{opacity:1}
+.pcm-dialog .pcm-theme-toggle svg{display:block;pointer-events:none}
+@media(max-width:900px){.pcm-dialog .pcm-theme-toggle{width:30px!important;height:30px!important;min-width:30px!important;padding:0!important}}
+
+/* ---------- 夜间：Gruvbox Dark ---------- */
+.pcm-dialog.pcm-theme-night{
+  --SmartThemeBorderColor:#45403d;
+  --SmartThemeBlurTintColor:#282828;
+  --SmartThemeBodyColor:#ebdbb2;
+  --pcm-accent:#8ec07c;--pcm-accent-deep:#689d6a;--pcm-accent-dark:#427b58;
+  --pcm-warn:#fabd2f;--pcm-bad:#fb4934;--pcm-info:#83a598;--pcm-good:#b8bb26;
+  --pcm-muted:#a89984;--pcm-input-bg:#1d2021;--pcm-input-bd:#504945;
+}
+.pcm-dialog.pcm-theme-night ::selection{background:#83a59840}
+.pcm-dialog.pcm-theme-night .pcm-header{background:linear-gradient(180deg,#8ec07c14,transparent 70%)}
+.pcm-dialog.pcm-theme-night .pcm-header h2{background:linear-gradient(90deg,#ebdbb2 30%,#b8bb26dd);-webkit-background-clip:text;background-clip:text}
+.pcm-dialog.pcm-theme-night .pcm-close:hover{background:#fb49341f;color:#fb4934;box-shadow:0 0 0 3px #fb493426}
+.pcm-dialog.pcm-theme-night input,.pcm-dialog.pcm-theme-night textarea{background:var(--pcm-input-bg)!important;border-color:var(--pcm-input-bd)!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night select{background-color:#1d2021!important;border:1px solid #504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night .menu_button{background:#3c3836!important;border-color:#504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night .menu_button:hover{background:#504945!important;border-color:#665c52!important;color:#ffefc9!important}
+.pcm-dialog.pcm-theme-night .pcm-import{background:#3c3836!important;border-color:#504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night .menu_button.pcm-primary{background:linear-gradient(135deg,#689d6a,#427b58)!important;border-color:#8ec07c66!important;color:#fff!important;box-shadow:0 2px 10px #8ec07c33}
+.pcm-dialog.pcm-theme-night .menu_button.pcm-primary:hover{background:linear-gradient(135deg,#689d6a,#427b58)!important;box-shadow:0 4px 16px #8ec07c59;filter:brightness(1.07)}
+.pcm-dialog.pcm-theme-night .pcm-tools input:focus,.pcm-dialog.pcm-theme-night .pcm-tools select:focus,.pcm-dialog.pcm-theme-night .pcm-project-bar input:focus,.pcm-dialog.pcm-theme-night .pcm-project-bar select:focus{border-color:#83a59899;box-shadow:0 0 0 3px #83a59840}
+.pcm-dialog.pcm-theme-night .menu_button:focus-visible,.pcm-dialog.pcm-theme-night .pcm-row-action:focus-visible,.pcm-dialog.pcm-theme-night .pcm-switch:focus-visible{outline-color:#83a598}
+.pcm-dialog.pcm-theme-night .pcm-pane:first-child .pcm-pane-head h3::before{background:#fabd2f;box-shadow:0 0 8px #fabd2f66}
+.pcm-dialog.pcm-theme-night .pcm-pane:last-child .pcm-pane-head h3::before{background:#b8bb26;box-shadow:0 0 8px #b8bb2666}
+.pcm-dialog.pcm-theme-night .pcm-row:hover{background:#8ec07c12}
+.pcm-dialog.pcm-theme-night .pcm-row.active{background:#8ec07c1f;box-shadow:inset 3px 0 0 #8ec07c}
+.pcm-dialog.pcm-theme-night .pcm-changed{color:#fabd2f;background:#fabd2f21;border-color:#fabd2f52}
+.pcm-dialog.pcm-theme-night .pcm-removed{color:#fb4934;background:#fb493424;border-color:#fb493452}
+.pcm-dialog.pcm-theme-night .pcm-added{color:#83a598;background:#83a59824;border-color:#83a59852}
+.pcm-dialog.pcm-theme-night .pcm-same{color:#a89984;background:#a8998421;border-color:#a8998445}
+.pcm-dialog.pcm-theme-night .pcm-compare{border-top-color:#83a598}
+.pcm-dialog.pcm-theme-night .pcm-field.changed h4{color:#fabd2f}
+.pcm-dialog.pcm-theme-night .pcm-field.changed .pcm-value{border-color:#fabd2f59}
+.pcm-dialog.pcm-theme-night .pcm-value{background:#ffffff0a}
+.pcm-dialog.pcm-theme-night .pcm-toast-success{border-color:#b8bb26;color:#b8bb26}
+.pcm-dialog.pcm-theme-night .pcm-toast-warning{border-color:#fabd2f;color:#fabd2f}
+.pcm-dialog.pcm-theme-night .pcm-toast-error{border-color:#fb4934;color:#fb4934}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled{border-color:#8ec07c80}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#689d6a}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-knob{left:11px;background:#ebdbb2}
+.pcm-dialog.pcm-theme-night .pcm-op-enabled{color:#b8bb26}
+.pcm-dialog.pcm-theme-night .pcm-uninjected{border-color:#fabd2f59}.pcm-dialog.pcm-theme-night .pcm-uninjected>.pcm-group-head{color:#fabd2f}
+.pcm-dialog.pcm-theme-night .pcm-uninjected-toggle:hover{background:#fabd2f1a}
+.pcm-dialog.pcm-theme-night .pcm-free-selected{outline-color:#fabd2f;background:#fabd2f1f!important}
+.pcm-dialog.pcm-theme-night .pcm-group-selected{outline-color:#b8bb26;background:#b8bb261a!important}
+.pcm-dialog.pcm-theme-night .pcm-group-finish{color:#b8bb26!important}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#b8bb2640}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#fb49343d}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#b8bb2673}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#fb493466}
+.pcm-dialog.pcm-theme-night .pcm-row-disabled .pcm-name{color:#a89984}
+
+/* ---------- 日间：Gruvbox Light ---------- */
+.pcm-dialog.pcm-theme-day{
+  --SmartThemeBorderColor:#ddd3bf;
+  --SmartThemeBlurTintColor:#f8f3ea;
+  --SmartThemeBodyColor:#3c3836;
+  --pcm-accent:#427b58;--pcm-accent-deep:#689d6a;--pcm-accent-dark:#427b58;
+  --pcm-warn:#b57614;--pcm-bad:#9d0006;--pcm-info:#076678;--pcm-good:#79740e;
+  --pcm-muted:#7c6f64;--pcm-input-bg:#fffefa;--pcm-input-bd:#ddd3bf;
+}
+.pcm-dialog.pcm-theme-day ::selection{background:#427b5833}
+.pcm-dialog.pcm-theme-day .pcm-header{background:linear-gradient(180deg,#427b580d,transparent 70%)}
+.pcm-dialog.pcm-theme-day .pcm-header h2{background:linear-gradient(90deg,#3c3836 30%,#79740edd);-webkit-background-clip:text;background-clip:text}
+.pcm-dialog.pcm-theme-day .pcm-close:hover{background:#9d000614;color:#9d0006;box-shadow:0 0 0 3px #9d000621}
+.pcm-dialog.pcm-theme-day input,.pcm-dialog.pcm-theme-day textarea{background:var(--pcm-input-bg)!important;border-color:var(--pcm-input-bd)!important;color:#3c3836!important}
+.pcm-dialog.pcm-theme-day select{background-color:#fffefa!important;border:1px solid #ddd3bf!important;color:#3c3836!important}
+.pcm-dialog.pcm-theme-day .menu_button{background:#fffefa!important;border-color:#ddd3bf!important;color:#3c3836!important}
+.pcm-dialog.pcm-theme-day .menu_button:hover{background:#f3ecdc!important;border-color:#cabfa4!important;color:#28251f!important}
+.pcm-dialog.pcm-theme-day .pcm-import{background:#fffefa!important;border-color:#ddd3bf!important;color:#3c3836!important}
+.pcm-dialog.pcm-theme-day .menu_button.pcm-primary{background:linear-gradient(135deg,#689d6a,#427b58)!important;border-color:#427b58!important;color:#fff!important;box-shadow:0 2px 10px #427b5833}
+.pcm-dialog.pcm-theme-day .menu_button.pcm-primary:hover{background:linear-gradient(135deg,#689d6a,#427b58)!important;box-shadow:0 4px 16px #427b5859;filter:brightness(1.07)}
+.pcm-dialog.pcm-theme-day .pcm-tools input:focus,.pcm-dialog.pcm-theme-day .pcm-tools select:focus,.pcm-dialog.pcm-theme-day .pcm-project-bar input:focus,.pcm-dialog.pcm-theme-day .pcm-project-bar select:focus{border-color:#427b5899;box-shadow:0 0 0 3px #427b5840}
+.pcm-dialog.pcm-theme-day .menu_button:focus-visible,.pcm-dialog.pcm-theme-day .pcm-row-action:focus-visible,.pcm-dialog.pcm-theme-day .pcm-switch:focus-visible{outline-color:#427b58}
+.pcm-dialog.pcm-theme-day .pcm-pane:first-child .pcm-pane-head h3::before{background:#b57614;box-shadow:0 0 8px #b5761466}
+.pcm-dialog.pcm-theme-day .pcm-pane:last-child .pcm-pane-head h3::before{background:#427b58;box-shadow:0 0 8px #427b5866}
+.pcm-dialog.pcm-theme-day .pcm-row:hover{background:#427b580f}
+.pcm-dialog.pcm-theme-day .pcm-row.active{background:#427b581c;box-shadow:inset 3px 0 0 #427b58}
+.pcm-dialog.pcm-theme-day .pcm-changed{color:#b57614;background:#b576141f;border-color:#b5761445}
+.pcm-dialog.pcm-theme-day .pcm-removed{color:#9d0006;background:#9d00061a;border-color:#9d000640}
+.pcm-dialog.pcm-theme-day .pcm-added{color:#076678;background:#07667814;border-color:#0766783d}
+.pcm-dialog.pcm-theme-day .pcm-same{color:#7c6f64;background:#7c6f6417;border-color:#7c6f6438}
+.pcm-dialog.pcm-theme-day .pcm-compare{border-top-color:#427b58}
+.pcm-dialog.pcm-theme-day .pcm-field.changed h4{color:#b57614}
+.pcm-dialog.pcm-theme-day .pcm-field.changed .pcm-value{border-color:#b5761459}
+.pcm-dialog.pcm-theme-day .pcm-value{background:#3c38360d}
+.pcm-dialog.pcm-theme-day .pcm-toast-success{border-color:#79740e;color:#79740e}
+.pcm-dialog.pcm-theme-day .pcm-toast-warning{border-color:#b57614;color:#b57614}
+.pcm-dialog.pcm-theme-day .pcm-toast-error{border-color:#9d0006;color:#9d0006}
+.pcm-dialog.pcm-theme-day .pcm-switch.pcm-op-enabled{border-color:#427b5880}
+.pcm-dialog.pcm-theme-day .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#689d6a}
+.pcm-dialog.pcm-theme-day .pcm-switch.pcm-op-enabled .pcm-switch-knob{left:11px;background:#fbf1c7}
+.pcm-dialog.pcm-theme-day .pcm-op-enabled{color:#79740e}
+.pcm-dialog.pcm-theme-day .pcm-uninjected{border-color:#b5761480}.pcm-dialog.pcm-theme-day .pcm-uninjected>.pcm-group-head{color:#b57614}
+.pcm-dialog.pcm-theme-day .pcm-uninjected-toggle:hover{background:#b5761414}
+.pcm-dialog.pcm-theme-day .pcm-free-selected{outline-color:#b57614;background:#b576141f!important}
+.pcm-dialog.pcm-theme-day .pcm-group-selected{outline-color:#79740e;background:#79740e1a!important}
+.pcm-dialog.pcm-theme-day .pcm-group-finish{color:#79740e!important}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e33}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d00062e}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e59}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d00064d}
+.pcm-dialog.pcm-theme-day .pcm-row-disabled .pcm-name{color:#a89984}
