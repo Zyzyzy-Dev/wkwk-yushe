@@ -46,7 +46,12 @@
   .pcm-list{overscroll-behavior-y:auto!important}
 }
 .pcm-op-enabled{color:#55c98e;cursor:pointer}.pcm-op-disabled{color:#999;opacity:.8;cursor:pointer}
-.pcm-uninjected{border-color:#d8a44a}.pcm-uninjected>.pcm-group-head{color:#e6b85f}.pcm-free-select{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid var(--SmartThemeBorderColor);font-size:11px;white-space:nowrap}.pcm-free-select input{margin:0}
+.pcm-uninjected{border-color:#d8a44a}.pcm-uninjected>.pcm-group-head{color:#e6b85f}.pcm-free-select{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid var(--SmartThemeBorderColor);border-radius:999px;font-size:11px;white-space:nowrap;cursor:pointer;user-select:none;-webkit-user-select:none;transition:background .15s,border-color .15s,color .15s}
+.pcm-free-select input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:15px;height:15px;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--SmartThemeBodyColor) 40%,transparent);background:color-mix(in srgb,var(--SmartThemeBodyColor) 6%,transparent);margin:0;display:inline-grid;place-content:center;cursor:pointer;flex-shrink:0;transition:border-color .15s,background .15s,transform .12s}
+.pcm-free-select input[type="checkbox"]::before{content:"";width:8px;height:8px;transform:scale(0);transition:transform .12s ease-in-out;box-shadow:inset 1em 1em var(--SmartThemeBodyColor);transform-origin:center;clip-path:polygon(14% 44%,0 65%,50% 100%,100% 16%,80% 0%,43% 62%)}
+.pcm-free-select input[type="checkbox"]:checked{border-color:#36b47d;background:#36b47d}
+.pcm-free-select input[type="checkbox"]:checked::before{transform:scale(1)}
+.pcm-free-select:has(input:checked){background:color-mix(in srgb,#36b47d 14%,transparent);border-color:#36b47d;color:var(--SmartThemeBodyColor)}.pcm-free-select input{margin:0}
 .pcm-uninjected-toggle{width:100%;border:0;border-radius:0;color:inherit;text-align:left;cursor:pointer}.pcm-uninjected-toggle:hover{background:color-mix(in srgb,#d8a44a 14%,rgba(0,0,0,.07))}.pcm-uninjected-toggle>.pcm-group-caret{flex:0 0 12px;font-size:9px}.pcm-uninjected-toggle>span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pcm-uninjected .pcm-group-body[hidden]{display:none!important}.pcm-uninjected.pcm-collapsed{background:rgba(0,0,0,.015)}.pcm-free-selected{opacity:.68;outline:2px solid #e6b85f;outline-offset:-2px;background:color-mix(in srgb,#e6b85f 14%,rgba(0,0,0,.12))!important}.pcm-free-selected:hover{opacity:.82}
 
 /* Disabled prompts: gray the whole row so enabled entries stand out at a glance. */
@@ -71,10 +76,10 @@
 .pcm-editwrap{position:relative}
 .pcm-diff-backdrop{position:absolute;inset:0;margin:0;border:0;white-space:pre-wrap;overflow-wrap:anywhere;overflow:hidden;color:transparent;-webkit-text-fill-color:transparent;text-shadow:none;pointer-events:none;box-sizing:border-box;contain:layout paint}
 .pcm-diff-backdrop>span{display:block;min-height:1.55em;border-radius:2px}
-.pcm-diff-backdrop .add{background:rgba(46,160,67,.28)}
-.pcm-diff-backdrop .del{background:rgba(220,53,69,.26)}
-.pcm-diff-backdrop .add .a{background:rgba(46,160,67,.55);border-radius:2px}
-.pcm-diff-backdrop .del .d{background:rgba(220,53,69,.5);border-radius:2px}
+.pcm-diff-backdrop .add{background:rgba(46,160,67,.34)}
+.pcm-diff-backdrop .del{background:rgba(220,53,69,.32)}
+.pcm-diff-backdrop .add .a{background:rgba(46,160,67,.66);border-radius:2px}
+.pcm-diff-backdrop .del .d{background:rgba(220,53,69,.64);border-radius:2px}
 .pcm-editwrap>.pcm-live-area{position:relative;z-index:1;width:100%;box-sizing:border-box}
 .pcm-editwrap.live>.pcm-live-area{background:transparent!important;color:var(--SmartThemeBodyColor)!important;-webkit-text-fill-color:var(--SmartThemeBodyColor)!important;text-shadow:none!important;caret-color:var(--SmartThemeBodyColor)}
 .pcm-editwrap.live>.pcm-live-area::selection{background:rgba(90,140,255,.35)}
@@ -231,7 +236,7 @@
 .pcm-dialog .pcm-theme-toggle svg{display:block;pointer-events:none}
 @media(max-width:900px){.pcm-dialog .pcm-theme-toggle{width:30px!important;height:30px!important;min-width:30px!important;padding:0!important}}
 
-/* ---------- 夜间：Gruvbox Dark ---------- */
+/* ---------- 夜间：Gruvbox Dark 经典暖灰护眼 (舒适低对比) ---------- */
 .pcm-dialog.pcm-theme-night{
   --SmartThemeBorderColor:#45403d;
   --SmartThemeBlurTintColor:#282828;
@@ -241,51 +246,85 @@
   --pcm-muted:#a89984;--pcm-input-bg:#1d2021;--pcm-input-bd:#504945;
 }
 .pcm-dialog.pcm-theme-night ::selection{background:#83a59840}
-.pcm-dialog.pcm-theme-night .pcm-header{background:linear-gradient(180deg,#8ec07c14,transparent 70%)}
+.pcm-dialog.pcm-theme-night .pcm-header{background:linear-gradient(180deg,rgba(142,192,124,0.1),transparent 70%)}
 .pcm-dialog.pcm-theme-night .pcm-header h2{background:linear-gradient(90deg,#ebdbb2 30%,#b8bb26dd);-webkit-background-clip:text;background-clip:text}
-.pcm-dialog.pcm-theme-night .pcm-close:hover{background:#fb49341f;color:#fb4934;box-shadow:0 0 0 3px #fb493426}
-.pcm-dialog.pcm-theme-night input{background:var(--pcm-input-bg)!important;border-color:var(--pcm-input-bd)!important;color:#ebdbb2!important}
-.pcm-dialog.pcm-theme-night .pcm-inline-form input{background:#fffefa!important;border:1px solid #504945!important;color:#3c3836!important}
-.pcm-dialog.pcm-theme-night select{background:#fffefa!important;border:1px solid #504945!important;color:#3c3836!important}
-.pcm-dialog.pcm-theme-night .pcm-app textarea{background:#fffefa!important;border:1px solid #504945!important;color:#3c3836!important;-webkit-text-fill-color:#3c3836!important;caret-color:#3c3836!important;text-shadow:none!important}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-live-area{color:#3c3836!important;-webkit-text-fill-color:#3c3836!important;caret-color:#3c3836!important}
-.pcm-dialog.pcm-theme-night .menu_button{background:#3c3836!important;border-color:#504945!important;color:#ebdbb2!important}
-.pcm-dialog.pcm-theme-night .menu_button:hover{background:#504945!important;border-color:#665c52!important;color:#ffefc9!important}
-.pcm-dialog.pcm-theme-night .pcm-import{background:#3c3836!important;border-color:#504945!important;color:#ebdbb2!important}
-.pcm-dialog.pcm-theme-night .menu_button.pcm-primary{background:linear-gradient(135deg,#689d6a,#427b58)!important;border-color:#8ec07c66!important;color:#fff!important;box-shadow:0 2px 10px #8ec07c33}
-.pcm-dialog.pcm-theme-night .menu_button.pcm-primary:hover{background:linear-gradient(135deg,#689d6a,#427b58)!important;box-shadow:0 4px 16px #8ec07c59;filter:brightness(1.07)}
-.pcm-dialog.pcm-theme-night .pcm-tools input:focus,.pcm-dialog.pcm-theme-night .pcm-tools select:focus,.pcm-dialog.pcm-theme-night .pcm-project-bar input:focus,.pcm-dialog.pcm-theme-night .pcm-project-bar select:focus{border-color:#83a59899;box-shadow:0 0 0 3px #83a59840}
-.pcm-dialog.pcm-theme-night .menu_button:focus-visible,.pcm-dialog.pcm-theme-night .pcm-row-action:focus-visible,.pcm-dialog.pcm-theme-night .pcm-switch:focus-visible{outline-color:#83a598}
-.pcm-dialog.pcm-theme-night .pcm-pane:first-child .pcm-pane-head h3::before{background:#fabd2f;box-shadow:0 0 8px #fabd2f66}
-.pcm-dialog.pcm-theme-night .pcm-pane:last-child .pcm-pane-head h3::before{background:#b8bb26;box-shadow:0 0 8px #b8bb2666}
-.pcm-dialog.pcm-theme-night .pcm-row:hover{background:#8ec07c12}
-.pcm-dialog.pcm-theme-night .pcm-row.active{background:#8ec07c1f;box-shadow:inset 3px 0 0 #8ec07c}
-.pcm-dialog.pcm-theme-night .pcm-changed{color:#fabd2f;background:#fabd2f21;border-color:#fabd2f52}
-.pcm-dialog.pcm-theme-night .pcm-removed{color:#fb4934;background:#fb493424;border-color:#fb493452}
-.pcm-dialog.pcm-theme-night .pcm-added{color:#83a598;background:#83a59824;border-color:#83a59852}
-.pcm-dialog.pcm-theme-night .pcm-same{color:#a89984;background:#a8998421;border-color:#a8998445}
-.pcm-dialog.pcm-theme-night .pcm-compare{border-top-color:#83a598}
+.pcm-dialog.pcm-theme-night .pcm-close:hover{background:rgba(251,73,52,0.18);color:#fb4934;box-shadow:0 0 0 3px rgba(251,73,52,0.25)}
+
+/* 控件与下拉框：Gruvbox 暖暗底 + 米黄文字 + 暖灰边框 */
+.pcm-dialog.pcm-theme-night input{background:#1d2021!important;border:1px solid #504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night select{background-color:#1d2021!important;border:1px solid #504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night textarea{background:#1d2021!important;border:1px solid #45403d!important;color:#ebdbb2!important;-webkit-text-fill-color:#ebdbb2!important;caret-color:#ebdbb2!important;text-shadow:none!important}
+.pcm-dialog.pcm-theme-night .pcm-inline-form input{background:#1d2021!important;border:1px solid #504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-live-area{background:#1d2021!important;color:#ebdbb2!important;-webkit-text-fill-color:#ebdbb2!important;caret-color:#ebdbb2!important}
+
+/* 按钮与导入标签 */
+.pcm-dialog.pcm-theme-night .menu_button{background:#32302f!important;border-color:#504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night .menu_button:hover{background:#45403d!important;border-color:#665c52!important;color:#ffefc9!important}
+.pcm-dialog.pcm-theme-night .pcm-import{background:#32302f!important;border-color:#504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night .menu_button.pcm-primary{background:linear-gradient(135deg,#689d6a,#427b58)!important;border-color:#8ec07c66!important;color:#ffffff!important;box-shadow:0 2px 10px rgba(142,192,124,0.22)}
+.pcm-dialog.pcm-theme-night .menu_button.pcm-primary:hover{background:linear-gradient(135deg,#78ad7a,#528b68)!important;box-shadow:0 4px 16px rgba(142,192,124,0.38);filter:brightness(1.06)}
+
+/* 头部复选框药丸：明亮打勾 + 柔和激活边框 */
+.pcm-dialog.pcm-theme-night .pcm-free-select{background:#32302f;border-color:#504945;color:#ebdbb2}
+.pcm-dialog.pcm-theme-night .pcm-free-select:hover{background:#3c3836;border-color:#665c52}
+.pcm-dialog.pcm-theme-night .pcm-free-select input[type="checkbox"]{border-color:#7c6f64;background:#1d2021}
+.pcm-dialog.pcm-theme-night .pcm-free-select input[type="checkbox"]:checked{border-color:#83a598;background:#458588}
+.pcm-dialog.pcm-theme-night .pcm-free-select:has(input:checked){background:rgba(69,133,136,0.18);border-color:#83a598;color:#fbf1c7}
+/* 深色(夜间)模式:勾选圆内打白色勾 */
+.pcm-dialog.pcm-theme-night .pcm-free-select input[type="checkbox"]::before{box-shadow:inset 1em 1em #ebdbb2}
+
+/* 焦点光环 */
+.pcm-dialog.pcm-theme-night .pcm-tools input:focus,.pcm-dialog.pcm-theme-night .pcm-tools select:focus,.pcm-dialog.pcm-theme-night .pcm-project-bar input:focus,.pcm-dialog.pcm-theme-night .pcm-project-bar select:focus{border-color:#83a59899;box-shadow:0 0 0 3px rgba(131,165,152,0.25)}
+.pcm-dialog.pcm-theme-night .menu_button:focus-visible,.pcm-dialog.pcm-theme-night .pcm-row-action:focus-visible,.pcm-dialog.pcm-theme-night .pcm-switch:focus-visible{outline-color:#8ec07c}
+
+/* 双栏标题圆点 */
+.pcm-dialog.pcm-theme-night .pcm-pane:first-child .pcm-pane-head h3::before{background:#fabd2f;box-shadow:0 0 8px rgba(250,189,47,0.45)}
+.pcm-dialog.pcm-theme-night .pcm-pane:last-child .pcm-pane-head h3::before{background:#b8bb26;box-shadow:0 0 8px rgba(184,187,38,0.45)}
+
+/* 列表行与开关 */
+.pcm-dialog.pcm-theme-night .pcm-row{border-bottom-color:rgba(235,219,178,0.06)}
+.pcm-dialog.pcm-theme-night .pcm-row:hover{background:rgba(142,192,124,0.08)}
+.pcm-dialog.pcm-theme-night .pcm-row.active{background:rgba(142,192,124,0.15);box-shadow:inset 3px 0 0 #8ec07c}
+.pcm-dialog.pcm-theme-night .pcm-switch{background:#1d2021;border-color:#504945}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled{border-color:#8ec07c;background:rgba(142,192,124,0.15)}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#689d6a}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-knob{left:11px;background:#fbf1c7;box-shadow:0 0 4px rgba(142,192,124,0.6)}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-disabled .pcm-switch-track{background:#3c3836}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-disabled .pcm-switch-knob{left:1px;background:#7c6f64}
+.pcm-dialog.pcm-theme-night .pcm-op-enabled{color:#b8bb26}
+
+/* 徽章配色：Gruvbox 调和色 */
+.pcm-dialog.pcm-theme-night .pcm-changed{color:#fabd2f;background:rgba(250,189,47,0.16);border-color:rgba(250,189,47,0.4)}
+.pcm-dialog.pcm-theme-night .pcm-removed{color:#fb4934;background:rgba(251,73,52,0.16);border-color:rgba(251,73,52,0.4)}
+.pcm-dialog.pcm-theme-night .pcm-added{color:#83a598;background:rgba(131,165,152,0.16);border-color:rgba(131,165,152,0.4)}
+.pcm-dialog.pcm-theme-night .pcm-same{color:#a89984;background:rgba(168,153,132,0.14);border-color:rgba(168,153,132,0.3)}
+
+/* 对比与编辑器卡片：Gruvbox 深炭灰表面 */
+.pcm-dialog.pcm-theme-night .pcm-compare{background:#242424;border-top-color:#8ec07c}
+.pcm-dialog.pcm-theme-night .pcm-compare-head{background:#242424;border-bottom-color:#3c3836}
+.pcm-dialog.pcm-theme-night .pcm-version-editor{background:#282828;border-color:#3c3836;border-radius:8px}
+.pcm-dialog.pcm-theme-night .pcm-version-editor>h4{color:#ebdbb2;font-weight:600}
+.pcm-dialog.pcm-theme-night .pcm-version-editor .pcm-control>span{color:#a89984}
 .pcm-dialog.pcm-theme-night .pcm-field.changed h4{color:#fabd2f}
-.pcm-dialog.pcm-theme-night .pcm-field.changed .pcm-value{border-color:#fabd2f59}
-.pcm-dialog.pcm-theme-night .pcm-value{background:#ffffff0a}
+.pcm-dialog.pcm-theme-night .pcm-field.changed .pcm-value{border-color:#fabd2f66}
+.pcm-dialog.pcm-theme-night .pcm-value{background:#1d2021;border-color:#3c3836}
+
+/* 正文差异 (Diff) 高亮：左红/右绿 + 鲜明字符高亮 */
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del{background:rgba(251,73,52,0.22)}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:rgba(251,73,52,0.55);border-radius:2px}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add{background:rgba(184,187,38,0.22)}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:rgba(184,187,38,0.55);border-radius:2px}
+
+/* 提示气泡与分组选择 */
 .pcm-dialog.pcm-theme-night .pcm-toast-success{border-color:#b8bb26;color:#b8bb26}
 .pcm-dialog.pcm-theme-night .pcm-toast-warning{border-color:#fabd2f;color:#fabd2f}
 .pcm-dialog.pcm-theme-night .pcm-toast-error{border-color:#fb4934;color:#fb4934}
-.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled{border-color:#8ec07c80}
-.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#689d6a}
-.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-knob{left:11px;background:#ebdbb2}
-.pcm-dialog.pcm-theme-night .pcm-op-enabled{color:#b8bb26}
-.pcm-dialog.pcm-theme-night .pcm-uninjected{border-color:#fabd2f59}.pcm-dialog.pcm-theme-night .pcm-uninjected>.pcm-group-head{color:#fabd2f}
-.pcm-dialog.pcm-theme-night .pcm-uninjected-toggle:hover{background:#fabd2f1a}
-.pcm-dialog.pcm-theme-night .pcm-free-selected{outline-color:#fabd2f;background:#fabd2f1f!important}
-.pcm-dialog.pcm-theme-night .pcm-group-selected{outline-color:#b8bb26;background:#b8bb261a!important}
+.pcm-dialog.pcm-theme-night .pcm-uninjected{border-color:rgba(250,189,47,0.4)}.pcm-dialog.pcm-theme-night .pcm-uninjected>.pcm-group-head{color:#fabd2f}
+.pcm-dialog.pcm-theme-night .pcm-uninjected-toggle:hover{background:rgba(250,189,47,0.1)}
+.pcm-dialog.pcm-theme-night .pcm-free-selected{outline-color:#fabd2f;background:rgba(250,189,47,0.15)!important}
+.pcm-dialog.pcm-theme-night .pcm-group-selected{outline-color:#b8bb26;background:rgba(184,187,38,0.14)!important}
 .pcm-dialog.pcm-theme-night .pcm-group-finish{color:#b8bb26!important}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e30}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d00062b}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e59}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d00064d}
-.pcm-dialog.pcm-theme-night .pcm-row-disabled .pcm-name{color:#a89984}
-
+.pcm-dialog.pcm-theme-night .pcm-row-disabled .pcm-name{color:#7c6f64}
 /* ---------- 日间：Gruvbox Light ---------- */
 .pcm-dialog.pcm-theme-day{
   --SmartThemeBorderColor:#ddd3bf;
@@ -332,8 +371,15 @@
 .pcm-dialog.pcm-theme-day .pcm-free-selected{outline-color:#b57614;background:#b576141f!important}
 .pcm-dialog.pcm-theme-day .pcm-group-selected{outline-color:#79740e;background:#79740e1a!important}
 .pcm-dialog.pcm-theme-day .pcm-group-finish{color:#79740e!important}
-.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e33}
-.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d00062e}
-.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e59}
-.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d00064d}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e3d}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d000640}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e80}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d000680}
 .pcm-dialog.pcm-theme-day .pcm-row-disabled .pcm-name{color:#a89984}
+.pcm-dialog.pcm-theme-day .pcm-free-select{background:rgba(0,0,0,0.025);border-color:#ddd3bf;color:#3c3836}
+.pcm-dialog.pcm-theme-day .pcm-free-select:hover{background:rgba(0,0,0,0.05);border-color:#cabfa4}
+.pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]{border-color:#bdae93;background:#fffefa}
+.pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]:checked{border-color:#427b58;background:#427b58}
+.pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:rgba(66,123,88,0.12);border-color:#427b58;color:#28251f}
+/* 白色(浅色)模式:勾选圆内打黑色勾 */
+.pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]::before{box-shadow:inset 1em 1em #3c3836}
