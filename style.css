@@ -71,10 +71,10 @@
 .pcm-editwrap{position:relative}
 .pcm-diff-backdrop{position:absolute;inset:0;margin:0;border:0;white-space:pre-wrap;overflow-wrap:anywhere;overflow:hidden;color:transparent;-webkit-text-fill-color:transparent;text-shadow:none;pointer-events:none;box-sizing:border-box;contain:layout paint}
 .pcm-diff-backdrop>span{display:block;min-height:1.55em;border-radius:2px}
-.pcm-diff-backdrop .add{background:rgba(46,160,67,.28)}
-.pcm-diff-backdrop .del{background:rgba(220,53,69,.26)}
-.pcm-diff-backdrop .add .a{background:rgba(46,160,67,.55);border-radius:2px}
-.pcm-diff-backdrop .del .d{background:rgba(220,53,69,.5);border-radius:2px}
+.pcm-diff-backdrop .add{background:rgba(46,160,67,.34)}
+.pcm-diff-backdrop .del{background:rgba(220,53,69,.32)}
+.pcm-diff-backdrop .add .a{background:rgba(46,160,67,.66);border-radius:2px}
+.pcm-diff-backdrop .del .d{background:rgba(220,53,69,.64);border-radius:2px}
 .pcm-editwrap>.pcm-live-area{position:relative;z-index:1;width:100%;box-sizing:border-box}
 .pcm-editwrap.live>.pcm-live-area{background:transparent!important;color:var(--SmartThemeBodyColor)!important;-webkit-text-fill-color:var(--SmartThemeBodyColor)!important;text-shadow:none!important;caret-color:var(--SmartThemeBodyColor)}
 .pcm-editwrap.live>.pcm-live-area::selection{background:rgba(90,140,255,.35)}
@@ -280,11 +280,16 @@
 .pcm-dialog.pcm-theme-night .pcm-free-selected{outline-color:#fabd2f;background:#fabd2f1f!important}
 .pcm-dialog.pcm-theme-night .pcm-group-selected{outline-color:#b8bb26;background:#b8bb261a!important}
 .pcm-dialog.pcm-theme-night .pcm-group-finish{color:#b8bb26!important}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e30}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d00062b}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e59}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d00064d}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e3d}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d000640}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e80}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d000680}
 .pcm-dialog.pcm-theme-night .pcm-row-disabled .pcm-name{color:#a89984}
+/* 夜间编辑器浅色表面(v1.6.2):v1.6.1 只把输入控件改成白底,卡片仍黑底,白控件与黑底混杂导致按钮/开关状态难判定;
+   整体改为 Gruvbox Light 风格浅色 surface,标题与字段标签统一深色。 */
+.pcm-dialog.pcm-theme-night .pcm-version-editor{background:#fbf1c7;border-color:#a89984}
+.pcm-dialog.pcm-theme-night .pcm-version-editor>h4{color:#3c3836}
+.pcm-dialog.pcm-theme-night .pcm-version-editor .pcm-control>span{color:#3c3836}
 
 /* ---------- 日间：Gruvbox Light ---------- */
 .pcm-dialog.pcm-theme-day{
@@ -332,8 +337,8 @@
 .pcm-dialog.pcm-theme-day .pcm-free-selected{outline-color:#b57614;background:#b576141f!important}
 .pcm-dialog.pcm-theme-day .pcm-group-selected{outline-color:#79740e;background:#79740e1a!important}
 .pcm-dialog.pcm-theme-day .pcm-group-finish{color:#79740e!important}
-.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e33}
-.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d00062e}
-.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e59}
-.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d00064d}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e3d}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d000640}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e80}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d000680}
 .pcm-dialog.pcm-theme-day .pcm-row-disabled .pcm-name{color:#a89984}
