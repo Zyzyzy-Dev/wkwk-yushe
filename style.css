@@ -54,23 +54,21 @@
 .pcm-free-select:has(input:checked){background:color-mix(in srgb,#36b47d 14%,transparent);border-color:#36b47d;color:var(--SmartThemeBodyColor)}.pcm-free-select input{margin:0}
 .pcm-uninjected-toggle{width:100%;border:0;border-radius:0;color:inherit;text-align:left;cursor:pointer}.pcm-uninjected-toggle:hover{background:color-mix(in srgb,#d8a44a 14%,rgba(0,0,0,.07))}.pcm-uninjected-toggle>.pcm-group-caret{flex:0 0 12px;font-size:9px}.pcm-uninjected-toggle>span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pcm-uninjected .pcm-group-body[hidden]{display:none!important}.pcm-uninjected.pcm-collapsed{background:rgba(0,0,0,.015)}.pcm-free-selected{opacity:.68;outline:2px solid #e6b85f;outline-offset:-2px;background:color-mix(in srgb,#e6b85f 14%,rgba(0,0,0,.12))!important}.pcm-free-selected:hover{opacity:.82}
 
-/* Disabled prompts: gray the whole row so enabled entries stand out at a glance. */
-.pcm-row.pcm-row-disabled .pcm-name{color:color-mix(in srgb,var(--SmartThemeBodyColor) 45%,#8a8a8a)}
-.pcm-row.pcm-row-disabled .pcm-open>code{opacity:.28}
-.pcm-row.pcm-row-disabled .pcm-badge{opacity:.5;filter:grayscale(.45)}
-.pcm-row.pcm-row-disabled .pcm-op-tag{opacity:.6}
-.pcm-row.pcm-row-disabled .pcm-name,.pcm-row.pcm-row-disabled .pcm-open>code,.pcm-row.pcm-row-disabled .pcm-badge{transition:color .15s,opacity .15s}
-.pcm-row.pcm-row-disabled:hover .pcm-name{color:color-mix(in srgb,var(--SmartThemeBodyColor) 70%,#8a8a8a)}
-.pcm-row.pcm-row-disabled.active .pcm-name{color:color-mix(in srgb,var(--SmartThemeBodyColor) 80%,#8a8a8a)}
+/* 未启用条目视觉优化：字迹饱满清晰、不发虚，柔和中灰呈现次级状态，悬停/展开时完全清晰 */
+.pcm-row.pcm-row-disabled{transition:opacity .15s,background .15s}
+.pcm-row.pcm-row-disabled .pcm-name{color:color-mix(in srgb,var(--SmartThemeBodyColor) 65%,#7c6f64);transition:color .15s}
+.pcm-row.pcm-row-disabled .pcm-open>code{opacity:.48;transition:opacity .15s}
+.pcm-row.pcm-row-disabled .pcm-badge{opacity:.78;filter:grayscale(.2);transition:opacity .15s,filter .15s}
+.pcm-row.pcm-row-disabled .pcm-op-tag{opacity:.75}
+.pcm-row.pcm-row-disabled:hover .pcm-name,.pcm-row.pcm-row-disabled.active .pcm-name{color:var(--SmartThemeBodyColor)}
+.pcm-row.pcm-row-disabled:hover .pcm-open>code,.pcm-row.pcm-row-disabled.active .pcm-open>code{opacity:.65}
+.pcm-row.pcm-row-disabled:hover .pcm-badge,.pcm-row.pcm-row-disabled.active .pcm-badge{opacity:1;filter:none}
 
 /* The ignore-whitespace toggle reuses the free-select chip; keep both header toggles compact on small screens. */
 @media(max-width:900px){.pcm-free-select{padding:5px 7px;font-size:10px;gap:5px}}
 @media(max-width:520px){.pcm-free-select{padding:4px 6px;font-size:9px}}
 
-/* Disabled prompts: dim the whole row like SillyTavern's prompt manager. */
-.pcm-row.pcm-row-disabled{opacity:.55;transition:opacity .15s}
-.pcm-row.pcm-row-disabled:hover{opacity:.85}
-.pcm-row.pcm-row-disabled.active{opacity:.72}
+/* 取消双重叠加过低 opacity，避免白底/浅色表面下字迹隐形发虚 */
 
 /* In-editor live diff: transparent textarea over a synced highlight backdrop. */
 .pcm-editwrap{position:relative}
@@ -322,7 +320,7 @@
 .pcm-dialog.pcm-theme-night .pcm-free-selected{outline-color:#fabd2f;background:rgba(250,189,47,0.15)!important}
 .pcm-dialog.pcm-theme-night .pcm-group-selected{outline-color:#b8bb26;background:rgba(184,187,38,0.14)!important}
 .pcm-dialog.pcm-theme-night .pcm-group-finish{color:#b8bb26!important}
-.pcm-dialog.pcm-theme-night .pcm-row-disabled .pcm-name{color:#7c6f64}
+.pcm-dialog.pcm-theme-night .pcm-row-disabled .pcm-name{color:#a89984}
 /* ---------- 日间：Gruvbox Light ---------- */
 .pcm-dialog.pcm-theme-day{
   --SmartThemeBorderColor:#ddd3bf;
@@ -373,4 +371,9 @@
 .pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d000640}
 .pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e80}
 .pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d000680}
-.pcm-dialog.pcm-theme-day .pcm-row-disabled .pcm-name{color:#a89984}
+.pcm-dialog.pcm-theme-day .pcm-row-disabled .pcm-name{color:#7c6f64}
+.pcm-dialog.pcm-theme-day .pcm-free-select{background:rgba(0,0,0,0.025);border-color:#ddd3bf;color:#3c3836}
+.pcm-dialog.pcm-theme-day .pcm-free-select:hover{background:rgba(0,0,0,0.05);border-color:#cabfa4}
+.pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]{border-color:#bdae93;background:#fffefa}
+.pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]:checked{border-color:#427b58;background:#427b58}
+.pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:rgba(66,123,88,0.12);border-color:#427b58;color:#28251f}
