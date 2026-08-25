@@ -231,66 +231,92 @@
 .pcm-dialog .pcm-theme-toggle svg{display:block;pointer-events:none}
 @media(max-width:900px){.pcm-dialog .pcm-theme-toggle{width:30px!important;height:30px!important;min-width:30px!important;padding:0!important}}
 
-/* ---------- 夜间：Gruvbox Dark ---------- */
+/* ---------- 夜间：精致暗黑科技风 (True Dark) ---------- */
 .pcm-dialog.pcm-theme-night{
-  --SmartThemeBorderColor:#45403d;
-  --SmartThemeBlurTintColor:#282828;
-  --SmartThemeBodyColor:#ebdbb2;
-  --pcm-accent:#8ec07c;--pcm-accent-deep:#689d6a;--pcm-accent-dark:#427b58;
-  --pcm-warn:#fabd2f;--pcm-bad:#fb4934;--pcm-info:#83a598;--pcm-good:#b8bb26;
-  --pcm-muted:#a89984;--pcm-input-bg:#1d2021;--pcm-input-bd:#504945;
+  --SmartThemeBorderColor:#2d2d2d;
+  --SmartThemeBlurTintColor:#161616;
+  --SmartThemeBodyColor:#e0e0e0;
+  --pcm-accent:#36b47d;--pcm-accent-deep:#18734f;--pcm-accent-dark:#115237;
+  --pcm-warn:#f0b85d;--pcm-bad:#ff8989;--pcm-info:#68c8ff;--pcm-good:#55c98e;
+  --pcm-muted:#888888;--pcm-input-bg:#222222;--pcm-input-bd:#333333;
 }
-.pcm-dialog.pcm-theme-night ::selection{background:#83a59840}
-.pcm-dialog.pcm-theme-night .pcm-header{background:linear-gradient(180deg,#8ec07c14,transparent 70%)}
-.pcm-dialog.pcm-theme-night .pcm-header h2{background:linear-gradient(90deg,#ebdbb2 30%,#b8bb26dd);-webkit-background-clip:text;background-clip:text}
-.pcm-dialog.pcm-theme-night .pcm-close:hover{background:#fb49341f;color:#fb4934;box-shadow:0 0 0 3px #fb493426}
-.pcm-dialog.pcm-theme-night input{background:var(--pcm-input-bg)!important;border-color:var(--pcm-input-bd)!important;color:#ebdbb2!important}
-.pcm-dialog.pcm-theme-night .pcm-inline-form input{background:#fffefa!important;border:1px solid #504945!important;color:#3c3836!important}
-.pcm-dialog.pcm-theme-night select{background:#fffefa!important;border:1px solid #504945!important;color:#3c3836!important}
-.pcm-dialog.pcm-theme-night .pcm-app textarea{background:#fffefa!important;border:1px solid #504945!important;color:#3c3836!important;-webkit-text-fill-color:#3c3836!important;caret-color:#3c3836!important;text-shadow:none!important}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-live-area{color:#3c3836!important;-webkit-text-fill-color:#3c3836!important;caret-color:#3c3836!important}
-.pcm-dialog.pcm-theme-night .menu_button{background:#3c3836!important;border-color:#504945!important;color:#ebdbb2!important}
-.pcm-dialog.pcm-theme-night .menu_button:hover{background:#504945!important;border-color:#665c52!important;color:#ffefc9!important}
-.pcm-dialog.pcm-theme-night .pcm-import{background:#3c3836!important;border-color:#504945!important;color:#ebdbb2!important}
-.pcm-dialog.pcm-theme-night .menu_button.pcm-primary{background:linear-gradient(135deg,#689d6a,#427b58)!important;border-color:#8ec07c66!important;color:#fff!important;box-shadow:0 2px 10px #8ec07c33}
-.pcm-dialog.pcm-theme-night .menu_button.pcm-primary:hover{background:linear-gradient(135deg,#689d6a,#427b58)!important;box-shadow:0 4px 16px #8ec07c59;filter:brightness(1.07)}
-.pcm-dialog.pcm-theme-night .pcm-tools input:focus,.pcm-dialog.pcm-theme-night .pcm-tools select:focus,.pcm-dialog.pcm-theme-night .pcm-project-bar input:focus,.pcm-dialog.pcm-theme-night .pcm-project-bar select:focus{border-color:#83a59899;box-shadow:0 0 0 3px #83a59840}
-.pcm-dialog.pcm-theme-night .menu_button:focus-visible,.pcm-dialog.pcm-theme-night .pcm-row-action:focus-visible,.pcm-dialog.pcm-theme-night .pcm-switch:focus-visible{outline-color:#83a598}
-.pcm-dialog.pcm-theme-night .pcm-pane:first-child .pcm-pane-head h3::before{background:#fabd2f;box-shadow:0 0 8px #fabd2f66}
-.pcm-dialog.pcm-theme-night .pcm-pane:last-child .pcm-pane-head h3::before{background:#b8bb26;box-shadow:0 0 8px #b8bb2666}
-.pcm-dialog.pcm-theme-night .pcm-row:hover{background:#8ec07c12}
-.pcm-dialog.pcm-theme-night .pcm-row.active{background:#8ec07c1f;box-shadow:inset 3px 0 0 #8ec07c}
-.pcm-dialog.pcm-theme-night .pcm-changed{color:#fabd2f;background:#fabd2f21;border-color:#fabd2f52}
-.pcm-dialog.pcm-theme-night .pcm-removed{color:#fb4934;background:#fb493424;border-color:#fb493452}
-.pcm-dialog.pcm-theme-night .pcm-added{color:#83a598;background:#83a59824;border-color:#83a59852}
-.pcm-dialog.pcm-theme-night .pcm-same{color:#a89984;background:#a8998421;border-color:#a8998445}
-.pcm-dialog.pcm-theme-night .pcm-compare{border-top-color:#83a598}
-.pcm-dialog.pcm-theme-night .pcm-field.changed h4{color:#fabd2f}
-.pcm-dialog.pcm-theme-night .pcm-field.changed .pcm-value{border-color:#fabd2f59}
-.pcm-dialog.pcm-theme-night .pcm-value{background:#ffffff0a}
-.pcm-dialog.pcm-theme-night .pcm-toast-success{border-color:#b8bb26;color:#b8bb26}
-.pcm-dialog.pcm-theme-night .pcm-toast-warning{border-color:#fabd2f;color:#fabd2f}
-.pcm-dialog.pcm-theme-night .pcm-toast-error{border-color:#fb4934;color:#fb4934}
-.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled{border-color:#8ec07c80}
-.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#689d6a}
-.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-knob{left:11px;background:#ebdbb2}
-.pcm-dialog.pcm-theme-night .pcm-op-enabled{color:#b8bb26}
-.pcm-dialog.pcm-theme-night .pcm-uninjected{border-color:#fabd2f59}.pcm-dialog.pcm-theme-night .pcm-uninjected>.pcm-group-head{color:#fabd2f}
-.pcm-dialog.pcm-theme-night .pcm-uninjected-toggle:hover{background:#fabd2f1a}
-.pcm-dialog.pcm-theme-night .pcm-free-selected{outline-color:#fabd2f;background:#fabd2f1f!important}
-.pcm-dialog.pcm-theme-night .pcm-group-selected{outline-color:#b8bb26;background:#b8bb261a!important}
-.pcm-dialog.pcm-theme-night .pcm-group-finish{color:#b8bb26!important}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e3d}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d000640}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e80}
-.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d000680}
-.pcm-dialog.pcm-theme-night .pcm-row-disabled .pcm-name{color:#a89984}
-/* 夜间编辑器浅色表面(v1.6.2):v1.6.1 只把输入控件改成白底,卡片仍黑底,白控件与黑底混杂导致按钮/开关状态难判定;
-   整体改为 Gruvbox Light 风格浅色 surface,标题与字段标签统一深色。 */
-.pcm-dialog.pcm-theme-night .pcm-version-editor{background:#fbf1c7;border-color:#a89984}
-.pcm-dialog.pcm-theme-night .pcm-version-editor>h4{color:#3c3836}
-.pcm-dialog.pcm-theme-night .pcm-version-editor .pcm-control>span{color:#3c3836}
+.pcm-dialog.pcm-theme-night ::selection{background:rgba(104,200,255,0.25)}
+.pcm-dialog.pcm-theme-night .pcm-header{background:linear-gradient(180deg,rgba(54,180,125,0.08),transparent 70%)}
+.pcm-dialog.pcm-theme-night .pcm-header h2{background:linear-gradient(90deg,#ffffff 30%,#36b47ddd);-webkit-background-clip:text;background-clip:text}
+.pcm-dialog.pcm-theme-night .pcm-close:hover{background:rgba(255,137,137,0.14);color:#ff8989;box-shadow:0 0 0 3px rgba(255,137,137,0.2)}
 
+/* 输入控件与下拉框：统一深暗底色 + 浅白文字 + 细深灰边框 */
+.pcm-dialog.pcm-theme-night input{background:var(--pcm-input-bg)!important;border:1px solid var(--pcm-input-bd)!important;color:#e0e0e0!important}
+.pcm-dialog.pcm-theme-night select{background-color:#222222!important;border:1px solid #333333!important;color:#e0e0e0!important}
+.pcm-dialog.pcm-theme-night textarea{background:#121212!important;border:1px solid #2d2d2d!important;color:#e0e0e0!important;-webkit-text-fill-color:#e0e0e0!important;caret-color:#ffffff!important;text-shadow:none!important}
+.pcm-dialog.pcm-theme-night .pcm-inline-form input{background:#222222!important;border:1px solid #333333!important;color:#e0e0e0!important}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-live-area{background:#121212!important;color:#e0e0e0!important;-webkit-text-fill-color:#e0e0e0!important;caret-color:#ffffff!important}
+
+/* 按钮与导入标签 */
+.pcm-dialog.pcm-theme-night .menu_button{background:#252525!important;border-color:#383838!important;color:#e0e0e0!important}
+.pcm-dialog.pcm-theme-night .menu_button:hover{background:#323232!important;border-color:#484848!important;color:#ffffff!important}
+.pcm-dialog.pcm-theme-night .pcm-import{background:#252525!important;border-color:#383838!important;color:#e0e0e0!important}
+.pcm-dialog.pcm-theme-night .menu_button.pcm-primary{background:linear-gradient(135deg,#1d8a60,#18734f)!important;border-color:#36b47d!important;color:#ffffff!important;box-shadow:0 2px 10px rgba(54,180,125,0.25)}
+.pcm-dialog.pcm-theme-night .menu_button.pcm-primary:hover{background:linear-gradient(135deg,#24a875,#1d8a60)!important;box-shadow:0 4px 16px rgba(54,180,125,0.4);filter:brightness(1.06)}
+
+/* 头部复选框药丸与开关 */
+.pcm-dialog.pcm-theme-night .pcm-free-select{background:rgba(255,255,255,0.03);border-color:#333333;color:#e0e0e0}
+.pcm-dialog.pcm-theme-night .pcm-free-select:hover{background:rgba(255,255,255,0.07)}
+.pcm-dialog.pcm-theme-night .pcm-free-select:has(input:checked){background:rgba(38,128,235,0.12);border-color:#2680eb;color:#ffffff}
+.pcm-dialog.pcm-theme-night input[type="checkbox"]{accent-color:#2680eb}
+
+/* 焦点光环 */
+.pcm-dialog.pcm-theme-night .pcm-tools input:focus,.pcm-dialog.pcm-theme-night .pcm-tools select:focus,.pcm-dialog.pcm-theme-night .pcm-project-bar input:focus,.pcm-dialog.pcm-theme-night .pcm-project-bar select:focus{border-color:#36b47db3;box-shadow:0 0 0 3px rgba(54,180,125,0.2)}
+.pcm-dialog.pcm-theme-night .menu_button:focus-visible,.pcm-dialog.pcm-theme-night .pcm-row-action:focus-visible,.pcm-dialog.pcm-theme-night .pcm-switch:focus-visible{outline-color:#36b47d}
+
+/* 双栏标题圆点 */
+.pcm-dialog.pcm-theme-night .pcm-pane:first-child .pcm-pane-head h3::before{background:#e6b85f;box-shadow:0 0 8px rgba(230,184,95,0.4)}
+.pcm-dialog.pcm-theme-night .pcm-pane:last-child .pcm-pane-head h3::before{background:#36b47d;box-shadow:0 0 8px rgba(54,180,125,0.4)}
+
+/* 列表行与开关 */
+.pcm-dialog.pcm-theme-night .pcm-row{border-bottom-color:rgba(255,255,255,0.05)}
+.pcm-dialog.pcm-theme-night .pcm-row:hover{background:rgba(255,255,255,0.035)}
+.pcm-dialog.pcm-theme-night .pcm-row.active{background:rgba(54,180,125,0.14);box-shadow:inset 3px 0 0 #36b47d}
+.pcm-dialog.pcm-theme-night .pcm-switch{background:#1a1a1a;border-color:#333333}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled{border-color:#36b47d;background:rgba(54,180,125,0.12)}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#18734f}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-knob{left:11px;background:#ffffff;box-shadow:0 0 4px rgba(54,180,125,0.6)}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-disabled .pcm-switch-track{background:#2a2a2a}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-disabled .pcm-switch-knob{left:1px;background:#666666}
+.pcm-dialog.pcm-theme-night .pcm-op-enabled{color:#55c98e}
+
+/* 徽章配色：实心深色底 + 鲜明对比字 (完全匹配截图) */
+.pcm-dialog.pcm-theme-night .pcm-changed{color:#f0b85d;background:#443214;border-color:#7a5820}
+.pcm-dialog.pcm-theme-night .pcm-removed{color:#ff8989;background:#441818;border-color:#782828}
+.pcm-dialog.pcm-theme-night .pcm-added{color:#68c8ff;background:#123048;border-color:#245880}
+.pcm-dialog.pcm-theme-night .pcm-same{color:#888888;background:#252525;border-color:#383838}
+
+/* 对比与编辑器卡片：全暗黑背景 + 深色卡片 */
+.pcm-dialog.pcm-theme-night .pcm-compare{background:#161616;border-top-color:#36b47d}
+.pcm-dialog.pcm-theme-night .pcm-compare-head{background:#161616;border-bottom-color:#2d2d2d}
+.pcm-dialog.pcm-theme-night .pcm-version-editor{background:#191919;border-color:#2d2d2d;border-radius:8px}
+.pcm-dialog.pcm-theme-night .pcm-version-editor>h4{color:#e0e0e0;font-weight:600}
+.pcm-dialog.pcm-theme-night .pcm-version-editor .pcm-control>span{color:#a0a0a0}
+.pcm-dialog.pcm-theme-night .pcm-field.changed h4{color:#f0b85d}
+.pcm-dialog.pcm-theme-night .pcm-field.changed .pcm-value{border-color:#7a5820}
+.pcm-dialog.pcm-theme-night .pcm-value{background:#1a1a1a;border-color:#2d2d2d}
+
+/* 正文差异 (Diff) 高亮：左暗红/右暗绿 + 高亮字符强调 (完全还原截图) */
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del{background:rgba(220,53,69,0.22)}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:rgba(220,53,69,0.5);border-radius:2px}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add{background:rgba(46,160,67,0.22)}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:rgba(46,160,67,0.5);border-radius:2px}
+
+/* 提示气泡与分组选择 */
+.pcm-dialog.pcm-theme-night .pcm-toast-success{border-color:#36b47d;color:#55c98e}
+.pcm-dialog.pcm-theme-night .pcm-toast-warning{border-color:#f0b85d;color:#f0b85d}
+.pcm-dialog.pcm-theme-night .pcm-toast-error{border-color:#ff8989;color:#ff8989}
+.pcm-dialog.pcm-theme-night .pcm-uninjected{border-color:#7a5820}.pcm-dialog.pcm-theme-night .pcm-uninjected>.pcm-group-head{color:#f0b85d}
+.pcm-dialog.pcm-theme-night .pcm-uninjected-toggle:hover{background:rgba(240,184,93,0.1)}
+.pcm-dialog.pcm-theme-night .pcm-free-selected{outline-color:#f0b85d;background:rgba(240,184,93,0.14)!important}
+.pcm-dialog.pcm-theme-night .pcm-group-selected{outline-color:#36b47d;background:rgba(54,180,125,0.12)!important}
+.pcm-dialog.pcm-theme-night .pcm-group-finish{color:#55c98e!important}
+.pcm-dialog.pcm-theme-night .pcm-row-disabled .pcm-name{color:#666666}
 /* ---------- 日间：Gruvbox Light ---------- */
 .pcm-dialog.pcm-theme-day{
   --SmartThemeBorderColor:#ddd3bf;
