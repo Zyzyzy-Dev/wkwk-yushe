@@ -43,7 +43,14 @@
 @media(max-width:900px){
   .pcm-pane{overscroll-behavior:contain!important}
   .pcm-pane::after{content:"";display:block;min-height:1px}
-  .pcm-list{overscroll-behavior-y:auto!important}
+  .pcm-list{overscroll-behavior-y:contain!important}
+}
+
+/* v1.8.4: tablet panes capped at 520px can otherwise leave the outer dialog
+   shorter than one viewport. Reserve one viewport for the stacked pane area so
+   the global header can scroll away until the old-preset header reaches top. */
+@media(min-width:521px) and (max-width:900px){
+  .pcm-lists{min-height:100dvh!important}
 }
 .pcm-op-enabled{color:#55c98e;cursor:pointer}.pcm-op-disabled{color:#999;opacity:.8;cursor:pointer}
 .pcm-uninjected{border-color:#d8a44a}.pcm-uninjected>.pcm-group-head{color:#e6b85f}.pcm-free-select{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid var(--SmartThemeBorderColor);border-radius:999px;font-size:11px;white-space:nowrap;cursor:pointer;user-select:none;-webkit-user-select:none;transition:background .15s,border-color .15s,color .15s}
@@ -87,7 +94,7 @@
 
 /* Row action buttons (copy / delete), multi-device: hover-reveal on desktop, always visible on touch, larger on small screens. */
 .pcm-row-actions{display:inline-flex;gap:2px;flex:0 0 auto}
-.pcm-row-action{padding:2px 5px;border:0;background:none;opacity:0;cursor:pointer;font-size:11px;line-height:1;color:var(--SmartThemeBodyColor);transition:opacity .15s}
+.pcm-row-action{padding:2px 5px;border:0;background:none;opacity:.6;cursor:pointer;font-size:11px;line-height:1;color:var(--SmartThemeBodyColor);transition:opacity .15s}
 .pcm-row:not(.pcm-row-disabled) .pcm-row-action{opacity:.65}.pcm-row.pcm-row-disabled:hover .pcm-row-action,.pcm-row.pcm-row-disabled.active .pcm-row-action{opacity:.55}
 .pcm-row-action:hover{opacity:1}
 .pcm-row-action.pcm-row-del:hover{color:#ff8989}
@@ -127,10 +134,11 @@
 @media(pointer:coarse),(hover:none){.pcm-row{content-visibility:visible!important;contain-intrinsic-size:none!important}}
 /* 指针长按拖拽期间（桌面/混合设备）禁用行级 content-visibility 占位，保证 elementFromPoint 命中真实行高、落点不错位。 */
 .pcm-dialog.pcm-touch-dragging .pcm-row{content-visibility:visible!important;contain-intrinsic-size:none!important}
-/* 放大移动端旧版预设可见空间：旧版(上)面板高度加大、新版(下)略收。手机(≤520px)旧 34→44dvh/新 50→46dvh；
-   小平板(521~900px)旧 36→42dvh/新 52→48dvh。均置于末尾覆盖前述 nth-child 高度规则。 */
+/* 放大移动端旧版预设可见空间：手机(≤520px)旧 34→44dvh/新 50→46dvh；
+   平板(521~900px)旧版保持 42dvh，新版使用剩余 58dvh，双面板合计一整屏且不留尾部空白。
+   均置于末尾覆盖前述 nth-child 高度规则。 */
 @media(max-width:520px){.pcm-pane:nth-child(1){height:44dvh!important}.pcm-pane:nth-child(2){height:46dvh!important}}
-@media(min-width:521px) and (max-width:900px){.pcm-pane:nth-child(1){height:42dvh!important}.pcm-pane:nth-child(2){height:48dvh!important}}
+@media(min-width:521px) and (max-width:900px){.pcm-pane:nth-child(1){height:42dvh!important}.pcm-pane:nth-child(2){height:58dvh!important}}
 /* 移动端编辑工作区紧凑化：①姓名/身份/触发器/位置四字段改 4 列横排、标签与控件横排压缩占位；②编辑器卡片内边距收窄；
    ③「保持旧版/新版条目」按钮由整行右对齐改为宽度自适应、不再占满整行。仅 ≤900px 生效，桌面端不变。 */
 @media(max-width:900px){
@@ -376,6 +384,99 @@
 .pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e80}
 .pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d000680}
 .pcm-dialog.pcm-theme-day .pcm-row-disabled .pcm-name{color:#a89984}
+
+/* ============================================================
+   多选模式（v1.7.0）：点击选中，批量拖拽
+   ============================================================ */
+.pcm-ms-selected{outline:2px solid #55c98e;outline-offset:-2px;background:color-mix(in srgb,#55c98e 16%,transparent)!important}
+.pcm-ms-selected:hover{background:color-mix(in srgb,#55c98e 22%,transparent)!important}
+.pcm-ms-selected .pcm-name{font-weight:700}
+.pcm-dialog.pcm-theme-night .pcm-ms-selected{outline-color:#8ec07c;background:#8ec07c1f!important}
+.pcm-dialog.pcm-theme-night .pcm-ms-selected:hover{background:#8ec07c2b!important}
+.pcm-dialog.pcm-theme-day .pcm-ms-selected{outline-color:#427b58;background:#427b581f!important}
+.pcm-dialog.pcm-theme-day .pcm-ms-selected:hover{background:#427b582b!important}
+
+/* ============================================================
+   变量预设管理面板（v1.7.0）
+   ============================================================ */
+.pcm-vars-panel{width:min(880px,94vw)}
+.pcm-vars-panel>.pcm-picker-panel{min-width:0}
+.pcm-vars-body{min-height:0;min-width:0;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.pcm-vars-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pcm-vars-bar select{max-width:62vw;min-width:220px}
+.pcm-vars-entry-name{font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto}
+.pcm-vars-save{flex:0 0 auto;color:#18734f!important;border-color:#36b47d!important}
+.pcm-dialog.pcm-theme-night .pcm-vars-save{color:#b8bb26!important;border-color:#b8bb26!important}
+.pcm-dialog.pcm-theme-day .pcm-vars-save{color:#427b58!important;border-color:#427b58!important}
+.pcm-vars-label{font-size:12px;opacity:.7;white-space:nowrap}
+.pcm-vars-stats{font-size:11px;opacity:.75;padding:6px 9px;border:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 60%,transparent);border-radius:8px}
+.pcm-vars-missing{border:1px solid #d8a44a;border-radius:8px;padding:8px 10px}
+.pcm-vars-missing h4{margin:0 0 6px;font-size:12px;color:#e6b85f}
+.pcm-vars-miss-row{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:11px}
+.pcm-vars-miss-row code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcm-vars-miss-count{opacity:.6;font-size:10px;white-space:nowrap}
+.pcm-vars-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.pcm-vars-raw h4{margin:0 0 5px;font-size:11px;opacity:.75}
+.pcm-vars-raw textarea{width:100%;min-height:120px;max-height:260px;padding:8px;border:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 60%,transparent);border-radius:6px;font-size:10px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;resize:vertical;font-family:var(--monoFontFamily,monospace)}
+.pcm-dialog.pcm-theme-night .pcm-vars-missing{border-color:#fabd2f59}.pcm-dialog.pcm-theme-night .pcm-vars-missing h4{color:#fabd2f}
+.pcm-dialog.pcm-theme-day .pcm-vars-missing{border-color:#b5761480}.pcm-dialog.pcm-theme-day .pcm-vars-missing h4{color:#b57614}
+@media(max-width:640px){.pcm-vars-panel{width:96vw}.pcm-vars-bar select{min-width:0;width:100%}.pcm-vars-miss-row{flex-wrap:wrap}.pcm-vars-miss-count{white-space:normal;flex:1 1 100%;order:3}.pcm-vars-raw textarea{min-height:100px}}
+
+/* ---------- 获取变量/引用变量 面板补充（v1.7.1） ---------- */
+.pcm-vars-toggle{white-space:nowrap;font-size:11px}
+.pcm-vars-miss-row .menu_button{flex:0 0 auto;min-width:max-content;padding:2px 8px;font-size:10px}
+.pcm-vars-chips{display:flex;flex-wrap:wrap;gap:4px}
+.pcm-vars-chips code{padding:2px 6px;border:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 60%,transparent);border-radius:6px;font-size:10px;opacity:.75}
+[data-ref-content]{width:100%;min-height:220px;resize:vertical;font-family:var(--monoFontFamily,monospace);font-size:11px}
+
+/* ============================================================
+   UI 紧凑化重构（v1.8.0）：胶囊开关 / 图标按钮 / 项目下拉 / 头部布局
+   ============================================================ */
+
+/* ---------- 开关胶囊化：无方块勾选框，选中高亮 ---------- */
+.pcm-free-select{padding:5px 11px;border:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 80%,transparent);border-radius:999px;background:color-mix(in srgb,var(--SmartThemeBodyColor) 4%,transparent);cursor:pointer;user-select:none;transition:background .15s,border-color .15s}
+.pcm-free-select:hover{border-color:color-mix(in srgb,var(--SmartThemeBodyColor) 45%,transparent)}
+.pcm-free-select input{display:none}
+.pcm-free-select:has(input:checked){background:color-mix(in srgb,#55c98e 20%,transparent);border-color:#55c98e;font-weight:600}
+.pcm-dialog.pcm-theme-night .pcm-free-select:has(input:checked){background:#8ec07c26;border-color:#8ec07c}
+.pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:#427b5820;border-color:#427b58}
+
+/* ---------- 图标按钮 ---------- */
+.pcm-icon-btn{width:30px;height:30px;min-width:30px;min-height:30px;padding:0!important;display:inline-flex!important;align-items:center;justify-content:center}
+.pcm-icon-btn svg{pointer-events:none}
+.pcm-icon-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ---------- 头部布局：标题占位，主题+关闭成组靠右 ---------- */
+.pcm-header{flex-wrap:wrap;row-gap:7px}
+.pcm-header>div:first-child{flex:1 1 auto;min-width:150px}
+.pcm-close{width:30px;min-width:30px;height:30px;font-size:15px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+
+/* ---------- 旧版标题旁撤回按钮 ---------- */
+.pcm-pane-head>div:first-child{display:flex;align-items:center;gap:6px;min-width:0}
+.pcm-pane-head .pcm-icon-btn{flex:0 0 auto;width:26px;height:26px;min-width:26px;min-height:26px}
+
+/* ---------- 项目栏：输入框 + 内嵌下拉 + 图标按钮 ---------- */
+.pcm-project-bar{flex-wrap:nowrap}
+.pcm-proj-drop{position:relative;flex:1 1 130px;min-width:110px;max-width:240px}
+.pcm-proj-drop input{width:100%;min-width:0}
+.pcm-proj-list{display:none;position:absolute;top:calc(100% + 4px);left:0;width:max(100%,190px);max-height:220px;overflow:auto;z-index:80;background:var(--SmartThemeBlurTintColor);border:1px solid var(--SmartThemeBorderColor);border-radius:8px;box-shadow:0 12px 34px #0008;padding:4px}
+.pcm-proj-drop.open .pcm-proj-list{display:flex;flex-direction:column;gap:2px}
+.pcm-proj-item{text-align:left;padding:6px 9px;border:0;background:none;color:inherit;cursor:pointer;border-radius:6px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcm-proj-item:hover{background:color-mix(in srgb,var(--SmartThemeBodyColor) 10%,transparent)}
+.pcm-proj-empty{font-size:11px;opacity:.6;padding:6px 9px;white-space:nowrap}
+
+/* ---------- 移动端（≤900px）：三行头部布局 ---------- */
+@media(max-width:900px){
+  .pcm-header{flex-wrap:wrap!important;row-gap:6px}
+  .pcm-header>div:first-child{flex:1 1 auto!important;min-width:0!important}
+  .pcm-theme-toggle{order:1}
+  .pcm-close{order:2;display:inline-flex!important;align-items:center;justify-content:center;width:30px!important;min-width:30px!important;height:30px!important;font-size:15px!important}
+  .pcm-header .pcm-free-select{order:3;padding:4px 8px;font-size:10px}
+  .pcm-project-bar{order:4;display:flex!important;visibility:visible!important;width:100%!important;max-width:100%!important;flex-wrap:nowrap!important;overflow:visible!important;padding:2px 0 4px}
+  .pcm-proj-drop{flex:1 1 auto!important;min-width:0!important;max-width:none!important}
+  .pcm-project-bar .pcm-icon-btn{width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;padding:0!important;font-size:12px!important}
+  .pcm-pane-head>div:first-child{min-width:0!important;flex:1 1 auto!important}
+}
 .pcm-dialog.pcm-theme-day .pcm-free-select{background:rgba(0,0,0,0.025);border-color:#ddd3bf;color:#3c3836}
 .pcm-dialog.pcm-theme-day .pcm-free-select:hover{background:rgba(0,0,0,0.05);border-color:#cabfa4}
 .pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]{border-color:#bdae93;background:#fffefa}
@@ -383,3 +484,103 @@
 .pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:rgba(66,123,88,0.12);border-color:#427b58;color:#28251f}
 /* 白色(浅色)模式:勾选圆内打黑色勾 */
 .pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]::before{box-shadow:inset 1em 1em #3c3836}
+
+/* ============================================================
+   响应式头部修正（v1.8.1）：PC / 平板 / 窄屏手机
+   ============================================================ */
+.pcm-dialog .pcm-free-select input[type="checkbox"]{display:none!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;appearance:none!important;-webkit-appearance:none!important}
+.pcm-title-block,.pcm-window-actions,.pcm-header-toggles{display:flex;align-items:center;min-width:0}
+.pcm-title-block{gap:10px}.pcm-title-copy{min-width:0}.pcm-window-actions,.pcm-header-toggles{gap:6px;flex-wrap:nowrap}.pcm-header-toggles{white-space:nowrap}
+.pcm-desktop-undo{flex:0 0 auto}.pcm-pane-undo{display:none!important}
+
+@media(min-width:901px){
+  .pcm-header{display:grid!important;grid-template-columns:minmax(270px,1fr) auto auto auto;align-items:center;column-gap:10px;row-gap:0;flex-wrap:nowrap!important}
+  .pcm-title-block{min-width:270px}.pcm-project-bar{width:auto;max-width:none;flex-wrap:nowrap}.pcm-proj-drop{flex:0 1 180px;min-width:120px;max-width:180px}
+  .pcm-header-toggles{justify-self:end}.pcm-window-actions{justify-self:end}
+}
+
+@media(max-width:900px){
+  .pcm-header{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:6px!important}
+  .pcm-title-block{order:0;flex:1 1 auto!important;min-width:0!important}.pcm-window-actions{order:1;flex:0 0 auto;margin-left:auto}
+  .pcm-header-toggles{order:2;width:100%;display:flex;justify-content:flex-end;overflow:visible}
+  .pcm-header .pcm-free-select{order:initial;padding:4px 8px;font-size:10px}
+  .pcm-project-bar{order:3;display:flex!important;visibility:visible!important;width:100%!important;max-width:100%!important;flex-wrap:nowrap!important;overflow:visible!important;padding:2px 0 4px}
+  .pcm-desktop-undo{display:none!important}.pcm-pane-undo{display:inline-flex!important}
+}
+
+@media(min-width:521px) and (max-width:900px){
+  .pcm-header-toggles{justify-content:flex-end}
+  .pcm-proj-drop{flex:0 1 430px!important;width:50vw!important;min-width:220px!important;max-width:430px!important}
+}
+
+@media(max-width:520px){
+  .pcm-header{padding-inline:8px!important}
+  .pcm-header-toggles{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px!important;width:100%;justify-content:stretch}
+  .pcm-header .pcm-free-select{min-width:0;justify-content:center;padding:4px 2px!important;font-size:clamp(8px,2.35vw,10px)!important;line-height:1.15;overflow:hidden}
+  .pcm-header .pcm-free-select span{overflow:hidden;text-overflow:clip;white-space:nowrap}
+  .pcm-proj-drop{flex:1 1 auto!important;width:auto!important;min-width:0!important;max-width:none!important}
+}
+
+/* ============================================================
+   v1.8.2 responsive follow-up: project row first, compact mobile controls,
+   and outer-scroll handoff from preset rows on touch devices.
+   ============================================================ */
+@media(max-width:900px){
+  .pcm-header{position:relative!important;top:auto!important}
+  .pcm-project-bar{order:2!important}
+  .pcm-header-toggles{order:3!important}
+  .pcm-tools{gap:6px!important;padding:6px 10px!important}
+  .pcm-tools input{min-width:0!important;height:32px!important;min-height:32px!important;padding:4px 8px!important}
+  .pcm-tools select{flex:0 0 92px!important;width:92px!important;height:32px!important;min-height:32px!important;padding:4px 7px!important}
+}
+
+/* ============================================================
+   v1.9.1 mobile single-row pane head: narrow title + filename + icon actions
+   ============================================================ */
+.pcm-btn-icon{display:none}
+.pcm-btn-text{white-space:nowrap}
+.pcm-pane-head [data-action=pull-tavern] .pcm-btn-tavern-short{display:none}
+@media(max-width:520px){
+  .pcm-btn-icon{display:inline-flex!important}
+  .pcm-pane-head .pcm-btn-text{display:none!important}
+  .pcm-pane{grid-template-columns:minmax(0,1fr)!important}
+  .pcm-pane-head{max-width:100%!important;min-width:0!important}
+  .pcm-btn-icon svg{width:14px;height:14px}
+  .pcm-pane-head{flex-wrap:nowrap!important;gap:4px!important;padding-inline:6px!important}
+  .pcm-pane-head>div:first-child{flex:1 1 auto!important;min-width:0!important;display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:4px!important;overflow:hidden!important}
+  .pcm-pane-head h3{flex:0 0 auto!important;margin:0!important;font-size:12px!important;font-weight:700!important;line-height:1.15!important;writing-mode:horizontal-tb!important;white-space:nowrap!important;gap:3px!important}
+  .pcm-pane-head .pcm-icon-btn{flex:0 0 auto!important;width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important}
+  .pcm-pane-head [data-file-name]{flex:1 1 24px!important;width:auto!important;min-width:0!important;max-width:none!important;margin-top:0!important;font-size:9px!important}
+  .pcm-actions{flex:0 0 auto!important;min-width:0!important;max-width:none!important;gap:2px!important;overflow:visible!important;padding:0!important}
+  .pcm-actions .menu_button,.pcm-import{flex:0 0 auto!important;box-sizing:border-box!important;min-width:0!important;height:24px!important;min-height:24px!important;padding-block:0!important;padding-inline:5px!important;font-size:9px!important;line-height:1!important;white-space:nowrap!important;border-radius:8px!important}
+  .pcm-pane-head .pcm-actions .menu_button svg,.pcm-pane-head .pcm-import svg{width:11px!important;height:11px!important}
+  .pcm-pane-head [data-action=pull-tavern] .pcm-btn-text{display:none!important}
+  .pcm-pane-head [data-action=pull-tavern] .pcm-btn-tavern-short{display:inline!important}
+  .pcm-pane-head .pcm-import,.pcm-pane-head [data-action=export]{width:26px!important;min-width:26px!important;padding-inline:0!important;justify-content:center!important;align-items:center!important;display:inline-flex!important}
+  .pcm-tools{gap:4px!important;padding:5px 8px!important}
+  .pcm-tools input{height:29px!important;min-height:29px!important;padding:3px 7px!important;font-size:11px!important}
+  .pcm-tools select{flex-basis:72px!important;width:72px!important;height:29px!important;min-height:29px!important;padding:3px 5px!important;font-size:11px!important}
+}
+@media(max-width:359px){
+  .pcm-pane-head .pcm-actions{overflow-x:auto!important;max-width:52vw!important}
+}
+
+/* ============================================================
+   v1.9.4 readability: compare editors + variable raw/ref textareas
+   render light-on-light on some host skins. Force light background
+   + near-black text. Name field keeps host styling (already dark).
+   Placed last so it wins cascade ties with theme rules.
+   ============================================================ */
+.pcm-dialog .pcm-inline-form input:not([name=name]),
+.pcm-dialog .pcm-inline-form select{color:#1d2021!important;background:#fffefa!important;-webkit-text-fill-color:#1d2021!important;caret-color:#1d2021!important;text-shadow:none!important}
+.pcm-dialog .pcm-inline-content textarea{color:#1d2021!important;background:#fffefa!important;-webkit-text-fill-color:#1d2021!important;caret-color:#1d2021!important;text-shadow:none!important}
+.pcm-dialog .pcm-vars-raw textarea{color:#1d2021!important;background:#fffefa!important;-webkit-text-fill-color:#1d2021!important;caret-color:#1d2021!important;text-shadow:none!important}
+.pcm-dialog textarea[data-ref-content]{color:#1d2021!important;background:#fffefa!important;-webkit-text-fill-color:#1d2021!important;caret-color:#1d2021!important;text-shadow:none!important}
+
+/* v1.9.5 ref view: orange chips + in-text highlight of unreferenced setvars */
+.pcm-vars-refchips .pcm-vars-chips{margin-top:4px}
+.pcm-vars-refchips .pcm-vars-chips code{color:#b23c17!important;border-color:#b23c1780!important;background:#e258221a!important;font-weight:700}
+.pcm-dialog.pcm-theme-night .pcm-vars-refchips .pcm-vars-chips code{color:#ff9457!important;border-color:#ff945780!important;background:#e2582226!important}
+.pcm-dialog.pcm-theme-day .pcm-vars-refchips .pcm-vars-chips code{color:#9d2f0e!important;border-color:#9d2f0e80!important;background:#e2582214!important}
+.pcm-diff-backdrop .refhit{background:rgba(226,88,34,.30);border-radius:2px;box-shadow:0 0 0 1px rgba(226,88,34,.28)}
+.pcm-dialog.pcm-theme-night .pcm-diff-backdrop .refhit{background:rgba(255,148,87,.20);box-shadow:0 0 0 1px rgba(255,148,87,.30)}
