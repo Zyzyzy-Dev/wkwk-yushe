@@ -584,3 +584,26 @@
 .pcm-dialog.pcm-theme-day .pcm-vars-refchips .pcm-vars-chips code{color:#9d2f0e!important;border-color:#9d2f0e80!important;background:#e2582214!important}
 .pcm-diff-backdrop .refhit{background:rgba(226,88,34,.30);border-radius:2px;box-shadow:0 0 0 1px rgba(226,88,34,.28)}
 .pcm-dialog.pcm-theme-night .pcm-diff-backdrop .refhit{background:rgba(255,148,87,.20);box-shadow:0 0 0 1px rgba(255,148,87,.30)}
+
+/* Compact pane headers remain phone-only. */
+@media(max-width:520px){
+  .pcm-dialog .pcm-pane-head,
+  .pcm-dialog .pcm-tools,
+  .pcm-dialog .pcm-summary{box-sizing:border-box!important;margin:0!important}
+  .pcm-dialog .pcm-pane-head{min-height:32px!important;padding:3px 6px!important}
+  .pcm-dialog .pcm-pane-head::before{display:none!important}
+  .pcm-dialog .pcm-pane-head .menu_button{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin:0!important}
+  .pcm-dialog .pcm-tools{padding:3px 6px!important;gap:4px!important}
+  .pcm-dialog .pcm-tools input,
+  .pcm-dialog .pcm-tools select{box-sizing:border-box!important;height:26px!important;min-height:26px!important;margin:0!important;padding-block:2px!important;line-height:18px!important}
+  .pcm-dialog .pcm-summary{min-height:18px!important;padding:1px 6px!important;font-size:10px!important;line-height:14px!important}
+}
+
+/* v1.7.3: single-line preset rows on desktop, tablet and phone.
+   Keep pane/list heights and switch hit areas intact; saved space goes to rows.
+   IDs stay in the DOM/data for lookup and remain visible in the detail editor. */
+.pcm-dialog .pcm-row{box-sizing:border-box!important;min-height:36px!important;padding:4px 6px!important;gap:6px!important}
+.pcm-dialog .pcm-row .pcm-open{min-height:26px!important;margin:0!important;padding:0!important}
+.pcm-dialog .pcm-row .pcm-open>code{display:none!important}
+.pcm-dialog .pcm-row-title{min-height:26px;line-height:1.2}
+.pcm-dialog .pcm-row-action{box-sizing:border-box;min-width:24px;min-height:24px;margin:0;padding:3px 5px;line-height:1}
