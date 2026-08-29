@@ -85,6 +85,7 @@
 .pcm-diff-backdrop>span{display:block;min-height:1.55em;border-radius:2px}
 .pcm-diff-backdrop .add{background:rgba(46,160,67,.34)}
 .pcm-diff-backdrop .del{background:rgba(220,53,69,.32)}
+.pcm-diff-backdrop .add.paired,.pcm-diff-backdrop .del.paired{background:transparent!important}
 .pcm-diff-backdrop .add .a{background:rgba(46,160,67,.66);border-radius:2px}
 .pcm-diff-backdrop .del .d{background:rgba(220,53,69,.64);border-radius:2px}
 .pcm-editwrap>.pcm-live-area{position:relative;z-index:1;width:100%;box-sizing:border-box}
