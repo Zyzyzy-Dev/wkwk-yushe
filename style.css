@@ -85,7 +85,8 @@
 .pcm-diff-backdrop>span{display:block;min-height:1.55em;border-radius:2px}
 .pcm-diff-backdrop .add{background:rgba(46,160,67,.34)}
 .pcm-diff-backdrop .del{background:rgba(220,53,69,.32)}
-.pcm-diff-backdrop .add.paired,.pcm-diff-backdrop .del.paired{background:transparent!important}
+.pcm-diff-backdrop .add.paired{background:rgba(46,160,67,.12)!important}
+.pcm-diff-backdrop .del.paired{background:rgba(220,53,69,.11)!important}
 .pcm-diff-backdrop .add .a{background:rgba(46,160,67,.66);border-radius:2px}
 .pcm-diff-backdrop .del .d{background:rgba(220,53,69,.64);border-radius:2px}
 .pcm-editwrap>.pcm-live-area{position:relative;z-index:1;width:100%;box-sizing:border-box}
@@ -320,8 +321,10 @@
 
 /* 正文差异 (Diff) 高亮：左红/右绿 + 鲜明字符高亮 */
 .pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del{background:rgba(251,73,52,0.22)}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del.paired{background:rgba(251,73,52,.11)!important}
 .pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:rgba(251,73,52,0.55);border-radius:2px}
 .pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add{background:rgba(184,187,38,0.22)}
+.pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add.paired{background:rgba(184,187,38,.11)!important}
 .pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:rgba(184,187,38,0.55);border-radius:2px}
 
 /* 提示气泡与分组选择 */
@@ -382,6 +385,8 @@
 .pcm-dialog.pcm-theme-day .pcm-group-finish{color:#79740e!important}
 .pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add{background:#79740e3d}
 .pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del{background:#9d000640}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add.paired{background:rgba(121,116,14,.11)!important}
+.pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del.paired{background:rgba(157,0,6,.11)!important}
 .pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .add .a{background:#79740e80}
 .pcm-dialog.pcm-theme-day .pcm-editwrap.live>.pcm-diff-backdrop .del .d{background:#9d000680}
 .pcm-dialog.pcm-theme-day .pcm-row-disabled .pcm-name{color:#a89984}
@@ -602,7 +607,7 @@
 
 /* v1.7.3: single-line preset rows on desktop, tablet and phone.
    Keep pane/list heights and switch hit areas intact; saved space goes to rows.
-   IDs stay in the DOM/data for lookup and remain visible in the detail editor. */
+   IDs stay in the DOM/data for lookup and remain searchable. */
 .pcm-dialog .pcm-row{box-sizing:border-box!important;min-height:36px!important;padding:4px 6px!important;gap:6px!important}
 .pcm-dialog .pcm-row .pcm-open{min-height:26px!important;margin:0!important;padding:0!important}
 .pcm-dialog .pcm-row .pcm-open>code{display:none!important}
