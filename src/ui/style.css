@@ -1,4 +1,5 @@
-/* iframe 基础层：所有控件和主题变量都在本 document 内定义，不依赖酒馆或美化插件的 CSS。 */
+/* 预设更新编辑器 · iframe 独立样式：控件与主题变量完全自足，不依赖酒馆主页面或美化插件 CSS。
+   开头为自足基础层，后半保留触屏禁用 content-visibility、移动端面板高度、编辑区紧凑化及 auto/day/night 配色。 */
 :root{color-scheme:dark;--SmartThemeBorderColor:#504945;--SmartThemeBlurTintColor:#282828;--SmartThemeBodyColor:#ebdbb2;--mainFontFamily:system-ui,-apple-system,"Segoe UI",sans-serif;--monoFontFamily:"Cascadia Mono","SFMono-Regular",Consolas,monospace}
 html,body{width:100%;height:100%;margin:0;padding:0;background:transparent;color:var(--SmartThemeBodyColor);font-family:var(--mainFontFamily);font-size:14px}
 *,*::before,*::after{box-sizing:border-box}

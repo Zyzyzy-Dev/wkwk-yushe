@@ -1,3 +1,5 @@
+// 预设更新编辑器 · iframe 通信桥：校验同源父窗口并接收一次性 MessagePort，
+// 以 request/notify/on 三个接口与宿主进行 RPC 请求、通知和事件订阅。
 const APP_ID = 'preset-compare-migrator';
 const CONNECT_MESSAGE = `${APP_ID}:connect`;
 const REQUEST_TIMEOUT_MS = 30_000;

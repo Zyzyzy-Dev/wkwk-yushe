@@ -1,7 +1,9 @@
+// 预设更新编辑器 · 纯功能核心回归测试（node --test 自动发现）。
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   VAR_GET_RE,
+  applyPresetToMemory,
   buildRows,
   clone,
   contentSimilarity,
@@ -9,6 +11,7 @@ import {
   equalValues,
   findPromptOrderEntry,
   parseVarContent,
+  shouldRefreshActivePreset,
   validatePreset,
 } from '../src/core.js';
 
@@ -91,4 +94,27 @@ test('variable parsing separates text and setvar macros', () => {
     [...'{{getvar::名字}} {{getglobalvar::全局}}'.matchAll(VAR_GET_RE)].map(match => match[1]),
     ['名字', '全局'],
   );
+});
+
+test('save refreshes only when the saved preset is the currently active one', () => {
+  assert.equal(shouldRefreshActivePreset('ActiveA', 'ActiveA'), true);
+  assert.equal(shouldRefreshActivePreset('ActiveB', 'ActiveA'), false);
+  assert.equal(shouldRefreshActivePreset('', 'ActiveA'), false); // 无法取得当前预设时不切换
+  assert.equal(shouldRefreshActivePreset('ActiveA', 'activea'), false); // 名称大小写敏感
+});
+
+test('preset memory sync writes only existing slots', () => {
+  const presets = [{ name: 'A' }, { name: 'B' }];
+  const namesByIndex = { A: 0, B: 1 };
+  const incoming = { name: 'A2' };
+
+  assert.equal(applyPresetToMemory(presets, namesByIndex, 'A', incoming), true);
+  assert.equal(presets[0], incoming);
+  assert.equal(presets[1].name, 'B');
+
+  assert.equal(applyPresetToMemory(presets, namesByIndex, 'Missing', incoming), false);
+  assert.equal(applyPresetToMemory(presets, ['A', 'B'], 'B', incoming), true); // 数组式 preset_names
+  assert.equal(presets[1], incoming);
+  assert.equal(applyPresetToMemory(presets, ['A', 'B'], 'Nope', incoming), false);
+  assert.equal(applyPresetToMemory('not-an-array', namesByIndex, 'A', incoming), false);
 });

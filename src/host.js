@@ -1,3 +1,8 @@
+// 预设更新编辑器 · 酒馆宿主桥：唯一可接触 SillyTavern 主 document/API 的模块。
+// 扩展菜单入口、外层 dialog/iframe 外壳、preset-manager/openai 动态读取与保存、
+// PRESET_CHANGED 订阅转发、主题变量与 TauriTavern IME 高度转发。
+import { applyPresetToMemory, shouldRefreshActivePreset } from './core.js';
+
 const APP_ID = 'preset-compare-migrator';
 const APP_TITLE = '预设更新编辑器';
 // SillyTavern is the canonical host. TauriTavern integration is optional and
@@ -57,7 +62,20 @@ async function handleRequest(method, payload) {
     const preset = payload?.preset;
     if (!name || !preset || !Array.isArray(preset.prompts)) throw new Error('预设名称或数据无效');
     const manager = await getPresetManager();
-    await manager.savePreset(name, clone(preset));
+    const saved = clone(preset);
+    // 先看原生酒馆预设管理器当前选中的预设：同名才走 savePreset 的「重新应用刷新」路径
+    // （updateList 会重选该项并触发 change → 重载生成设置并发出 PRESET_CHANGED）；
+    // 不同名则用 skipUpdate 静默写盘，避免酒馆把活动预设切到被保存的预设，
+    // 再手动把内存中的预设数据同步为 saved（updateList 被跳过，与 ST 自身 writePresetExtensionField 的用法一致）。
+    const activeName = typeof manager.getSelectedPresetName === 'function'
+      ? String(manager.getSelectedPresetName() || '') : '';
+    if (shouldRefreshActivePreset(activeName, name)) {
+      await manager.savePreset(name, saved);
+    } else {
+      await manager.savePreset(name, saved, { skipUpdate: true });
+      const { presets, preset_names: names } = manager.getPresetList();
+      applyPresetToMemory(presets, names, name, saved);
+    }
     return clone(readPresetByName(manager, name));
   }
   throw new Error(`未知宿主请求：${method}`);

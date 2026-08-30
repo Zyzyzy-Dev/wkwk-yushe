@@ -1,3 +1,5 @@
+// 预设更新编辑器 · 纯功能核心：不接触 DOM，可在 Node 中直接回归测试。
+// 预设校验、prompt_order 顺序节点选择、比对归一化/正文相似度、Myers 混合粒度 diff、变量宏解析。
 const ALL_TRIGGERS = ['continue', 'impersonate', 'normal', 'quiet', 'regenerate', 'swipe'];
 const LINE_DIFF_LIMIT = 200_000;
 const CHAR_DIFF_LIMIT = 40_000;
@@ -250,4 +252,19 @@ export function parseVarContent(content) {
   }
   if (last < content.length) segments.push({ type: 'text', value: content.slice(last) });
   return segments;
+}
+
+// 保存回酒馆的决策/同步纯逻辑（供 src/host.js 使用，可在 Node 中直接测试）：
+// - shouldRefreshActivePreset：保存的预设是否为酒馆预设管理器当前活动预设（决定是否走刷新路径）
+// - applyPresetToMemory：skipUpdate 跳过 updateList 后，把新数据同步写回内存预设数组
+export function shouldRefreshActivePreset(activeName, name) {
+  return Boolean(activeName) && String(activeName) === String(name);
+}
+
+export function applyPresetToMemory(presets, presetNames, name, preset) {
+  if (!Array.isArray(presets)) return false;
+  const index = Array.isArray(presetNames) ? presetNames.indexOf(name) : presetNames?.[name];
+  if (index === undefined || index < 0 || index >= presets.length) return false;
+  presets[Number(index)] = preset;
+  return true;
 }
