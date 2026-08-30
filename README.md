@@ -2,6 +2,23 @@
 
 这是一个用于 SillyTavern OpenAI / Chat Completion 预设的对比和迁移插件。它可以同时载入旧版与新版预设，快速查看条目差异，并将条目或修改后的内容迁移到另一版本。
 
+## 代码结构与隔离
+
+插件使用原生 ES Module 拆分，并把完整工作区运行在独立 iframe document 中：
+
+- `index.js`：唯一扩展入口，只安装宿主控制器。
+- `src/host.js`：唯一允许接触酒馆主页面的模块；负责扩展菜单、iframe 外壳、preset-manager 调用、`PRESET_CHANGED` 订阅以及主题/输入法环境转发。
+- `src/core.js`：不接触 DOM 的预设校验、顺序节点选择、正文相似度、混合粒度 diff 和变量宏解析。
+- `src/ui/app.js`：iframe 内的状态、交互与渲染。
+- `src/ui/bridge.js`：基于 `MessageChannel` 的请求/响应和事件通道。
+- `src/ui/index.html` / `src/ui/style.css`：iframe 自己的 HTML 与完整基础样式。
+
+本项目以 **SillyTavern 官方 Web 版为主目标**，同时对 **TauriTavern** 做可选适配：标准路径只使用 SillyTavern 的扩展加载器、`openai.js`、`preset-manager.js` 和事件总线；仅检测到 `window.__TAURITAVERN__` 时才动态加载 TauriTavern `layout-kit.js`，把同源 iframe 标记为 `ViewportHost` 并转发 IME 高度。Tauri 适配失败或超时不会阻塞标准 SillyTavern UI，普通浏览器继续使用 `visualViewport` 回退。
+
+`manifest.json` 不再向酒馆主 document 加载插件 CSS。主页面及其他美化插件的选择器默认无法跨过 iframe 边界，插件样式也无法影响酒馆外部；宿主只保留一个菜单入口和 iframe 外壳。业务 UI 不直接读取酒馆全局对象、TauriTavern API 或主页面 DOM；`bridge.js` 仅校验同源父窗口并接收专用消息端口。读取/保存预设、预设变更事件、主题变量与输入法高度统一经过该消息通道。除明确点击「保存回酒馆」外，iframe 逻辑不会写入或刷新酒馆预设管理器。
+
+纯功能回归测试运行：`node --test tests/core.test.mjs`。
+
 ## 主要功能
 
 - **双版本对比**：左侧显示旧版预设，右侧显示新版预设；先按 ID、相同正文、正文相似度与名称建立一对一关系，再以正文是否一致判定「内容相同 / 内容已修改」，避免 ID、名称或其他设置差异冒充正文修改；候选接近或证据不足时不自动配对。
