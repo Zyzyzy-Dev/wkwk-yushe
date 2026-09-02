@@ -417,3 +417,11 @@ export function installPresetCompareHost() {
   else installMenu();
   return controller;
 }
+
+// 扩展更新 hook（ST 官方约定，manifest.hooks.update 指向本导出）：
+// ST 在「扩展更新」成功后调用，扩展自行决定收尾。这里直接整页刷新，
+// 让酒馆重新加载入口/宿主/iframe 全部脚本——比手动 F5 更可靠（无旧模块缓存），
+// 也与 JS-Slash-Runner 的「更新成功后刷新页面以生效」同款行为。
+export async function reloadAfterUpdate() {
+  location.reload();
+}
