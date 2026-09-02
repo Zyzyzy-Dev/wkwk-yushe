@@ -140,6 +140,7 @@ class AppHost {
     this.tavernEventsBound = false;
     this.environmentBound = false;
     this.ttKeyboard = 0;
+    this.ttSafeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
     this.environmentFrame = 0;
     this.scheduleEnvironment = () => {};
     this.tauriLayoutCleanup = null;
@@ -211,6 +212,10 @@ class AppHost {
           this.tauriLayoutCleanup = await layoutKit.subscribeLayout(snapshot => {
             const keyboard = snapshot?.ime?.keyboardOffset;
             if (Number.isFinite(keyboard)) this.ttKeyboard = Math.max(0, keyboard);
+            for (const side of ['top', 'right', 'bottom', 'left']) {
+              const inset = snapshot?.safeInsets?.[side];
+              if (Number.isFinite(inset)) this.ttSafeInsets[side] = Math.max(0, inset);
+            }
             this.scheduleEnvironment();
           });
         }
@@ -307,8 +312,14 @@ class AppHost {
     const visualKeyboard = window.visualViewport
       ? Math.max(0, window.innerHeight - window.visualViewport.height)
       : 0;
+    const safeInsets = {};
+    for (const side of ['top', 'right', 'bottom', 'left']) {
+      const cssInset = Number.parseFloat(computed.getPropertyValue(`--tt-inset-${side}`)) || 0;
+      safeInsets[side] = Math.max(0, this.ttSafeInsets[side] || 0, cssInset);
+    }
     return {
       theme,
+      safeInsets,
       keyboardOffset: Math.max(this.ttKeyboard, cssKeyboard, visualKeyboard),
       viewport: {
         width: window.visualViewport?.width || window.innerWidth,

@@ -1,6 +1,6 @@
 /* 预设更新编辑器 · iframe 独立样式：控件与主题变量完全自足，不依赖酒馆主页面或美化插件 CSS。
    开头为自足基础层，后半保留触屏禁用 content-visibility、移动端面板高度、编辑区紧凑化及 auto/day/night 配色。 */
-:root{color-scheme:dark;--SmartThemeBorderColor:#504945;--SmartThemeBlurTintColor:#282828;--SmartThemeBodyColor:#ebdbb2;--mainFontFamily:system-ui,-apple-system,"Segoe UI",sans-serif;--monoFontFamily:"Cascadia Mono","SFMono-Regular",Consolas,monospace}
+:root{color-scheme:dark;--SmartThemeBorderColor:#504945;--SmartThemeBlurTintColor:#282828;--SmartThemeBodyColor:#ebdbb2;--mainFontFamily:system-ui,-apple-system,"Segoe UI",sans-serif;--monoFontFamily:"Cascadia Mono","SFMono-Regular",Consolas,monospace;--pcm-host-inset-top:0px;--pcm-host-inset-right:0px;--pcm-host-inset-bottom:0px;--pcm-host-inset-left:0px;--pcm-safe-top:max(var(--tt-inset-top,0px),var(--pcm-host-inset-top),env(safe-area-inset-top,0px));--pcm-safe-right:max(var(--tt-inset-right,0px),var(--pcm-host-inset-right),env(safe-area-inset-right,0px));--pcm-safe-bottom:max(var(--tt-inset-bottom,0px),var(--pcm-host-inset-bottom),env(safe-area-inset-bottom,0px));--pcm-safe-left:max(var(--tt-inset-left,0px),var(--pcm-host-inset-left),env(safe-area-inset-left,0px))}
 html,body{width:100%;height:100%;margin:0;padding:0;background:transparent;color:var(--SmartThemeBodyColor);font-family:var(--mainFontFamily);font-size:14px}
 *,*::before,*::after{box-sizing:border-box}
 body{overflow:hidden}
@@ -60,7 +60,7 @@ dialog{font-family:var(--mainFontFamily)}
   .pcm-list{overscroll-behavior-y:contain!important}
 }
 
-/* v1.8.4: tablet panes capped at 520px can otherwise leave the outer dialog
+/* Tablet panes capped at 520px can otherwise leave the outer dialog
    shorter than one viewport. Reserve one viewport for the stacked pane area so
    the global header can scroll away until the old-preset header reaches top. */
 @media(min-width:521px) and (max-width:900px){
@@ -450,7 +450,7 @@ dialog{font-family:var(--mainFontFamily)}
 [data-ref-content]{width:100%;min-height:220px;resize:vertical;font-family:var(--monoFontFamily,monospace);font-size:11px}
 
 /* ============================================================
-   UI 紧凑化重构（v1.8.0）：胶囊开关 / 图标按钮 / 项目下拉 / 头部布局
+   UI 紧凑化重构：胶囊开关 / 图标按钮 / 项目下拉 / 头部布局
    ============================================================ */
 
 /* ---------- 开关胶囊化：无方块勾选框，选中高亮 ---------- */
@@ -506,7 +506,7 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]::before{box-shadow:inset 1em 1em #3c3836}
 
 /* ============================================================
-   响应式头部修正（v1.8.1）：PC / 平板 / 窄屏手机
+   响应式头部修正：PC / 平板 / 窄屏手机
    ============================================================ */
 .pcm-dialog .pcm-free-select input[type="checkbox"]{display:none!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;appearance:none!important;-webkit-appearance:none!important}
 .pcm-title-block,.pcm-window-actions,.pcm-header-toggles{display:flex;align-items:center;min-width:0}
@@ -535,14 +535,14 @@ dialog{font-family:var(--mainFontFamily)}
 
 @media(max-width:520px){
   .pcm-header{padding-inline:8px!important}
-  .pcm-header-toggles{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px!important;width:100%;justify-content:stretch}
+  .pcm-header-toggles{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px!important;width:100%;justify-content:stretch}
   .pcm-header .pcm-free-select{min-width:0;justify-content:center;padding:4px 2px!important;font-size:clamp(8px,2.35vw,10px)!important;line-height:1.15;overflow:hidden}
   .pcm-header .pcm-free-select span{overflow:hidden;text-overflow:clip;white-space:nowrap}
   .pcm-proj-drop{flex:1 1 auto!important;width:auto!important;min-width:0!important;max-width:none!important}
 }
 
 /* ============================================================
-   v1.8.2 responsive follow-up: project row first, compact mobile controls,
+   Responsive follow-up: project row first, compact mobile controls,
    and outer-scroll handoff from preset rows on touch devices.
    ============================================================ */
 @media(max-width:900px){
@@ -555,7 +555,7 @@ dialog{font-family:var(--mainFontFamily)}
 }
 
 /* ============================================================
-   v1.9.1 mobile single-row pane head: narrow title + filename + icon actions
+   Mobile single-row pane head: narrow title + filename + icon actions
    ============================================================ */
 .pcm-btn-icon{display:none}
 .pcm-btn-text{white-space:nowrap}
@@ -586,7 +586,7 @@ dialog{font-family:var(--mainFontFamily)}
 }
 
 /* ============================================================
-   v1.9.4 readability: compare editors + variable raw/ref textareas
+   Readability: compare editors + variable raw/ref textareas
    render light-on-light on some host skins. Force light background
    + near-black text. Name field keeps host styling (already dark).
    Placed last so it wins cascade ties with theme rules.
@@ -597,7 +597,7 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-dialog .pcm-vars-raw textarea{color:#1d2021!important;background:#fffefa!important;-webkit-text-fill-color:#1d2021!important;caret-color:#1d2021!important;text-shadow:none!important}
 .pcm-dialog textarea[data-ref-content]{color:#1d2021!important;background:#fffefa!important;-webkit-text-fill-color:#1d2021!important;caret-color:#1d2021!important;text-shadow:none!important}
 
-/* v1.9.5 ref view: orange chips + in-text highlight of unreferenced setvars */
+/* Ref view: orange chips + in-text highlight of unreferenced setvars */
 .pcm-vars-refchips .pcm-vars-chips{margin-top:4px}
 .pcm-vars-refchips .pcm-vars-chips code{color:#b23c17!important;border-color:#b23c1780!important;background:#e258221a!important;font-weight:700}
 .pcm-dialog.pcm-theme-night .pcm-vars-refchips .pcm-vars-chips code{color:#ff9457!important;border-color:#ff945780!important;background:#e2582226!important}
@@ -627,3 +627,51 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-dialog .pcm-row .pcm-open>code{display:none!important}
 .pcm-dialog .pcm-row-title{min-height:26px;line-height:1.2}
 .pcm-dialog .pcm-row-action{box-sizing:border-box;min-width:24px;min-height:24px;margin:0;padding:3px 5px;line-height:1}
+
+/* ============================================================
+   正则对比、拖拽迁移与 BaiBai 分组
+   ============================================================ */
+.pcm-header-toggles .pcm-header-regex{flex:0 0 auto;min-width:48px;padding:5px 10px;border-radius:999px;font-size:10px;white-space:nowrap}
+.pcm-dialog.pcm-regex-open{overflow:hidden!important;overscroll-behavior:none!important}
+.pcm-picker[data-regex-panel]{padding:clamp(6px,1.5vw,16px);overscroll-behavior:contain;touch-action:pan-y}
+.pcm-regex-panel{width:min(1180px,96vw);height:min(86dvh,860px);max-height:94dvh;min-width:0;overflow:hidden;grid-template-rows:auto minmax(0,1fr);overscroll-behavior:contain;touch-action:pan-y}
+.pcm-regex-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px;font-weight:700}
+.pcm-regex-head-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.pcm-regex-body{min-width:0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);overflow:hidden;overscroll-behavior:contain}
+.pcm-regex-column{min-width:0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;border-right:1px solid var(--SmartThemeBorderColor)}
+.pcm-regex-column:last-child{border-right:0}
+.pcm-regex-column-head{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;border-bottom:1px solid var(--SmartThemeBorderColor)}
+.pcm-regex-column-head h4{min-width:0;margin:0;font-size:13px;white-space:nowrap}.pcm-regex-column-head span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;opacity:.6}
+.pcm-regex-list{min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:7px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+.pcm-regex-group{min-width:0;margin:0 0 8px;border:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 70%,transparent);border-radius:9px;overflow:hidden;background:color-mix(in srgb,var(--SmartThemeBodyColor) 2%,transparent)}
+.pcm-regex-group-head{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-bottom:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 60%,transparent);background:color-mix(in srgb,var(--SmartThemeBodyColor) 5%,transparent)}
+.pcm-regex-group-head strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.pcm-regex-group-head span{flex:0 0 auto;font-size:9px;opacity:.6}
+.pcm-regex-group-items{min-width:0;padding:6px}
+.pcm-regex-row{position:relative;min-width:0;overflow:hidden;margin-bottom:4px;padding:5px 7px;border:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 70%,transparent);border-radius:7px;background:color-mix(in srgb,var(--SmartThemeBodyColor) 3%,transparent);cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.pcm-regex-group-items .pcm-regex-row:last-child{margin-bottom:0}
+.pcm-regex-row-top{min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px}.pcm-regex-info{min-width:0;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.pcm-regex-info strong{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.pcm-regex-info .pcm-badge{padding:1px 4px;font-size:8px;line-height:1.2}.pcm-regex-info small{min-width:0;flex-basis:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;opacity:.6}
+.pcm-regex-row-top>.menu_button{flex:0 0 auto;min-width:64px;min-height:26px;height:26px;padding:2px 6px;font-size:9px;white-space:nowrap}.pcm-regex-row-top>.menu_button:disabled{opacity:.45}
+.pcm-regex-disclosure{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:0;border-radius:5px;background:transparent;color:inherit;opacity:.7;cursor:pointer}.pcm-regex-disclosure:hover{background:color-mix(in srgb,var(--SmartThemeBodyColor) 8%,transparent);opacity:1}.pcm-regex-disclosure:focus{outline:none}.pcm-regex-disclosure:focus-visible{outline:2px solid #68c8ff;outline-offset:-2px}.pcm-regex-disclosure span{display:block;font-size:21px;line-height:1;transform:rotate(0);transition:transform .15s}.pcm-regex-expanded-open .pcm-regex-disclosure span{transform:rotate(90deg)}
+.pcm-regex-expanded{display:grid;gap:8px;margin:8px 0 1px 30px;padding-top:8px;border-top:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 55%,transparent);cursor:auto;user-select:text;-webkit-user-select:text}.pcm-regex-expanded[hidden]{display:none!important}.pcm-regex-field{display:grid;gap:4px;min-width:0}.pcm-regex-field>span{font-size:9px;opacity:.62}.pcm-regex-field code,.pcm-regex-field pre{display:block;max-width:100%;max-height:170px;overflow:auto;margin:0;padding:7px;border:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 45%,transparent);border-radius:5px;background:color-mix(in srgb,var(--SmartThemeBodyColor) 4%,transparent);white-space:pre-wrap;overflow-wrap:anywhere;font:10px/1.45 var(--monoFontFamily,monospace)}
+.pcm-regex-json{max-width:100%;margin:0;font-size:10px}.pcm-regex-json summary{cursor:pointer;opacity:.7}.pcm-regex-json pre{max-width:100%;max-height:230px;overflow:auto;margin:6px 0 0;padding:7px;border-radius:6px;background:#0001;white-space:pre-wrap;overflow-wrap:anywhere;font-size:9px}
+.pcm-regex-empty{padding:28px 12px;text-align:center;font-size:11px;opacity:.58}
+.pcm-regex-row.pcm-regex-dragging{opacity:.42;cursor:grabbing;outline:2px dashed #68c8ff;outline-offset:-2px}.pcm-regex-drop-before::before,.pcm-regex-drop-after::after{content:"";position:absolute;z-index:3;left:4px;right:4px;height:3px;border-radius:3px;background:#68c8ff}.pcm-regex-drop-before::before{top:-2px}.pcm-regex-drop-after::after{bottom:-2px}.pcm-regex-drop-group{outline:2px solid #68c8ff;outline-offset:-2px;background:color-mix(in srgb,#68c8ff 12%,transparent)}.pcm-regex-drop-end::after{content:"拖到这里放在末尾";display:block;margin:7px;padding:10px;border:2px dashed #68c8ff;border-radius:7px;color:#68c8ff;text-align:center;font-size:10px}
+@media(max-width:900px){.pcm-header-toggles .pcm-header-regex{order:initial;min-width:48px;padding:4px 8px;font-size:10px}.pcm-regex-panel{width:calc(100vw - 12px);height:calc(100dvh - 12px);max-height:none}.pcm-regex-body{min-height:0;display:grid;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr);overflow:hidden;overscroll-behavior:contain}.pcm-regex-column{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;border-right:0;border-bottom:1px solid var(--SmartThemeBorderColor)}.pcm-regex-column:last-child{border-bottom:0}.pcm-regex-column-head{position:static;background:var(--SmartThemeBlurTintColor)}.pcm-regex-list{min-height:0;overflow-y:auto;overflow-x:hidden;padding:5px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}.pcm-regex-row-top>.menu_button{min-width:60px;padding-inline:5px}}
+@media(max-width:520px){.pcm-header-toggles .pcm-header-regex{display:inline-flex!important;align-items:center;justify-content:center;width:100%;min-width:0;height:auto;min-height:0;padding:4px 2px!important;font-size:clamp(8px,2.35vw,10px)!important}.pcm-regex-panel .pcm-picker-head{padding:8px}.pcm-regex-title{font-size:14px}.pcm-regex-column-head{padding:5px 7px}.pcm-regex-group{margin-bottom:4px}.pcm-regex-group-head{padding:4px 6px}.pcm-regex-group-items{padding:3px}.pcm-regex-row{margin-bottom:3px;padding:3px 5px}.pcm-regex-info strong{font-size:10px}.pcm-regex-row-top>.menu_button{min-width:54px;min-height:23px;height:23px;padding:1px 4px;font-size:8px}.pcm-regex-disclosure{width:18px;height:18px}.pcm-regex-disclosure span{font-size:19px}.pcm-regex-expanded{margin-left:22px}}
+
+/* v1.7.5 mobile safe-area contract: the iframe stays full-bleed while only
+   interactive content avoids TT/iOS insets. max() prevents double padding. */
+@media(max-width:900px){
+  .pcm-app{padding:var(--pcm-safe-top) var(--pcm-safe-right) var(--pcm-safe-bottom) var(--pcm-safe-left)!important}
+  .pcm-dialog>.pcm-picker{padding-top:max(16px,var(--pcm-safe-top))!important;padding-right:max(16px,var(--pcm-safe-right))!important;padding-bottom:max(16px,var(--pcm-safe-bottom))!important;padding-left:max(16px,var(--pcm-safe-left))!important}
+  .pcm-dialog>.pcm-picker[data-regex-panel]{padding-top:max(clamp(6px,1.5vw,16px),var(--pcm-safe-top))!important;padding-right:max(clamp(6px,1.5vw,16px),var(--pcm-safe-right))!important;padding-bottom:max(clamp(6px,1.5vw,16px),var(--pcm-safe-bottom))!important;padding-left:max(clamp(6px,1.5vw,16px),var(--pcm-safe-left))!important}
+  .pcm-dialog>.pcm-picker:not([data-regex-panel]) .pcm-picker-panel{max-height:min(82vh,calc(100dvh - var(--pcm-safe-top) - var(--pcm-safe-bottom) - 32px))!important}
+  .pcm-regex-panel{height:calc(100dvh - var(--pcm-safe-top) - var(--pcm-safe-bottom) - 12px)!important}
+  .pcm-close{position:relative}
+  .pcm-close::after{content:"";position:absolute;inset:-3px}
+}
+@media(max-width:700px){
+  .pcm-dialog>.pcm-picker:not([data-regex-panel]){padding-top:max(8px,var(--pcm-safe-top))!important;padding-right:max(8px,var(--pcm-safe-right))!important;padding-bottom:max(8px,var(--pcm-safe-bottom))!important;padding-left:max(8px,var(--pcm-safe-left))!important}
+  .pcm-dialog>.pcm-picker:not([data-regex-panel]) .pcm-picker-panel{max-height:min(92vh,calc(100dvh - var(--pcm-safe-top) - var(--pcm-safe-bottom) - 16px))!important}
+}
