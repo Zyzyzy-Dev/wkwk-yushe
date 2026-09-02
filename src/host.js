@@ -199,28 +199,52 @@ class AppHost {
     this.iframe.src = new URL('./ui/index.html', import.meta.url).href;
   }
 
+  // TT 布局快照统一处理：layout-kit 与硬 ABI 两条订阅路径共用，转发键盘高度与安全区。
+  applyTauriLayoutSnapshot(snapshot) {
+    const keyboard = snapshot?.ime?.keyboardOffset;
+    if (Number.isFinite(keyboard)) this.ttKeyboard = Math.max(0, keyboard);
+    for (const side of ['top', 'right', 'bottom', 'left']) {
+      const inset = snapshot?.safeInsets?.[side];
+      if (Number.isFinite(inset)) this.ttSafeInsets[side] = Math.max(0, inset);
+    }
+    this.scheduleEnvironment();
+  }
+
   configureTauriSurface() {
     if (!globalThis.__TAURITAVERN__) return null;
     return (async () => {
+      // 首选官方 layout-kit（新 TT 提供）。旧版 TT 没有该文件（import 404 抛错），
+      // 必须回退到硬 ABI：__TAURITAVERN__.api.layout.subscribe 是旧版 TT 唯一存在的
+      // 键盘高度通道——只依赖 layout-kit 会让旧版 TT 的输入法适配整个失效。
       try {
         const layoutKit = await import('/scripts/tauritavern/layout-kit.js');
         await layoutKit.waitForHostReady?.();
         if (layoutKit.applySurface && layoutKit.SURFACE?.ViewportHost) {
           layoutKit.applySurface(this.iframe, layoutKit.SURFACE.ViewportHost);
+        } else {
+          this.iframe.dataset.ttMobileSurface = 'viewport-host';
         }
         if (layoutKit.subscribeLayout) {
-          this.tauriLayoutCleanup = await layoutKit.subscribeLayout(snapshot => {
-            const keyboard = snapshot?.ime?.keyboardOffset;
-            if (Number.isFinite(keyboard)) this.ttKeyboard = Math.max(0, keyboard);
-            for (const side of ['top', 'right', 'bottom', 'left']) {
-              const inset = snapshot?.safeInsets?.[side];
-              if (Number.isFinite(inset)) this.ttSafeInsets[side] = Math.max(0, inset);
-            }
-            this.scheduleEnvironment();
-          });
+          this.tauriLayoutCleanup = await layoutKit.subscribeLayout(
+            snapshot => this.applyTauriLayoutSnapshot(snapshot),
+          );
         }
       } catch (error) {
-        console.warn(`[${APP_ID}] optional TauriTavern layout-kit unavailable`, error);
+        console.warn(`[${APP_ID}] TauriTavern layout-kit unavailable, falling back to raw layout API`, error);
+        try {
+          await (globalThis.__TAURITAVERN__.ready ?? globalThis.__TAURITAVERN_MAIN_READY__);
+          this.iframe.dataset.ttMobileSurface = 'viewport-host';
+          const layout = globalThis.__TAURITAVERN__.api?.layout;
+          if (layout && typeof layout.subscribe === 'function') {
+            this.tauriLayoutCleanup = await layout.subscribe(
+              snapshot => this.applyTauriLayoutSnapshot(snapshot),
+            );
+          } else {
+            console.warn(`[${APP_ID}] TauriTavern layout API unavailable; IME forwarding disabled`);
+          }
+        } catch (fallbackError) {
+          console.warn(`[${APP_ID}] TauriTavern raw layout API failed`, fallbackError);
+        }
       }
     })();
   }
