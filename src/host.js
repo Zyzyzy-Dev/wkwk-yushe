@@ -140,6 +140,7 @@ class AppHost {
     this.tavernEventsBound = false;
     this.environmentBound = false;
     this.ttKeyboard = 0;
+    this.surfaceKeyboard = 0;
     this.ttSafeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
     this.environmentFrame = 0;
     this.scheduleEnvironment = () => {};
@@ -318,9 +319,14 @@ class AppHost {
     this.scheduleEnvironment = schedule;
     window.addEventListener('resize', schedule, { passive: true });
     window.visualViewport?.addEventListener('resize', schedule, { passive: true });
+    window.visualViewport?.addEventListener('scroll', schedule, { passive: true });
     const observer = new MutationObserver(schedule);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
-    if (document.body) observer.observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] });
+    // 活跃 IME 表面切换（data-tt-ime-active 只是布尔标记）或其内联 style 变化
+    // （--tt-ime-bottom 由 TT 原生桥写在目标元素内联 style 上）都要重发环境快照。
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class', 'style'], subtree: true });
+    document.addEventListener('focusin', schedule, true);
+    document.addEventListener('focusout', schedule, true);
   }
 
   environmentSnapshot() {
@@ -336,6 +342,18 @@ class AppHost {
     const visualKeyboard = window.visualViewport
       ? Math.max(0, window.innerHeight - window.visualViewport.height)
       : 0;
+    /* Android TauriTavern 的 --tt-ime-bottom 是 surface-local：iframe 内聚焦时宿主 IME
+       控制器在主 document 看到的 focusin 目标是 <iframe>（非可编辑元素），活跃表面被释放、
+       布局订阅不再推送键盘高度，:root 上的 CSS 变量通道也为 0——键盘高度只由原生桥
+       注入到默认 IME 目标元素的内联 style 上。因此直接从携带者读取：当前活跃 IME 表面
+       （data-tt-ime-active）优先，#sheld 兜底（iframe 输入时的实际落点）。 */
+    let surfaceKeyboard = 0;
+    for (const carrier of [document.querySelector('[data-tt-ime-active]'), document.getElementById('sheld')]) {
+      if (!carrier) continue;
+      const value = Number.parseFloat(getComputedStyle(carrier).getPropertyValue('--tt-ime-bottom'));
+      if (Number.isFinite(value)) surfaceKeyboard = Math.max(surfaceKeyboard, value);
+    }
+    this.surfaceKeyboard = surfaceKeyboard;
     const safeInsets = {};
     for (const side of ['top', 'right', 'bottom', 'left']) {
       const cssInset = Number.parseFloat(computed.getPropertyValue(`--tt-inset-${side}`)) || 0;
@@ -344,7 +362,7 @@ class AppHost {
     return {
       theme,
       safeInsets,
-      keyboardOffset: Math.max(this.ttKeyboard, cssKeyboard, visualKeyboard),
+      keyboardOffset: Math.max(this.ttKeyboard, cssKeyboard, surfaceKeyboard, visualKeyboard),
       viewport: {
         width: window.visualViewport?.width || window.innerWidth,
         height: window.visualViewport?.height || window.innerHeight,
