@@ -1,0 +1,117 @@
+/* 酒馆工坊编辑器三主题：清晰面板边框、轻立体条目和紧凑间距，保留操作区与滚动结构。 */
+.pcm-dialog.pcm-theme-day{--SmartThemeBorderColor:#dfcfb9;--SmartThemeBlurTintColor:#f7efe3;--SmartThemeBodyColor:#4b3b2d;--pcm-input-bg:#fffaf2;--pcm-input-bd:#dfcfb9;--pcm-surface:#fcf7ee;--pcm-muted:#887360;--pcm-accent:#707b4e;box-shadow:0 16px 56px #61432224}
+.pcm-dialog.pcm-theme-day .pcm-header{background:linear-gradient(110deg,#f2e7d5,#f7efe3 75%);border-bottom-color:#dfcfb9}
+.pcm-dialog.pcm-theme-day .pcm-header h2{color:#4b3b2d}
+.pcm-dialog.pcm-theme-day .pcm-pane{border-color:#e1d3be;background:#fcf7ee;box-shadow:0 3px 12px #78553708}
+.pcm-dialog.pcm-theme-day .pcm-pane-head{background:#fcf7ee;border-bottom-color:#e7dccb}
+.pcm-dialog.pcm-theme-day .pcm-tools,.pcm-dialog.pcm-theme-day .pcm-summary{border-bottom-color:#eae0d1}
+.pcm-dialog.pcm-theme-day .pcm-list{background:#fcf7ee}
+.pcm-dialog.pcm-theme-day .pcm-row{border-bottom-color:#eae0d1}
+.pcm-dialog.pcm-theme-day .pcm-row.pcm-same{background:#9b82610b;color:#6f604f;border-color:#a58f7140}
+.pcm-dialog.pcm-theme-day .pcm-row:hover{background:#f0eedf}
+.pcm-dialog.pcm-theme-day .pcm-row.active{background:#e8ecd9;box-shadow:inset 3px 0 #7d895b}
+.pcm-dialog.pcm-theme-day .pcm-group,.pcm-dialog.pcm-theme-day .pcm-version-editor{border-color:#dfcfb9}
+.pcm-dialog.pcm-theme-day .pcm-group-head{background:#f1ebdc}
+.pcm-dialog.pcm-theme-day .menu_button,.pcm-dialog.pcm-theme-day .pcm-import{background:#fffaf2!important;border-color:#dfcfb9!important;color:#4b3b2d!important;box-shadow:0 2px 5px #78553706}
+.pcm-dialog.pcm-theme-day .menu_button:hover,.pcm-dialog.pcm-theme-day .pcm-import:hover{background:#f0eedb!important;border-color:#b9bb94!important;color:#4b3b2d!important}
+.pcm-dialog.pcm-theme-day .menu_button.pcm-primary{background:linear-gradient(125deg,#737c4a,#58683c)!important;border-color:#737c4a!important;color:#fffaf2!important;box-shadow:0 2px 9px #707b4e24}
+.pcm-dialog.pcm-theme-day .menu_button.pcm-primary:hover{background:linear-gradient(125deg,#6a7543,#516234)!important;box-shadow:0 3px 12px #707b4e30;filter:none}
+.pcm-dialog.pcm-theme-day input,.pcm-dialog.pcm-theme-day select{background-color:#fffaf2!important;border-color:#dfcfb9!important;color:#4b3b2d!important}
+.pcm-dialog.pcm-theme-day .pcm-inline-content textarea:not(.pcm-live-area),.pcm-dialog.pcm-theme-day .pcm-vars-raw textarea{background:#fffaf2!important;border-color:#dfcfb9!important;color:#4b3b2d!important;-webkit-text-fill-color:#4b3b2d!important;caret-color:#4b3b2d!important}
+.pcm-dialog.pcm-theme-day .pcm-free-select{background:#fffaf2;border-color:#dfcfb9;color:#705f4d}
+.pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:linear-gradient(125deg,#e5e9d6,#f0f0de);border-color:#b8c095;color:#495c32;box-shadow:0 2px 7px #707b4e10}
+.pcm-dialog.pcm-theme-day .pcm-switch.pcm-op-enabled{border-color:#86936670}
+.pcm-dialog.pcm-theme-day .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#879762}
+.pcm-dialog.pcm-theme-day .pcm-switch.pcm-op-enabled .pcm-switch-knob{background:#fff7e5}
+.pcm-dialog.pcm-theme-day .pcm-compare,.pcm-dialog.pcm-theme-day .pcm-compare-head,.pcm-dialog.pcm-theme-day .pcm-picker-panel,.pcm-dialog.pcm-theme-day .pcm-worldbook-panel{background:#fcf7ee;border-color:#c2c89e}
+.pcm-dialog.pcm-theme-day .pcm-version-editor{background:#f8f1e6}
+.pcm-dialog.pcm-theme-day .pcm-toast-success{background:#f2eedc;color:#53633b;border-color:#a8b384}
+.pcm-dialog.pcm-theme-day .pcm-ms-selected{outline-color:#70824d;background:#e5ebd4!important}
+.pcm-dialog.pcm-theme-day .pcm-free-selected{outline-color:#ab803d;background:#f2e6ce!important}
+.pcm-dialog.pcm-theme-day .pcm-group-selected{outline-color:#70824d;background:#e5ebd4!important}
+
+.pcm-dialog.pcm-theme-night{--SmartThemeBorderColor:#504945;--SmartThemeBlurTintColor:#282828;--SmartThemeBodyColor:#ebdbb2;--pcm-input-bg:#32302f;--pcm-input-bd:#665c54;--pcm-muted:#bdae93;box-shadow:0 16px 56px #00000055}
+.pcm-dialog.pcm-theme-night .pcm-header{background:linear-gradient(115deg,#3c3836,#282828 80%);border-bottom-color:#504945}
+.pcm-dialog.pcm-theme-night .pcm-header h2{background:none;color:#ebdbb2;-webkit-text-fill-color:currentColor}
+.pcm-dialog.pcm-theme-night .pcm-pane{background:#2e2c2b;border-color:#504945}
+.pcm-dialog.pcm-theme-night .pcm-pane-head{background:#32302f;border-bottom-color:#504945}
+.pcm-dialog.pcm-theme-night .pcm-tools,.pcm-dialog.pcm-theme-night .pcm-summary{border-bottom-color:#45403d}
+.pcm-dialog.pcm-theme-night .pcm-list{background:#2e2c2b}
+.pcm-dialog.pcm-theme-night .pcm-row.pcm-same{background:#a8998409;border-color:#a8998420;color:#bdae93}
+.pcm-dialog.pcm-theme-night .pcm-row:hover{background:#504945}
+.pcm-dialog.pcm-theme-night .pcm-row.active{background:#504945;box-shadow:inset 3px 0 #83a598}
+.pcm-dialog.pcm-theme-night .pcm-group-head{background:#3c3836}
+.pcm-dialog.pcm-theme-night .menu_button,.pcm-dialog.pcm-theme-night .pcm-import{background:#3c3836!important;border-color:#665c54!important;color:#ebdbb2!important;box-shadow:0 2px 5px #00000015}
+.pcm-dialog.pcm-theme-night .menu_button:hover,.pcm-dialog.pcm-theme-night .pcm-import:hover{background:#504945!important;border-color:#928374!important}
+.pcm-dialog.pcm-theme-night .menu_button.pcm-primary{background:linear-gradient(125deg,#83a598,#458588)!important;border-color:#83a598!important;color:#282828!important;box-shadow:0 2px 9px #83a59815}
+.pcm-dialog.pcm-theme-night .menu_button.pcm-primary:hover{background:#a7c0b5!important;filter:none;box-shadow:0 3px 12px #83a59825}
+.pcm-dialog.pcm-theme-night .pcm-free-select{background:#3c3836;border-color:#665c54;color:#d5c4a1}
+.pcm-dialog.pcm-theme-night .pcm-free-select:has(input:checked){background:#504945;border-color:#928374;color:#ebdbb2;box-shadow:0 2px 7px #00000010}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#83a598}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-knob{background:#ebdbb2}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled{background:#3c3836;border-color:#83a598;color:#ebdbb2}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled:hover{background:#504945;border-color:#a7c0b5}
+.pcm-dialog.pcm-theme-night .pcm-free-select input[type="checkbox"]:checked{background:#83a598;border-color:#83a598}
+.pcm-dialog.pcm-theme-night .pcm-pane:last-child .pcm-pane-head h3::before{background:#83a598;box-shadow:none}
+.pcm-dialog.pcm-theme-night .pcm-compare,.pcm-dialog.pcm-theme-night .pcm-compare-head{background:#32302f;border-color:#928374}
+.pcm-dialog.pcm-theme-night .pcm-version-editor,.pcm-dialog.pcm-theme-night .pcm-picker-panel,.pcm-dialog.pcm-theme-night .pcm-worldbook-panel{background:#32302f;border-color:#665c54}
+.pcm-dialog.pcm-theme-night .pcm-ms-selected,.pcm-dialog.pcm-theme-night .pcm-group-selected{outline-color:#83a598;background:#504945!important}
+.pcm-dialog.pcm-theme-night .pcm-free-selected{outline-color:#d79921;background:#514429!important}
+.pcm-dialog.pcm-theme-night .pcm-toast-success{background:#3c3836;color:#ebdbb2;border-color:#83a598}
+.pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-knob{box-shadow:0 1px 3px #0004}
+.pcm-dialog.pcm-theme-night :is(.menu_button,.pcm-row-action,.pcm-switch):focus-visible{outline-color:#83a598}
+.pcm-dialog.pcm-theme-night .pcm-ms-selected:hover{background:#504945!important}
+.pcm-dialog.pcm-theme-night :is(.pcm-group-finish,.pcm-vars-save){color:#83a598!important;border-color:#83a598!important}
+
+/* 自适应保留宿主的透明度和色相，用同源颜色混合替代固定的绿色块。 */
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-header{background:linear-gradient(110deg,color-mix(in srgb,var(--SmartThemeBodyColor) 5%,transparent),transparent)}
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-header h2{background:none;color:var(--SmartThemeBodyColor);-webkit-text-fill-color:currentColor}
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-pane-head{background:color-mix(in srgb,var(--SmartThemeBlurTintColor) 96%,var(--SmartThemeBodyColor) 4%)}
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-free-select:has(input:checked){background:color-mix(in srgb,var(--SmartThemeBodyColor) 13%,var(--SmartThemeBlurTintColor));border-color:color-mix(in srgb,var(--SmartThemeBodyColor) 55%,var(--SmartThemeBlurTintColor));color:var(--SmartThemeBodyColor)}
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-row.active{background:color-mix(in srgb,var(--SmartThemeBodyColor) 10%,transparent);box-shadow:inset 3px 0 var(--SmartThemeBodyColor)}
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .menu_button.pcm-primary{background:color-mix(in srgb,var(--SmartThemeBodyColor) 14%,var(--SmartThemeBlurTintColor))!important;border-color:color-mix(in srgb,var(--SmartThemeBodyColor) 50%,var(--SmartThemeBlurTintColor))!important;color:var(--SmartThemeBodyColor)!important;box-shadow:none}
+
+/* 所有模式共用几何与层次；自适应沿用宿主底色/文字，加少量鼠尾草色。 */
+.pcm-dialog{
+  --pcm-card-edge:color-mix(in srgb,var(--SmartThemeBodyColor) 42%,var(--SmartThemeBlurTintColor));
+  --pcm-card-bg:color-mix(in srgb,var(--SmartThemeBlurTintColor) 96%,#c9d8a8);
+  --pcm-row-bg:color-mix(in srgb,var(--SmartThemeBlurTintColor) 94%,#e4d4b7);
+  --pcm-row-edge:color-mix(in srgb,var(--SmartThemeBodyColor) 24%,var(--SmartThemeBlurTintColor));
+  --pcm-card-shade:#00000015;--pcm-card-glint:#ffffff19;
+  --pcm-selection:color-mix(in srgb,var(--SmartThemeBlurTintColor) 80%,#a2bc80);
+  --pcm-selection-edge:color-mix(in srgb,var(--SmartThemeBodyColor) 65%,#82a063);
+}
+.pcm-dialog.pcm-theme-day{--pcm-card-edge:#bca98a;--pcm-card-bg:#fffcf4;--pcm-row-bg:#fffaf0;--pcm-row-edge:#d9c9ac;--pcm-card-shade:#90744920;--pcm-card-glint:#ffffffc0;--pcm-selection:#eaf0da;--pcm-selection-edge:#7e955e}
+.pcm-dialog.pcm-theme-night{--pcm-card-edge:#928374;--pcm-card-bg:#282828;--pcm-row-bg:#32302f;--pcm-row-edge:#665c54;--pcm-card-shade:#00000038;--pcm-card-glint:#ffffff0a;--pcm-selection:#504945;--pcm-selection-edge:#a89984}
+.pcm-dialog .pcm-app .pcm-lists{gap:6px;padding:6px}
+.pcm-dialog .pcm-lists .pcm-pane{margin:0;border:2px solid var(--pcm-card-edge);border-radius:15px 12px 16px 13px;background:var(--pcm-card-bg);box-shadow:0 2px 0 var(--pcm-card-shade);overflow:hidden;grid-template-columns:minmax(0,1fr)}
+.pcm-dialog .pcm-pane .pcm-pane-head{background:var(--pcm-card-bg);border-bottom-color:var(--pcm-row-edge)}
+.pcm-dialog .pcm-pane .pcm-list{padding:3px 4px;background:var(--pcm-card-bg)}
+.pcm-dialog .pcm-pane .pcm-list .pcm-row{margin:3px 0;border:1px solid var(--pcm-row-edge);border-radius:9px 7px 10px 8px;background:linear-gradient(165deg,var(--pcm-card-glint),transparent 60%),var(--pcm-row-bg);color:var(--SmartThemeBodyColor);box-shadow:0 2px 0 var(--pcm-card-shade),inset 0 1px 0 var(--pcm-card-glint)}
+.pcm-dialog .pcm-pane .pcm-list .pcm-row:hover{border-color:var(--pcm-card-edge);background:var(--pcm-selection)}
+.pcm-dialog .pcm-pane .pcm-list .pcm-row.active{background:var(--pcm-selection);border-color:var(--pcm-selection-edge);box-shadow:inset 3px 0 var(--pcm-selection-edge),0 2px 0 var(--pcm-card-shade)}
+.pcm-dialog .pcm-pane .pcm-group{margin:4px 0;border:1.5px solid var(--pcm-card-edge);border-radius:11px 9px 12px 10px;background:var(--pcm-card-bg)}
+.pcm-dialog .pcm-pane .pcm-group-head{background:var(--pcm-selection);border-radius:9px 7px 0 0}
+.pcm-dialog .pcm-group.pcm-uninjected{border-style:dashed}
+.pcm-dialog .pcm-pane .pcm-list .pcm-row.pcm-row-disabled{opacity:.72}
+.pcm-dialog .pcm-pane .pcm-list .pcm-row.pcm-row-disabled:hover{opacity:.9}
+.pcm-dialog .pcm-pane .pcm-list .pcm-row.pcm-row-disabled .pcm-name{color:color-mix(in srgb,var(--SmartThemeBodyColor) 80%,var(--pcm-card-bg))}
+.pcm-dialog .pcm-pane .pcm-list .pcm-row.pcm-row-disabled .pcm-badge{opacity:.8}
+/* 拖拽落点保留明确指示，不能被卡片投影覆盖。 */
+.pcm-dialog .pcm-pane .pcm-list .pcm-row.pcm-drop-before{box-shadow:inset 0 4px #68c8ff}
+.pcm-dialog .pcm-pane .pcm-list .pcm-row.pcm-drop-after{box-shadow:inset 0 -4px #68c8ff}
+.pcm-dialog .pcm-version-editor{border:2px solid var(--pcm-card-edge);border-radius:12px;background:var(--pcm-card-bg);box-shadow:0 2px 0 var(--pcm-card-shade)}
+.pcm-dialog .pcm-version-forms{gap:8px}
+.pcm-dialog .pcm-compare{margin-inline:6px}
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) :is(.menu_button,.pcm-import,.pcm-free-select){border:1px solid var(--pcm-row-edge)!important;border-radius:9px;background:var(--pcm-card-bg)!important;box-shadow:0 2px 0 var(--pcm-card-shade);color:var(--SmartThemeBodyColor)!important}
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) :is(.menu_button.pcm-primary,.pcm-free-select:has(input:checked)){background:var(--pcm-selection)!important;border-color:var(--pcm-selection-edge)!important}
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) :is(.pcm-project-bar input,.pcm-tools input,.pcm-tools select){border:1px solid var(--pcm-row-edge)!important;border-radius:9px;background:var(--pcm-card-bg)!important}
+@media(max-width:900px){
+  /* 旧移动样式有 !important 的单边框，在此完整覆盖，宽度包含边框且不额外加 margin。 */
+  .pcm-dialog .pcm-app .pcm-lists{gap:5px;padding:4px}
+  .pcm-dialog .pcm-lists .pcm-pane{border:2px solid var(--pcm-card-edge)!important;margin:0;border-radius:13px 11px 14px 12px}
+  .pcm-dialog .pcm-pane .pcm-list{padding:2px 3px}
+  .pcm-dialog .pcm-pane .pcm-group{margin:3px 0!important}
+  .pcm-dialog .pcm-pane .pcm-list .pcm-row{margin:2px 0}
+  .pcm-dialog .pcm-version-forms{gap:6px}.pcm-dialog .pcm-version-editor{padding:8px}.pcm-dialog .pcm-compare{margin-inline:4px}
+}

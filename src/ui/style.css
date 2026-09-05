@@ -715,3 +715,37 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-worldbook-target .pcm-list{padding-bottom:var(--pcm-placement-height,130px)!important}
 .pcm-worldbook-target .pcm-row{cursor:crosshair}.pcm-worldbook-target .pcm-row:hover,.pcm-row.pcm-worldbook-anchor{outline:2px solid #68c8ff;outline-offset:-2px;background:color-mix(in srgb,#68c8ff 14%,transparent)!important}
 @media(max-width:520px){.pcm-worldbook-positions{flex-basis:100%;flex-wrap:nowrap}.pcm-worldbook-positions>.menu_button{flex:1;min-width:0;padding:6px 3px;font-size:11px;white-space:nowrap}.pcm-worldbook-placement .menu_button{font-size:12px;padding:6px 8px}.pcm-worldbook-placement{width:calc(100% - 16px);padding:8px}.pcm-worldbook-placement-actions{justify-content:stretch}.pcm-worldbook-placement-actions>.menu_button{flex:1;white-space:nowrap}}
+
+/* 工具箱首页：功能入口与预设编辑器共享主题变量。 */
+.pcm-view-hidden{display:none!important}
+/* 首页样式独立在 home.css，编辑器布局基线仍保留于下方。 */
+
+/* 奶油白与鼠尾草绿：沿用双栏、移动端上下列表及原有详情区，仅更新日间皮肤。 */
+.pcm-dialog.pcm-theme-day{--SmartThemeBorderColor:#e6e2d8;--SmartThemeBlurTintColor:#f8f6f0;--SmartThemeBodyColor:#303833;--pcm-input-bg:#fffefa;--pcm-input-bd:#e6e2d8;--pcm-surface:#fffefa;box-shadow:0 16px 56px #263b3026}
+.pcm-dialog.pcm-theme-day .pcm-header{background:linear-gradient(110deg,#edf3e8,#f8f6f0 70%);border-bottom-color:#e6e2d8}
+.pcm-dialog.pcm-theme-day .pcm-header h2{background:none;color:#303833;-webkit-text-fill-color:currentColor}
+.pcm-dialog.pcm-theme-day .pcm-pane{background:var(--pcm-surface);border-radius:16px;border:1px solid #e6e2d8;box-shadow:0 3px 12px #344d3706;overflow:hidden}
+.pcm-dialog.pcm-theme-day .pcm-pane-head{background:var(--pcm-surface)}
+.pcm-dialog.pcm-theme-day .pcm-tools,.pcm-dialog.pcm-theme-day .pcm-summary{border-bottom-color:#eeece5}
+.pcm-dialog.pcm-theme-day .pcm-list{padding:4px 6px}
+.pcm-dialog.pcm-theme-day .pcm-row{margin:2px 0;border-radius:9px;border-bottom-color:#eeece5}
+.pcm-dialog.pcm-theme-day .pcm-row:hover{background:#f1f5ec}
+.pcm-dialog.pcm-theme-day .pcm-row.active{background:#e9f2e5;box-shadow:inset 3px 0 #579669}
+.pcm-dialog.pcm-theme-day .pcm-group{border-radius:10px;border-color:#e6e2d8}
+.pcm-dialog.pcm-theme-day .pcm-group-head{background:#f2f5ed}
+.pcm-dialog.pcm-theme-day .menu_button,.pcm-dialog.pcm-theme-day .pcm-import{border-radius:10px;border-color:#e6e2d8!important;box-shadow:0 2px 5px #344d3705}
+.pcm-dialog.pcm-theme-day .menu_button:hover,.pcm-dialog.pcm-theme-day .pcm-import:hover{background:#f0f4e9!important;border-color:#c7d6bf!important}
+.pcm-dialog.pcm-theme-day .pcm-free-select{border-radius:10px;border-color:#e6e2d8;background:#fffefa;color:#4c564f}
+.pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:linear-gradient(135deg,#e5efdf,#edf4e8);border-color:#b5cda9;color:#2f6946;box-shadow:0 2px 8px #427b5810}
+.pcm-dialog.pcm-theme-day .pcm-compare{background:#fffefa;border-top-color:#afcba6;border-radius:16px 16px 0 0}
+.pcm-dialog.pcm-theme-day .pcm-compare-head{background:#fffefa}
+.pcm-dialog.pcm-theme-day .pcm-version-editor,.pcm-dialog.pcm-theme-day .pcm-picker-panel,.pcm-dialog.pcm-theme-day .pcm-worldbook-panel{border-radius:14px;border-color:#e6e2d8;background:#fffefa}
+@media(min-width:901px){.pcm-dialog.pcm-theme-day .pcm-lists{gap:10px;padding:10px}.pcm-dialog.pcm-theme-day .pcm-compare{margin:0 10px}}
+@media(max-width:900px){.pcm-dialog.pcm-theme-day .pcm-lists{gap:8px;padding:6px}.pcm-dialog.pcm-theme-day .pcm-pane{border-bottom:1px solid #e6e2d8!important;border-radius:14px}.pcm-dialog.pcm-theme-day .pcm-compare{margin-inline:6px}}
+/* 小尺寸 PC 仍用左右双栏；头部控件分两行，窗口按钮保持第一行最右侧。 */
+@media(min-width:901px) and (max-width:1250px){
+  .pcm-header{grid-template-columns:minmax(270px,1fr) auto!important;row-gap:8px}
+  .pcm-title-block{grid-column:1;grid-row:1}.pcm-window-actions{grid-column:2;grid-row:1}
+  .pcm-project-bar{grid-column:1;grid-row:2}.pcm-header-toggles{grid-column:2;grid-row:2}
+}
+@media(prefers-reduced-motion:reduce){.pcm-toolbox-card{transition:none}.pcm-toolbox-card:hover{transform:none}}
