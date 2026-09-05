@@ -683,3 +683,35 @@ dialog{font-family:var(--mainFontFamily)}
   .pcm-dialog>.pcm-picker:not([data-regex-panel]){padding-top:max(8px,var(--pcm-safe-top))!important;padding-right:max(8px,var(--pcm-safe-right))!important;padding-bottom:max(8px,var(--pcm-safe-bottom))!important;padding-left:max(8px,var(--pcm-safe-left))!important}
   .pcm-dialog>.pcm-picker:not([data-regex-panel]) .pcm-picker-panel{max-height:min(92vh,calc(100dvh - var(--pcm-safe-top) - var(--pcm-safe-bottom) - 16px))!important}
 }
+/* 世界书缝合：固定面板头尾，长条目列表独立滚动；沿用当前主题。 */
+.pcm-dialog.pcm-worldbook-open{overflow:hidden!important;overscroll-behavior:none!important}
+.pcm-worldbook-panel{width:min(900px,100%);max-width:100%;height:min(820px,90dvh);display:flex;flex-direction:column;overflow:hidden!important;min-height:0}
+.pcm-worldbook-panel .pcm-picker-head{flex:0 0 auto;gap:12px;min-width:0}
+.pcm-worldbook-panel .pcm-picker-head strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pcm-worldbook-body{display:flex;flex-direction:column;gap:8px;min-height:0;flex:1;padding:12px;overflow:auto;overscroll-behavior:contain}
+.pcm-worldbook-hint,.pcm-worldbook-status{font-size:12px;line-height:1.5;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.pcm-worldbook-hint{opacity:.8}.pcm-worldbook-status:empty{display:none}.pcm-worldbook-error{color:#dd6666}
+.pcm-worldbook-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.pcm-worldbook-controls input[type=search]{flex:1;min-width:120px;width:0}
+.pcm-worldbook-controls select{flex:1;min-width:100px;max-width:100%;width:0}
+.pcm-worldbook-panel input,.pcm-worldbook-panel select{color:inherit;background:transparent;border:1px solid var(--SmartThemeBorderColor,#888);border-radius:6px;padding:6px;box-sizing:border-box;font:inherit}
+.pcm-worldbook-panel option{color:CanvasText;background:Canvas}
+.pcm-worldbook-count{font-size:12px}.pcm-worldbook-list{flex:1;min-height:100px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--SmartThemeBorderColor,#888);border-radius:8px;padding:6px}
+.pcm-worldbook-entry{display:flex;align-items:flex-start;gap:8px;padding:8px 4px;border-bottom:1px solid var(--SmartThemeBorderColor,#888)}
+.pcm-worldbook-entry:last-child{border-bottom:0}.pcm-worldbook-entry input{flex:0 0 auto;width:16px;height:16px;margin:3px}
+.pcm-worldbook-entry details{min-width:0;flex:1}.pcm-worldbook-entry summary{cursor:pointer;overflow-wrap:anywhere;font-size:13px}
+.pcm-worldbook-entry small{display:block;font-size:11px;opacity:.7;margin:4px 0 0 14px}
+.pcm-worldbook-entry pre{font:12px/1.6 var(--monoFontFamily,monospace);white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;overscroll-behavior:contain;margin:8px 0}
+.pcm-worldbook-footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--SmartThemeBorderColor,#888);flex:0 0 auto}
+.pcm-worldbook-position{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 240px;font-size:12px}
+.pcm-worldbook-position select{min-width:0;width:0;flex:1}.pcm-worldbook-check{display:flex;gap:4px;align-items:center;font-size:12px}
+.pcm-tools [data-action=manage-worldbook]{flex:0 0 auto;white-space:nowrap}
+@media(max-width:520px){.pcm-worldbook-body{padding:8px;gap:6px}.pcm-worldbook-panel .menu_button{font-size:11px;padding:5px 7px;min-height:28px}.pcm-worldbook-hint{font-size:11px}.pcm-worldbook-footer{padding:8px;gap:6px}.pcm-worldbook-footer>.pcm-primary{margin-left:auto}.pcm-tools [data-action=manage-worldbook]{font-size:10px;padding:2px 5px;min-height:26px;height:26px}.pcm-worldbook-position{flex-basis:100%}}
+/* 世界书三种注入动作与对比列表选点条。 */
+.pcm-worldbook-positions{display:flex;gap:6px;flex:1;justify-content:flex-end;flex-wrap:wrap}
+.pcm-worldbook-placement{position:fixed;z-index:85;left:50%;bottom:max(12px,var(--pcm-safe-bottom));transform:translateX(-50%);width:min(580px,calc(100% - 24px));padding:10px 12px;border:1px solid var(--SmartThemeBorderColor);border-radius:12px;background:var(--SmartThemeBlurTintColor);color:var(--SmartThemeBodyColor);box-shadow:0 8px 32px #0006}
+.pcm-worldbook-placement-text{font-size:13px;line-height:1.4;margin-bottom:8px;overflow-wrap:anywhere;max-height:4.2em;overflow:auto}
+.pcm-worldbook-placement-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pcm-worldbook-target .pcm-list{padding-bottom:var(--pcm-placement-height,130px)!important}
+.pcm-worldbook-target .pcm-row{cursor:crosshair}.pcm-worldbook-target .pcm-row:hover,.pcm-row.pcm-worldbook-anchor{outline:2px solid #68c8ff;outline-offset:-2px;background:color-mix(in srgb,#68c8ff 14%,transparent)!important}
+@media(max-width:520px){.pcm-worldbook-positions{flex-basis:100%;flex-wrap:nowrap}.pcm-worldbook-positions>.menu_button{flex:1;min-width:0;padding:6px 3px;font-size:11px;white-space:nowrap}.pcm-worldbook-placement .menu_button{font-size:12px;padding:6px 8px}.pcm-worldbook-placement{width:calc(100% - 16px);padding:8px}.pcm-worldbook-placement-actions{justify-content:stretch}.pcm-worldbook-placement-actions>.menu_button{flex:1;white-space:nowrap}}

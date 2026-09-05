@@ -52,6 +52,17 @@ async function listTavernPresets() {
 }
 
 async function handleRequest(method, payload) {
+  if (method === 'list-worldbooks' || method === 'read-worldbook') {
+    const module = await import('/scripts/world-info.js');
+    const names = Array.isArray(module.world_names) ? module.world_names : [];
+    if (method === 'list-worldbooks') return [...names];
+    const name = String(payload?.name || '');
+    if (!names.includes(name)) throw new Error('该世界书不存在，请重新读取列表');
+    if (typeof module.loadWorldInfo !== 'function') throw new Error('当前酒馆不支持读取世界书，请导入世界书 JSON');
+    const data = await module.loadWorldInfo(name);
+    if (!data?.entries) throw new Error('世界书读取失败，请重试或导入世界书 JSON');
+    return clone(data);
+  }
   if (method === 'list-presets') return listTavernPresets();
   if (method === 'read-preset') {
     const manager = await getPresetManager();
