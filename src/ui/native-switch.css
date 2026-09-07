@@ -1,0 +1,33 @@
+/* 统一预设、世界书、正则与分组开关为原生灰色滑钮，保留可点击区域和键盘焦点。 */
+.pcm-snapshots input.pcm-native-switch,
+.pcm-dialog .pcm-control input[name="enabled"][type="checkbox"]{appearance:none;-webkit-appearance:none;position:relative;display:inline-block;vertical-align:middle;width:22px;height:12px;min-width:22px;min-height:12px;max-width:22px;padding:0;margin:0;flex:0 0 22px;border:0;border-radius:8px;background:#b8b8b8;box-shadow:inset 0 1px 2px #0002;cursor:pointer;transition:background .15s}
+.pcm-snapshots input.pcm-native-switch::before,
+.pcm-dialog .pcm-control input[name="enabled"][type="checkbox"]::before{content:'';position:absolute;left:2px;top:2px;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0002;transition:transform .15s}
+.pcm-snapshots input.pcm-native-switch:checked,
+.pcm-dialog .pcm-control input[name="enabled"][type="checkbox"]:checked{background:#747474}
+.pcm-snapshots input.pcm-native-switch:checked::before,
+.pcm-dialog .pcm-control input[name="enabled"][type="checkbox"]:checked::before{transform:translateX(10px)}
+.pcm-snapshots input.pcm-native-switch:indeterminate{background:#909090}
+.pcm-snapshots input.pcm-native-switch:indeterminate::before{transform:translateX(5px);width:8px;height:3px;top:4.5px;border-radius:1px}
+.pcm-snapshots input.pcm-native-switch:focus-visible{outline:2px solid var(--snap-accent);outline-offset:5px}
+.pcm-snapshots .is-off{opacity:.5}
+.pcm-snapshots .is-off .is-off{opacity:1}
+/* 触摸折叠标题不显示浏览器蓝色点击块，键盘导航仍保留 focus-visible。 */
+.pcm-snapshots summary,.pcm-snapshots summary *{-webkit-tap-highlight-color:transparent}
+.pcm-snapshots summary{user-select:none;-webkit-user-select:none}
+.pcm-snapshots summary:focus:not(:focus-visible){outline:none}
+.pcm-snapshots summary :is(input,select){user-select:auto;-webkit-user-select:auto}
+.pcm-snapshot-switch-display{position:relative;width:22px;height:12px;flex:none;border-radius:8px;background:#b8b8b8}
+.pcm-snapshot-switch-display::before{content:'';position:absolute;left:2px;top:2px;width:8px;height:8px;border-radius:50%;background:#fff}
+.pcm-snapshot-switch-display[data-enabled="true"]{background:#747474}
+.pcm-snapshot-switch-display[data-enabled="true"]::before{left:12px}
+.pcm-dialog .pcm-switch{width:30px;height:24px;border:0;background:transparent;border-radius:6px}
+.pcm-dialog:is(.pcm-theme-day,.pcm-theme-night,.pcm-theme-auto) .pcm-switch:is(.pcm-op-enabled,.pcm-op-disabled){background:transparent;border-color:transparent}
+.pcm-dialog .pcm-switch .pcm-switch-track{width:22px;height:12px;border-radius:8px}
+.pcm-dialog:is(.pcm-theme-day,.pcm-theme-night,.pcm-theme-auto) .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#747474}
+.pcm-dialog:is(.pcm-theme-day,.pcm-theme-night,.pcm-theme-auto) .pcm-switch.pcm-op-disabled .pcm-switch-track{background:#b8b8b8}
+.pcm-dialog:is(.pcm-theme-day,.pcm-theme-night,.pcm-theme-auto) .pcm-switch .pcm-switch-knob{top:2px;width:8px;height:8px;background:#fff;box-shadow:0 1px 2px #0002}
+.pcm-dialog .pcm-switch.pcm-op-enabled .pcm-switch-knob{left:12px}
+.pcm-dialog .pcm-switch.pcm-op-disabled .pcm-switch-knob{left:2px}
+.pcm-dialog .pcm-row-disabled .pcm-name{opacity:.5}
+@media(prefers-reduced-motion:reduce){.pcm-snapshots input.pcm-native-switch,.pcm-snapshots input.pcm-native-switch::before{transition:none}}

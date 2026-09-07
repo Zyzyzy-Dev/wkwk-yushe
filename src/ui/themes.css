@@ -16,7 +16,7 @@
 .pcm-dialog.pcm-theme-day .menu_button:hover,.pcm-dialog.pcm-theme-day .pcm-import:hover{background:#f0eedb!important;border-color:#b9bb94!important;color:#4b3b2d!important}
 .pcm-dialog.pcm-theme-day .menu_button.pcm-primary{background:linear-gradient(125deg,#737c4a,#58683c)!important;border-color:#737c4a!important;color:#fffaf2!important;box-shadow:0 2px 9px #707b4e24}
 .pcm-dialog.pcm-theme-day .menu_button.pcm-primary:hover{background:linear-gradient(125deg,#6a7543,#516234)!important;box-shadow:0 3px 12px #707b4e30;filter:none}
-.pcm-dialog.pcm-theme-day input,.pcm-dialog.pcm-theme-day select{background-color:#fffaf2!important;border-color:#dfcfb9!important;color:#4b3b2d!important}
+.pcm-dialog.pcm-theme-day input:not([type="checkbox"]),.pcm-dialog.pcm-theme-day select{background-color:#fffaf2!important;border-color:#dfcfb9!important;color:#4b3b2d!important}
 .pcm-dialog.pcm-theme-day .pcm-inline-content textarea:not(.pcm-live-area),.pcm-dialog.pcm-theme-day .pcm-vars-raw textarea{background:#fffaf2!important;border-color:#dfcfb9!important;color:#4b3b2d!important;-webkit-text-fill-color:#4b3b2d!important;caret-color:#4b3b2d!important}
 .pcm-dialog.pcm-theme-day .pcm-free-select{background:#fffaf2;border-color:#dfcfb9;color:#705f4d}
 .pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:linear-gradient(125deg,#e5e9d6,#f0f0de);border-color:#b8c095;color:#495c32;box-shadow:0 2px 7px #707b4e10}

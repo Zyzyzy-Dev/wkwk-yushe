@@ -56,11 +56,13 @@ window.addEventListener('message', event => {
 async function request(method, payload) {
   await connection;
   const id = ++requestId;
+  // 多本世界书需要逐本保存与读回核验，不能沿用单次编辑操作的短超时。
+  const timeoutMs = method.startsWith('snapshot-') ? 180_000 : REQUEST_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);
       reject(new Error(`宿主请求超时：${method}`));
-    }, REQUEST_TIMEOUT_MS);
+    }, timeoutMs);
     pending.set(id, { resolve, reject, timer });
     port.postMessage({ type: 'request', id, method, payload });
   });

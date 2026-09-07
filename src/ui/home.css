@@ -29,6 +29,7 @@
 .pcm-toolbox-card:hover{transform:translateY(-2px);box-shadow:1px 7px 0 var(--home-shadow)}
 .pcm-toolbox-card-icon{display:block;flex:0 0 86px;width:86px;height:86px;transform:rotate(-5deg)}
 .pcm-toolbox-card-icon img{display:block;width:100%;height:100%;object-fit:contain}
+.pcm-snapshot-home-icon{padding:15px;color:var(--home-accent);transform:rotate(3deg)}
 .pcm-toolbox-card-copy{flex:1;min-width:0}
 .pcm-toolbox-card-copy strong{display:block;font-size:25px;line-height:1.4;font-weight:750;letter-spacing:.04em}
 .pcm-toolbox-card-copy small{display:block;margin-top:5px;font-size:13px;line-height:1.15;color:var(--home-muted)}

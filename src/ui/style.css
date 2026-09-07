@@ -283,10 +283,10 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-dialog.pcm-theme-night .pcm-close:hover{background:rgba(251,73,52,0.18);color:#fb4934;box-shadow:0 0 0 3px rgba(251,73,52,0.25)}
 
 /* 控件与下拉框：Gruvbox 暖暗底 + 米黄文字 + 暖灰边框 */
-.pcm-dialog.pcm-theme-night input{background:#1d2021!important;border:1px solid #504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night input:not([type="checkbox"]){background:#1d2021!important;border:1px solid #504945!important;color:#ebdbb2!important}
 .pcm-dialog.pcm-theme-night select{background-color:#1d2021!important;border:1px solid #504945!important;color:#ebdbb2!important}
 .pcm-dialog.pcm-theme-night textarea{background:#1d2021!important;border:1px solid #45403d!important;color:#ebdbb2!important;-webkit-text-fill-color:#ebdbb2!important;caret-color:#ebdbb2!important;text-shadow:none!important}
-.pcm-dialog.pcm-theme-night .pcm-inline-form input{background:#1d2021!important;border:1px solid #504945!important;color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-night .pcm-inline-form input:not([type="checkbox"]){background:#1d2021!important;border:1px solid #504945!important;color:#ebdbb2!important}
 .pcm-dialog.pcm-theme-night .pcm-editwrap.live>.pcm-live-area{background:#1d2021!important;color:#ebdbb2!important;-webkit-text-fill-color:#ebdbb2!important;caret-color:#ebdbb2!important}
 
 /* 按钮与导入标签 */
@@ -372,7 +372,7 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-dialog.pcm-theme-day .pcm-header{background:linear-gradient(180deg,#427b580d,transparent 70%)}
 .pcm-dialog.pcm-theme-day .pcm-header h2{background:linear-gradient(90deg,#3c3836 30%,#79740edd);-webkit-background-clip:text;background-clip:text}
 .pcm-dialog.pcm-theme-day .pcm-close:hover{background:#9d000614;color:#9d0006;box-shadow:0 0 0 3px #9d000621}
-.pcm-dialog.pcm-theme-day input,.pcm-dialog.pcm-theme-day textarea{background:var(--pcm-input-bg)!important;border-color:var(--pcm-input-bd)!important;color:#3c3836!important}
+.pcm-dialog.pcm-theme-day input:not([type="checkbox"]),.pcm-dialog.pcm-theme-day textarea{background:var(--pcm-input-bg)!important;border-color:var(--pcm-input-bd)!important;color:#3c3836!important}
 .pcm-dialog.pcm-theme-day select{background-color:#fffefa!important;border:1px solid #ddd3bf!important;color:#3c3836!important}
 .pcm-dialog.pcm-theme-day .menu_button{background:#fffefa!important;border-color:#ddd3bf!important;color:#3c3836!important}
 .pcm-dialog.pcm-theme-day .menu_button:hover{background:#f3ecdc!important;border-color:#cabfa4!important;color:#28251f!important}

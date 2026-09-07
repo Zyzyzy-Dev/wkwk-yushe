@@ -24,6 +24,11 @@ export function createToolboxHome({ themeIcon, onCycleTheme }) {
         <span class="pcm-toolbox-card-copy"><strong>预设编辑</strong><small><span>预设对比 · 缝合 · 迁移</span><span>变量检查 · 预设正则缝合</span><span>世界书条目一键迁移到预设</span></small></span>
         <span class="pcm-home-card-go" aria-hidden="true">${arrow}</span>
       </button>
+      <button type="button" class="pcm-toolbox-card pcm-snapshot-home-card" data-action="open-snapshots">
+        <span class="pcm-toolbox-card-icon pcm-snapshot-home-icon" aria-hidden="true">${svg('<rect x="3" y="6" width="18" height="15" rx="3"/><path d="M8 6l2-3h4l2 3"/><circle cx="12" cy="13" r="4"/>')}</span>
+        <span class="pcm-toolbox-card-copy"><strong>设置快照</strong><small><span>预设开关 · 全局世界书挂载</span><span>一键切换 · 绑定聊天或角色</span></small></span>
+        <span class="pcm-home-card-go" aria-hidden="true">${arrow}</span>
+      </button>
       <img class="pcm-home-coming-soon" src="${comingSoon}" alt="更多酒馆工具将陆续加入" width="1536" height="1024" draggable="false">
     </div>
     <button type="button" class="pcm-home-flip" aria-label="点我翻转查看GPT巨作" aria-pressed="false">
