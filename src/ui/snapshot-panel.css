@@ -1,4 +1,10 @@
 /* 设置快照独立页面：三主题卡片、可换行操作与移动安全区，不改变预设编辑器布局。 */
+.pcm-snapshot-scope-picker{display:flex;flex-wrap:wrap;gap:10px 18px;min-width:0;margin:12px 0;padding:10px 12px;border:1px solid var(--snap-border);border-radius:8px}
+.pcm-snapshot-scope-picker legend{padding:0 5px;font-weight:600}
+.pcm-snapshot-scope-picker .pcm-snapshot-check{display:flex;align-items:center;gap:7px;margin:0}
+.pcm-snapshot-scope-picker small{flex-basis:100%;opacity:.8}
+.pcm-snapshot-saved-scope{margin:4px 0;font-size:.85em;opacity:.85}
+.pcm-snapshot-editor [data-snapshot-scope][hidden]{display:none!important}
 .pcm-snapshots{--snap-bg:var(--SmartThemeBlurTintColor);--snap-fg:var(--SmartThemeBodyColor);--snap-border:color-mix(in srgb,var(--snap-fg) 38%,var(--snap-bg));--snap-card:color-mix(in srgb,var(--snap-bg) 93%,var(--snap-fg));--snap-accent:#a6b8bf;min-height:100%;padding:22px 26px 40px;color:var(--snap-fg);background:var(--snap-bg);line-height:1.5;overflow-wrap:anywhere}
 .pcm-theme-day .pcm-snapshots{--snap-bg:#faf6ec;--snap-fg:#594735;--snap-card:#fffdf5;--snap-border:#c3ad91;--snap-accent:#526779}
 .pcm-theme-night .pcm-snapshots{--snap-bg:#282828;--snap-fg:#ebdbb2;--snap-card:#32302f;--snap-border:#82776a;--snap-accent:#a9bdc9}

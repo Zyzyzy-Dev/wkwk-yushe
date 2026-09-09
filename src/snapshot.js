@@ -2,6 +2,25 @@
 import { createIdentifier, findPromptOrderEntry } from './core.js';
 import { validateSnapshotResources } from './snapshot-resources.js';
 
+export function snapshotScope(snapshot) {
+  if (snapshot.scope === undefined) return {preset:true, worlds:true, regex:!!snapshot.resources};
+  const scope = snapshot.scope;
+  if (!scope || ['preset','worlds','regex'].some(key => typeof scope[key] !== 'boolean') || !['preset','worlds','regex'].some(key => scope[key])) throw new Error('请至少勾选一项有效的快照保存范围');
+  return {preset:scope.preset, worlds:scope.worlds, regex:scope.regex};
+}
+
+// 未选范围从持久化副本中移除；编辑页仍保留本轮草稿，重新勾选不会丢失修改。
+export function selectSnapshotScope(snapshot) {
+  const scope = snapshotScope(snapshot), saved = {...snapshot, scope};
+  if (!scope.preset) {saved.entries=[];saved.groups=[];}
+  if (!scope.worlds) saved.worldNames=[];
+  if (snapshot.resources) saved.resources = {...snapshot.resources,
+    ...(!scope.worlds ? {worlds:{global:[]},worldEntries:[]} : {}),
+    ...(!scope.regex ? {regex:{global:[],preset:[],character:[]}} : {}),
+  };
+  return saved;
+}
+
 export function normalizeSnapshotName(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 120) throw new Error('快照名称须为 1–120 个字符');
   return value.trim();
@@ -30,9 +49,11 @@ export function snapshotOrder(settings, characterId) {
 }
 
 export function validateSnapshot(snapshot) {
-  if (!snapshot || typeof snapshot.id !== 'string' || !snapshot.id || typeof snapshot.presetName !== 'string' || !snapshot.presetName) throw new Error('快照数据无效，请重新保存');
+  if (!snapshot || typeof snapshot.id !== 'string' || !snapshot.id) throw new Error('快照数据无效，请重新保存');
+  const scope = snapshotScope(snapshot);
+  if (scope.preset && (typeof snapshot.presetName !== 'string' || !snapshot.presetName)) throw new Error('快照预设无效');
   normalizeSnapshotName(snapshot.name);
-  if (!['string', 'number'].includes(typeof snapshot.orderCharacterId)) throw new Error('快照预设节点无效');
+  if (scope.preset && !['string', 'number'].includes(typeof snapshot.orderCharacterId)) throw new Error('快照预设节点无效');
   uniqueRecords(snapshot.entries, 'identifier');
   uniqueRecords(snapshot.groups, 'id');
   names(snapshot.worldNames);
@@ -88,13 +109,15 @@ export function snapshotPresetSections(items, groups, metadata) {
 }
 
 export function planSnapshotRestore(snapshot, { settings, orderCharacterId, groupState, worldNames }) {
+  snapshot = selectSnapshotScope(snapshot);
   validateSnapshot(snapshot);
-  if (String(snapshot.orderCharacterId) !== String(orderCharacterId)) throw new Error('快照与当前预设的条目节点不同，请重新保存快照');
-  const order = snapshotOrder(settings, orderCharacterId);
+  const scope = snapshotScope(snapshot);
+  if (scope.preset && String(snapshot.orderCharacterId) !== String(orderCharacterId)) throw new Error('快照与当前预设的条目节点不同，请重新保存快照');
+  const order = scope.preset ? snapshotOrder(settings, orderCharacterId) : [];
   const ids = new Set(order.map(entry => entry?.identifier));
   if (ids.size !== order.length) throw new Error('当前条目列表存在重复 ID，无法安全恢复');
   const groupIds = new Set((groupState?.groups || []).map(group => String(group.id)));
-  const availableBooks = new Set(names(worldNames));
+  const availableBooks = new Set(scope.worlds ? names(worldNames) : []);
   return {
     entries: snapshot.entries.filter(entry => ids.has(entry.identifier)).map(({identifier, enabled}) => ({identifier, enabled})),
     groups: snapshot.groups.filter(group => groupIds.has(group.id)).map(({id, enabled}) => ({id, enabled})),
