@@ -56,7 +56,7 @@ test('regex switches match stable IDs with independent sources and retain latest
   const result=restoreRegexSwitches(saved,source);
   assert.equal(result.scripts[0].disabled,true); assert.equal(result.scripts[0].findRegex,'new'); assert.equal(result.scripts[1].disabled,true); assert.equal(source[0].disabled,false);
   assert.deepEqual(restoreRegexSwitches(saved,[]).missing,['旧名']);
-  assert.throws(()=>captureRegexSwitches([{id:'a'},{id:'a'}]));
+  assert.equal(new Set(captureRegexSwitches([{id:'a'},{id:'a'}]).map(row=>row.id)).size,2);
 });
 test('resources validate empty mounts but reject invalid scopes, content injection and unsafe keys', () => {
   const base={worlds:{global:[],character:[],chat:[]},worldEntries:[],regex:{global:[],preset:[],character:[]}};
@@ -67,4 +67,31 @@ test('resources validate empty mounts but reject invalid scopes, content injecti
   assert.equal(validateSnapshotResources(withBook),withBook);
   for(const settings of [{content:'overwrite'},{disable:'false'},JSON.parse('{"__proto__":{"polluted":true}}')]) assert.throws(()=>validateSnapshotResources({...withBook,worldEntries:[{...book,entries:[{...book.entries[0],settings}]}]}));
   assert.throws(()=>validateSnapshotResources({...withBook,worldEntries:[]}));
+});
+
+test('legacy regex IDs tolerate duplicates and missing names without mutating sources or confusing reordered definitions', () => {
+  const scripts=[{id:'same',scriptName:'A',findRegex:'a',disabled:true},{id:'same',scriptName:'B',findRegex:'b',disabled:false},{findRegex:'anonymous',disabled:true},{scriptName:'legacy',findRegex:'one'},{scriptName:'legacy',findRegex:'two',disabled:true},{id:'stable',findRegex:'old'}];
+  const original=structuredClone(scripts),saved=captureRegexSwitches(scripts);
+  assert.equal(new Set(saved.map(row=>row.id)).size,6);
+  assert.equal(saved[5].id,'stable');assert.deepEqual(scripts,original);
+  const current=scripts.toReversed().map(script=>({...script,disabled:false}));current[0].findRegex='new';
+  const restored=restoreRegexSwitches(saved,current);
+  assert.deepEqual(restored.missing,[]);
+  assert.deepEqual(restored.scripts.map(script=>script.disabled),[false,true,false,true,false,true]);
+  assert.equal(restored.scripts[0].findRegex,'new');
+  const view=resources.regexEditor(current,null,saved);
+  assert.deepEqual(view.entries.map(entry=>entry.findRegex),['a','b','anonymous','one','two','new']);
+  assert(view.entries.every(entry=>!entry.missing));
+  assert.equal(restoreRegexSwitches(saved,[{...scripts[0],disabled:false}]).scripts[0].disabled,true);
+  // An old ambiguous ID must not arbitrarily select one of the conflicting records.
+  assert.deepEqual(restoreRegexSwitches([{id:'same',name:'old',enabled:false}],scripts).missing,['old']);
+});
+
+test('identical legacy definitions keep distinct switches; changed multiplicity is reported missing', () => {
+  const scripts=[{id:'dup',findRegex:'x',disabled:true},{id:'dup',findRegex:'x',disabled:false}];
+  const saved=captureRegexSwitches(scripts);
+  const result=restoreRegexSwitches(saved,scripts.map(script=>({...script,disabled:false})));
+  assert.deepEqual(result.scripts.map(script=>script.disabled),[true,false]);
+  assert.equal(restoreRegexSwitches(saved,[scripts[0]]).missing.length,2);
+  assert(saved.every(row=>!JSON.stringify(row).includes('findRegex')));
 });

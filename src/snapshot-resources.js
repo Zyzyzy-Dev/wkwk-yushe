@@ -47,15 +47,40 @@ export function restoreWorldEntries(saved, current) {
   return {data,missing};
 }
 function regexId(script) {return String(script?.id || (script?.scriptName ? 'name:'+script.scriptName : ''));}
+// 旧正则兼容标识：正常 ID 保持原样，冲突/缺失时按定义生成局部键，不改写宿主正则。
+function regexRecords(scripts) {
+  if (!Array.isArray(scripts) || scripts.some(script=>!object(script))) throw new Error('正则列表格式无效');
+  const counts=new Map(), fingerprints=new Map();
+  const canonical=value=>Array.isArray(value)?value.map(canonical):object(value)?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
+  const digest=text=>{let a=2166136261,b=5381;for(let i=0;i<text.length;i++){a=Math.imul(a^text.charCodeAt(i),16777619);b=Math.imul(b,33)^text.charCodeAt(i);}return (a>>>0).toString(16).padStart(8,'0')+(b>>>0).toString(16).padStart(8,'0');};
+  const records=scripts.map(script=>{
+    const raw=regexId(script);
+    // enabled/disabled are snapshot state, never part of identity.
+    const definition=JSON.stringify(canonical(Object.fromEntries(Object.entries(script).filter(([key])=>key!=='disabled'))));
+    const hash=digest(definition);
+    if(fingerprints.has(hash)&&fingerprints.get(hash)!==definition)throw new Error('正则兼容标识冲突，请为正则设置不同 ID');
+    fingerprints.set(hash,definition);counts.set(raw,(counts.get(raw)||0)+1);
+    return {script,raw,hash};
+  });
+  const totals=new Map(),used=new Map();for(const row of records)totals.set(row.hash,(totals.get(row.hash)||0)+1);
+  const rawIds=new Set(records.map(row=>row.raw));
+  for(const row of records){
+    const ordinal=used.get(row.hash)||0;used.set(row.hash,ordinal+1);
+    // Identical definitions use their occurrence only within that definition, not the whole array.
+    let fallback='snapshot-regex:'+row.hash+':'+totals.get(row.hash)+':'+ordinal;
+    while(rawIds.has(fallback))fallback='snapshot-regex:'+fallback;
+    row.fallback=fallback;row.id=row.raw&&counts.get(row.raw)===1?row.raw:fallback;
+  }
+  return records;
+}
+
 export function captureRegexSwitches(scripts) {
-  if (!Array.isArray(scripts)) throw new Error('正则列表格式无效');
-  const result=scripts.map(script=>({id:regexId(script),name:String(script.scriptName || script.id || ''),enabled:script.disabled !== true}));
+  const result=regexRecords(scripts).map(({id,script})=>({id,name:String(script.scriptName || script.id || '未命名正则'),enabled:script.disabled !== true}));
   unique(result,'id');return result;
 }
 export function restoreRegexSwitches(saved, current) {
   unique(saved,'id');const scripts=copy(current), records=new Map();
-  captureRegexSwitches(scripts);
-  for (const script of scripts) records.set(regexId(script),script);
+  for (const record of regexRecords(scripts)) {records.set(record.id,record.script);records.set(record.fallback,record.script);}
   const missing=[];
   for (const item of saved) {
     if (typeof item.enabled !== 'boolean') throw new Error('正则开关格式无效');
@@ -71,7 +96,8 @@ function regexGroupRecords(state) {
   return groups;
 }
 export function regexEditor(scripts, state, saved = captureRegexSwitches(scripts)) {
-  const source = new Map(scripts.map(script => [regexId(script),script]));
+  const source = new Map();
+  for(const record of regexRecords(scripts)){source.set(record.id,record.script);source.set(record.fallback,record.script);}
   const groups = regexGroupRecords(state), ids = new Set(groups.map(group => group.id));
   const entries = saved.map((item,index) => {
     const script = source.get(item.id), meta=state?.scripts?.[script?.id],groupId = String(meta?.groupId||'');

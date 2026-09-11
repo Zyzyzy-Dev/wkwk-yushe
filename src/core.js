@@ -393,6 +393,134 @@ export function reorderRegexScript(preset, sourceIndex, options = {}) {
   return { index: insertIndex };
 }
 
+// 整批正则先静态配对并在隔离草稿中排位；全部成功后一次写回 extensions。
+// beforeIndex 是操作前 regex_scripts 的锚点下标，null 表示指定组/列表末尾。
+export function transferRegexScripts(sourcePreset, targetPreset, sourceSide, sourceIndexes, options = {}) {
+  if (!['old', 'new'].includes(sourceSide)) throw new Error('正则来源版本无效。');
+  if (!sourcePreset || !targetPreset) throw new Error('请先导入两份预设。');
+  const source = getRegexScripts(sourcePreset), target = getRegexScripts(targetPreset);
+  if (!Array.isArray(sourceIndexes) || !sourceIndexes.length) throw new Error('请先选择正则。');
+  const selected = new Set(sourceIndexes);
+  for (const index of selected) {
+    if (!Number.isInteger(index) || index < 0 || index >= source.length || !source[index]
+      || typeof source[index] !== 'object' || Array.isArray(source[index])) throw new Error('所选正则已失效，请重新选择。');
+  }
+  const sameSide = sourcePreset === targetPreset;
+  const explicit = Object.hasOwn(options, 'beforeIndex') || Object.hasOwn(options, 'beforeId')
+    || options.targetGroupId != null;
+  const visualIndexes = preset => {
+    const model = getRegexGroupModel(preset);
+    return model.enabled ? model.groups.flatMap(group => group.scripts.map(item => item.index))
+      : getRegexScripts(preset).map((_, index) => index);
+  };
+  const sourceOrder = visualIndexes(sourcePreset), indexes = sourceOrder.filter(index => selected.has(index));
+  const draft = { extensions: clone(targetPreset.extensions || {}) };
+  if (!draft.extensions || typeof draft.extensions !== 'object' || Array.isArray(draft.extensions)) draft.extensions = {};
+  const extensionBefore = regexGroupExtension(targetPreset);
+  const entries = visualIndexes(targetPreset).map(index => ({
+    script: clone(target[index]), originalIndex: index,
+    groupId: extensionBefore ? scriptGroupId(targetPreset, target[index]) : null,
+    metadata: clone(extensionBefore?.scripts?.[String(target[index]?.id || '')] || {}),
+  }));
+  const originals = new Map(entries.map(entry => [entry.originalIndex, entry]));
+  const targetSide = sourceSide === 'old' ? 'new' : 'old';
+  const pairs = sameSide ? [] : pairRegexScripts(sourceSide === 'old' ? sourcePreset : targetPreset,
+    sourceSide === 'new' ? sourcePreset : targetPreset);
+  const counterparts = new Map(pairs.filter(pair => pair[sourceSide + 'Index'] !== null
+    && pair[targetSide + 'Index'] !== null).map(pair => [pair[sourceSide + 'Index'], originals.get(pair[targetSide + 'Index'])]));
+  let anchor = null;
+  if (options.beforeIndex != null) {
+    if (!Number.isInteger(options.beforeIndex) || !originals.has(options.beforeIndex)) throw new Error('目标位置已失效。');
+    anchor = originals.get(options.beforeIndex);
+  } else if (!Object.hasOwn(options, 'beforeIndex') && options.beforeId) {
+    const matches = entries.filter(entry => String(entry.script?.id || '') === String(options.beforeId));
+    if (matches.length !== 1) throw new Error('目标位置不存在或 ID 不唯一，请重新拖拽。');
+    anchor = matches[0];
+  }
+  let targetGroupId = options.targetGroupId;
+  if (targetGroupId != null) {
+    const extension = ensureRegexGroupExtension(draft);
+    if (targetGroupId !== REGEX_UNGROUPED_ID && !normalizedRegexGroups(extension).some(group => group.id === targetGroupId)) {
+      throw new Error('目标分组已失效。');
+    }
+    if (anchor && (anchor.groupId || REGEX_UNGROUPED_ID) !== targetGroupId) throw new Error('目标位置不属于指定分组。');
+  } else if (explicit || sameSide) targetGroupId = anchor?.groupId ?? (extensionBefore ? REGEX_UNGROUPED_ID : null);
+  const moving = indexes.map(index => {
+    const previous = sameSide ? originals.get(index) : counterparts.get(index);
+    const entry = { script: clone(source[index]), originalIndex: previous?.originalIndex,
+      metadata: clone(previous?.metadata || {}), groupId: previous?.groupId ?? null };
+    if (explicit || sameSide) entry.groupId = targetGroupId;
+    else if (!previous) entry.groupId = mapSourceRegexGroup(sourcePreset, draft, source[index]);
+    return { index, previous, entry };
+  });
+  const groupEnd = (list, groupId) => {
+    if (groupId === null) return list.length;
+    const last = list.findLastIndex(entry => (entry.groupId || REGEX_UNGROUPED_ID) === groupId);
+    if (last >= 0) return last + 1;
+    const ids = [...normalizedRegexGroups(regexGroupExtension(draft)).map(group => group.id), REGEX_UNGROUPED_ID];
+    const position = ids.indexOf(groupId);
+    const next = list.findIndex(entry => ids.indexOf(entry.groupId || REGEX_UNGROUPED_ID) > position);
+    return next < 0 ? list.length : next;
+  };
+  let result = [...entries];
+  if (explicit || sameSide) {
+    const removed = new Set(moving.map(item => item.previous).filter(Boolean));
+    const anchorPosition = anchor ? entries.indexOf(anchor) : -1;
+    result = result.filter(entry => !removed.has(entry));
+    // An anchor that is itself overwritten/moved resolves to its next surviving neighbor in the same group.
+    if (anchor && removed.has(anchor)) anchor = entries.slice(anchorPosition + 1)
+      .find(entry => !removed.has(entry) && entry.groupId === anchor.groupId) || null;
+    const at = anchor ? result.indexOf(anchor) : groupEnd(result, targetGroupId);
+    result.splice(at, 0, ...moving.map(item => item.entry));
+  } else {
+    const mapped = new Map(counterparts);
+    for (const { index, previous, entry } of moving) {
+      if (previous) result[result.indexOf(previous)] = entry;
+      else {
+        let at = groupEnd(result, entry.groupId);
+        if (entry.groupId === null) {
+          const sourcePosition = sourceOrder.indexOf(index);
+          const before = sourceOrder.slice(0, sourcePosition).reverse().map(i => mapped.get(i)).find(item => result.includes(item));
+          const after = sourceOrder.slice(sourcePosition + 1).map(i => mapped.get(i)).find(item => result.includes(item));
+          if (before) at = result.indexOf(before) + 1;
+          else if (after) at = result.indexOf(after);
+        }
+        result.splice(at, 0, entry);
+      }
+      mapped.set(index, entry);
+    }
+  }
+  const extension = regexGroupExtension(draft);
+  if (extension) {
+    const ids = new Set(), counters = new Map(), metadata = { ...extension.scripts };
+    // 无 ID 条目按数组下标回退排序；同组有这类条目时其他成员必须使用相同坐标。
+    const indexOrderedGroups = new Set(result.filter(entry => !String(entry.script?.id || ''))
+      .map(entry => entry.groupId || REGEX_UNGROUPED_ID));
+    if (indexOrderedGroups.size && metadata['']) {
+      metadata[''] = { ...metadata[''] };
+      delete metadata[''].order;
+    }
+    const liveIds = new Set(result.map(entry => String(entry.script?.id || '')).filter(Boolean));
+    for (const item of moving) {
+      const previousId = String(item.previous?.script?.id || '');
+      if (previousId && !liveIds.has(previousId)) delete metadata[previousId];
+    }
+    for (const [index, entry] of result.entries()) {
+      const id = String(entry.script?.id || '');
+      if (!id) continue;
+      if (ids.has(id)) throw new Error('分组正则包含重复 ID，无法安全更新分组，请先修正 ID。');
+      ids.add(id);
+      const groupId = entry.groupId || REGEX_UNGROUPED_ID, order = counters.get(groupId) || 0;
+      counters.set(groupId, order + 1);
+      metadata[id] = { ...entry.metadata, groupId, order: indexOrderedGroups.has(groupId) ? index : order };
+    }
+    extension.scripts = metadata;
+  }
+  draft.extensions.regex_scripts = result.map(entry => entry.script);
+  if (!equalValues(targetPreset.extensions, draft.extensions)) targetPreset.extensions = draft.extensions;
+  return { count: indexes.length, overwritten: sameSide ? 0 : moving.filter(item => item.previous).length };
+}
+
 function bigramSet(text) {
   const result = new Set();
   if (text.length < 2) {

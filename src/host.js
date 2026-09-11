@@ -5,6 +5,57 @@ import { applyPresetToMemory, shouldRefreshActivePreset } from './core.js';
 import { captureSnapshot, normalizeSnapshotName, planSnapshotRestore, resolveSnapshotBinding, snapshotOrder, validateSnapshot, snapshotPresetEditor, snapshotScope, selectSnapshotScope } from './snapshot.js';
 import { captureWorldEntries, restoreWorldEntries, captureRegexSwitches, restoreRegexSwitches, validateSnapshotResources, normalizeSnapshotResources, regexEditor } from './snapshot-resources.js';
 import { createIdentifier } from './core.js';
+import { normalizeWorkbenchBook } from './worldbook-workbench.js';
+
+// Track native worldbook writes from module startup, not only after a workbench window opens.
+// Other URLs, the fetch receiver/arguments, and the exact returned Promise are left untouched.
+const workbenchWorldWrites = installWorkbenchWorldWriteGuard();
+
+function installWorkbenchWorldWriteGuard() {
+  const original = globalThis.fetch;
+  const state = {pending: new Set(), uncertain: false, fetch: null, version: 0};
+  function guardedFetch(...args) {
+    let tracked = false;
+    try {
+      const input = args[0], url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url, location.href);
+      tracked = url.origin === location.origin && url.pathname === '/api/worldinfo/edit';
+    } catch { /* Native fetch owns input validation and its original error behavior. */ }
+    if (!tracked) return Reflect.apply(original, this, args);
+    state.version++;
+    let finish;
+    const pending = new Promise(resolve => {finish = resolve;});
+    state.pending.add(pending);
+    const done = () => {state.pending.delete(pending); finish();};
+    let request;
+    try {request = Reflect.apply(original, this, args);}
+    catch (error) {state.uncertain = true; done(); throw error;}
+    // A network error/abort has no confirmed server completion. Keep future overwrites blocked until reload.
+    Promise.resolve(request).then(response => response.clone().arrayBuffer()).catch(() => {state.uncertain = true;}).then(done);
+    return request;
+  }
+  state.fetch = guardedFetch;
+  globalThis.fetch = guardedFetch;
+  return state;
+}
+
+async function awaitWorkbenchWorldWrites() {
+  if (globalThis.fetch !== workbenchWorldWrites.fetch) throw new Error('世界书保存请求追踪已被其他扩展替换，请刷新酒馆后重试');
+  await withSnapshotTimeout((async () => {
+    while (workbenchWorldWrites.pending.size) await Promise.all([...workbenchWorldWrites.pending]);
+  })(), '原生世界书仍在保存，尚未覆盖写入；请等待完成后重试');
+  if (workbenchWorldWrites.uncertain) throw new Error('有世界书写入请求异常，无法确认服务器已完成保存；请核对数据并刷新酒馆后重试');
+}
+
+async function stableWorkbenchWorldRead(read) {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    await awaitWorkbenchWorldWrites();
+    const version = workbenchWorldWrites.version;
+    const value = await read();
+    // A native POST can start while the GET is in flight. Drain it and repeat the GET before trusting it.
+    if (version === workbenchWorldWrites.version && globalThis.fetch === workbenchWorldWrites.fetch && !workbenchWorldWrites.uncertain) return value;
+  }
+  throw new Error('原生世界书持续发生写入，无法取得稳定数据；请稍后重试');
+}
 
 const APP_ID = 'preset-compare-migrator';
 const APP_TITLE = '预设更新编辑器';
@@ -55,6 +106,10 @@ async function listTavernPresets() {
 }
 
 async function handleRequest(method, payload) {
+  if (method === 'workbench-read-worldbook' || method === 'workbench-save-worldbook') {
+    // Share the resource queue with snapshot writes so the two features cannot overwrite each other.
+    return snapshotSerial(() => handleWorkbenchWorldbook(method, payload || {}));
+  }
   if (method.startsWith('snapshot-')) return handleSnapshotRequest(method, payload || {});
   if (method === 'list-worldbooks' || method === 'read-worldbook') {
     const module = await import('/scripts/world-info.js');
@@ -94,6 +149,131 @@ async function handleRequest(method, payload) {
     return clone(readPresetByName(manager, name));
   }
   throw new Error(`未知宿主请求：${method}`);
+}
+
+function workbenchWorldName(value) {
+  if (typeof value !== 'string' || !value || value !== value.trim() || new TextEncoder().encode(value).length > 200
+    || /[<>:"/\\|?*\u0000-\u001f\u007f]/.test(value) || /[. ]$/.test(value)
+    || /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\.|$)/i.test(value)) {
+    throw new Error('世界书名称无效：请使用不含路径或特殊字符的简短名称');
+  }
+  return value;
+}
+
+function sameWorkbenchJSON(a, b) {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) !== Array.isArray(b)) return false;
+  const keys = Object.keys(a), other = Object.keys(b);
+  return keys.length === other.length && keys.every(key => Object.prototype.hasOwnProperty.call(b, key) && sameWorkbenchJSON(a[key], b[key]));
+}
+
+function assertWorkbenchCache(world, name, base, create = false) {
+  const cache = world.worldInfoCache;
+  if (!cache || !['has', 'get', 'set'].every(key => typeof cache[key] === 'function')) throw new Error('当前酒馆不支持安全同步世界书缓存，请更新酒馆');
+  if (cache.has(name) && (create || !sameWorkbenchJSON(cache.get(name), base))) {
+    throw new Error('世界书「' + name + '」存在原生未保存修改或缓存冲突，请先核对并处理原生编辑器的修改，再重新载入');
+  }
+}
+
+async function workbenchDiskNames(env) {
+  const data = await readSnapshotPersistence(env, '/api/settings/get', {});
+  if (!Array.isArray(data.world_names) || !data.world_names.every(name => typeof name === 'string')) throw new Error('无法核验世界书列表，请重试');
+  return data.world_names;
+}
+
+function workbenchEditorName(world) {
+  const selected = document.querySelector('#world_editor_select')?.value;
+  return selected !== undefined && selected !== '' ? world.world_names?.[Number(selected)] : undefined;
+}
+
+async function syncWorkbenchBook(env, name, data, previous, create) {
+  // Never replace a native edit made by another extension while the HTTP request was in flight.
+  assertWorkbenchCache(env.world, name, previous, create);
+  env.world.worldInfoCache.set(name, clone(data));
+  if (workbenchEditorName(env.world) === name) {
+    if (typeof env.world.showWorldEditor !== 'function') throw new Error('无法刷新原生世界书编辑器，请关闭并重新打开原生编辑器');
+    // Refresh only the already selected book: this replaces editor event closures without mounting/selecting a book.
+    await env.world.showWorldEditor(name);
+  }
+}
+
+async function handleWorkbenchWorldbook(method, payload) {
+  const name = workbenchWorldName(payload.name);
+  const [script, world] = await Promise.all([import('/script.js'), import('/scripts/world-info.js')]);
+  const env = {script, world};
+  const names = await workbenchDiskNames(env);
+  if (method === 'workbench-read-worldbook') {
+    if (!names.includes(name)) throw new Error('该世界书不存在，请重新读取列表');
+    const book = await readSnapshotPersistence(env, '/api/worldinfo/get', {name});
+    normalizeWorkbenchBook(book);
+    assertWorkbenchCache(world, name, book);
+    world.worldInfoCache.set(name, clone(book));
+    // The raw disk object is the CAS baseline; normalization must not change it.
+    return {name, book: clone(book)};
+  }
+  if (typeof payload.create !== 'boolean') throw new Error('请明确选择覆盖保存或另存世界书');
+  const create = payload.create, book = normalizeWorkbenchBook(payload.book), base = payload.base;
+  const exists = list => list.some(value => value.toLocaleLowerCase() === name.toLocaleLowerCase());
+  if (create && (exists(names) || exists(world.world_names || []))) throw new Error('同名世界书已存在，请使用其他名称');
+  if (!create && !names.includes(name)) throw new Error('该世界书不存在，不能覆盖保存，请重新载入或另存');
+  if (!create) normalizeWorkbenchBook(base);
+  assertWorkbenchCache(world, name, base, create);
+  if (create && typeof world.updateWorldInfoList !== 'function') throw new Error('当前酒馆不支持刷新世界书列表，请更新酒馆');
+  if (workbenchEditorName(world) === name && typeof world.showWorldEditor !== 'function') throw new Error('当前酒馆不支持安全刷新原生世界书编辑器');
+  // Block ordinary native editor input while checking and writing; restore its previous state even on failure.
+  const editor = document.getElementById('WorldInfo'), wasInert = editor?.inert;
+  if (editor) editor.inert = true;
+  let writeAttempted = false, synced = false;
+  try {
+    if (world.worldInfoCache.has(name)) {
+      // Native saveWorldInfo caches first and debounces the POST. Even a reverted edit can leave an old
+      // equal-to-base save queued. Let that timer run before the final check, without cancelling other books.
+      const {debounce_timeout} = await import('/scripts/constants.js');
+      const delay = debounce_timeout?.relaxed;
+      if (!Number.isFinite(delay) || delay < 0 || delay > 10000) throw new Error('无法确认原生世界书延迟保存状态，请更新酒馆后重试');
+      await new Promise(resolve => setTimeout(resolve, delay + 100));
+    }
+    // The debounce only tells us when a POST starts. Wait for all real responses, including slow old saves.
+    await awaitWorkbenchWorldWrites();
+    if (create) {
+      if (exists(await stableWorkbenchWorldRead(() => workbenchDiskNames(env)))) throw new Error('同名世界书已存在，请使用其他名称');
+    } else {
+      const current = await stableWorkbenchWorldRead(() => readSnapshotPersistence(env, '/api/worldinfo/get', {name}));
+      if (!sameWorkbenchJSON(current, base)) throw new Error('世界书「' + name + '」已被外部修改，保存冲突；请重新载入或另存');
+    }
+    assertWorkbenchCache(world, name, base, create);
+    // The native API has no atomic compare-and-swap. Check as late as possible and serialize all plugin writes.
+    writeAttempted = true;
+    await writeSnapshotResource(env, '/api/worldinfo/edit', {name, data: book});
+    await awaitWorkbenchWorldWrites();
+    const persisted = await stableWorkbenchWorldRead(() => readSnapshotPersistence(env, '/api/worldinfo/get', {name}));
+    normalizeWorkbenchBook(persisted);
+    await syncWorkbenchBook(env, name, persisted, base, create);
+    synced = true;
+    if (!sameWorkbenchJSON(persisted, book)) throw new Error('世界书保存后读回数据不一致，未确认保存成功；草稿已保留，请重新载入核验');
+    if (create) {
+      await world.updateWorldInfoList();
+      if (!world.world_names?.includes(name)) throw new Error('世界书已写入，但列表刷新失败；请刷新后核验，勿重复覆盖');
+    }
+    const event = script.event_types?.WORLDINFO_UPDATED;
+    if (event) await script.eventSource.emit(event, name, clone(persisted));
+    const finalBook = await stableWorkbenchWorldRead(() => readSnapshotPersistence(env, '/api/worldinfo/get', {name}));
+    if (!sameWorkbenchJSON(finalBook, persisted)) throw new Error('世界书保存后又发生外部修改，未确认保存成功；请重新载入核验');
+    assertWorkbenchCache(world, name, persisted);
+    return {name, book: clone(persisted)};
+  } catch (error) {
+    if (writeAttempted && !synced) {
+      // A timeout/HTTP error may happen after the server wrote the book. Read back only; never roll back over newer data.
+      try {
+        const actual = await readSnapshotPersistence(env, '/api/worldinfo/get', {name});
+        normalizeWorkbenchBook(actual);
+        await syncWorkbenchBook(env, name, actual, base, create);
+      } catch { /* Keep the original error and any concurrent native edits. The UI keeps its draft. */ }
+    }
+    throw error;
+  } finally {
+    if (editor) editor.inert = wasInert;
+  }
 }
 
 // 设置快照保存当前开关与挂载，扩展资源按稳定标识恢复；不覆盖预设或世界书正文。

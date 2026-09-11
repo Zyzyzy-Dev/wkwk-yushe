@@ -1,0 +1,10 @@
+/* 正则多选：紧凑选择框、批量操作及整批拖拽反馈，兼容三主题和手机上下双栏。 */
+.pcm-regex-row-top{grid-template-columns:auto auto minmax(0,1fr) auto}
+.pcm-regex-selection-tools{display:flex;align-items:center;gap:8px;min-width:0}
+.pcm-regex-select-all{display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer}
+.pcm-regex-select-all span{opacity:1}
+.pcm-dialog .pcm-regex-panel input[type=checkbox]{appearance:auto!important;-webkit-appearance:checkbox!important;width:15px!important;height:15px!important;min-width:15px!important;min-height:15px!important;margin:0!important;padding:0!important;flex:0 0 15px;accent-color:#62859c;cursor:pointer}
+.pcm-regex-panel .pcm-regex-batch-migrate{min-width:0;min-height:25px;padding:3px 6px;font-size:10px;white-space:nowrap}
+.pcm-dialog .pcm-regex-row.pcm-regex-selected{border-color:#7797ac!important;box-shadow:inset 3px 0 #7797ac;background:color-mix(in srgb,#7797ac 20%,var(--SmartThemeBlurTintColor))!important}
+.pcm-regex-select:focus-visible,.pcm-regex-select-all input:focus-visible{outline:2px solid #7797ac;outline-offset:2px}
+@media(max-width:520px){.pcm-regex-column-head{gap:4px}.pcm-regex-column-head h4{font-size:12px}.pcm-regex-selection-tools{gap:5px}.pcm-regex-panel .pcm-regex-batch-migrate{font-size:9px}.pcm-regex-row-top{gap:3px}}
