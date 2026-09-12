@@ -27,7 +27,8 @@ const worldbookSession=createWorkbenchSession();
 import { installPaneLayout } from './pane-layout.js';
 let paneLayout = null;
 import { stitchWorldbook } from '../worldbook.js';
-import { openWorldbookPanel } from './worldbook-panel.js';
+import { openWorldbookPanel, createWorldbookImportSession } from './worldbook-panel.js';
+const worldbookImportSession = createWorldbookImportSession();
 import { beginWorldbookPlacement } from './worldbook-placement.js';
 
 let worldbookPlacement = null;
@@ -53,6 +54,7 @@ function manageWorldbook(side) {
   };
   openWorldbookPanel({
     dialog,
+    session: worldbookImportSession,
     title: (side === 'old' ? '旧版' : '新版') + ' · ' + state[side+'Name'],
     onApply: apply,
     onPick(entries, options, callbacks) {

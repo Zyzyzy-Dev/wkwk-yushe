@@ -33,7 +33,11 @@ export function installWorkbenchDrag(element,{canDrag,onDrop}) {
     if(gesture.touch)timer=setTimeout(start,300);
   },options);
   element.addEventListener('contextmenu',event=>{if(event.target.closest('.pcm-wb-drag'))event.preventDefault();},options);
-  element.addEventListener('selectstart',event=>{if(event.target.closest('.pcm-wb-drag'))event.preventDefault();},options);
+  element.addEventListener('selectstart',event=>{
+    // 选择文本时目标可能是 Text 节点，先取所属元素再判断拖拽手柄。
+    const target=event.target instanceof Element?event.target:event.target?.parentElement;
+    if(target?.closest('.pcm-wb-drag'))event.preventDefault();
+  },options);
   window.addEventListener('pointermove',event=>{
     if(!gesture||gesture.id!==event.pointerId)return;
     gesture.x=event.clientX;gesture.y=event.clientY;

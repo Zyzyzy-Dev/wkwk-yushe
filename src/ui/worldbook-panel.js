@@ -1,6 +1,7 @@
 // 世界书缝合面板：文件/宿主读取、条目筛选与正文预览，提交所选条目给应用草稿。
 import { readWorldbook } from '../worldbook.js';
 import { host } from './bridge.js';
+import { openWorldbookSourcePicker } from './worldbook-source-picker.js';
 
 const node = (tag, className = '', text) => {
   const element = document.createElement(tag);
@@ -20,14 +21,19 @@ function option(select, value, text) {
   select.append(element);
 }
 
-export function openWorldbookPanel({ dialog, title, onApply, onPick }) {
+export function createWorldbookImportSession() {
+  return { books: new Map(), selected: new Set(), query: '', filter: 'all', keepDisabled: true };
+}
+
+export function openWorldbookPanel({ dialog, title, onApply, onPick, session = createWorldbookImportSession() }) {
   dialog.querySelector('[data-worldbook-panel]')?.remove();
   const panel = node('section', 'pcm-picker open');
   panel.dataset.worldbookPanel = '';
   const box = node('div', 'pcm-picker-panel pcm-worldbook-panel');
   box.setAttribute('role', 'region');
   box.setAttribute('aria-label', '世界书缝合');
-  const close = () => { panel.remove(); dialog.classList.remove('pcm-worldbook-open'); };
+  let sourcePicker = null;
+  const close = () => { sourcePicker?.close(); panel.remove(); dialog.classList.remove('pcm-worldbook-open'); };
   const head = node('header', 'pcm-picker-head');
   const closeButton = button('×', close, 'pcm-close');
   closeButton.setAttribute('aria-label', '关闭世界书缝合');
@@ -39,18 +45,13 @@ export function openWorldbookPanel({ dialog, title, onApply, onPick }) {
   file.type = 'file'; file.multiple = true; file.accept = '.json,application/json';
   file.setAttribute('aria-label', '导入世界书 JSON');
   fileLabel.append(file);
-  const bookSelect = node('select');
-  bookSelect.setAttribute('aria-label', '酒馆世界书');
-  bookSelect.hidden = true;
-  option(bookSelect, '', '先读取酒馆世界书列表');
   const status = node('p', 'pcm-worldbook-status');
   status.setAttribute('role', 'status');
   const report = error => { status.textContent = error.message || String(error); status.classList.add('pcm-worldbook-error'); };
-  const books = new Map();
-  const selected = new Set();
-  let items = [];
+  const { books, selected } = session;
+  let items = [...books.values()].flat();
+  if (books.size) status.textContent = `已加载 ${books.size} 本世界书`;
   let busy = false;
-  let currentTavernName = '';
   const applyButtons = [];
   const keyOf = item => JSON.stringify([item.source, item.key]);
   function addBook(data, source, replaceTavern = false) {
@@ -63,11 +64,10 @@ export function openWorldbookPanel({ dialog, title, onApply, onPick }) {
     }
     for (const entry of books.get(source) || []) selected.delete(keyOf(entry));
     books.set(source, entries);
-    for (const entry of entries) selected.add(keyOf(entry));
     items = [...books.values()].flat();
     status.classList.remove('pcm-worldbook-error');
     status.textContent = `已加载 ${books.size} 本世界书`;
-    search.value = ''; filter.value = 'all';
+    search.value = session.query = ''; filter.value = session.filter = 'all';
     render();
   }
   async function runBusy(control, work) {
@@ -84,24 +84,17 @@ export function openWorldbookPanel({ dialog, title, onApply, onPick }) {
   const loadBooks = button('酒馆世界书', () => runBusy(loadBooks, async () => {
     const names = await host.request('list-worldbooks');
     if (!panel.isConnected) return;
-    bookSelect.replaceChildren(); option(bookSelect, '', names.length ? '选择世界书' : '酒馆中没有世界书');
-    for (const name of names) option(bookSelect, name, name);
-    bookSelect.hidden = false;
-    bookSelect.value = names.includes(currentTavernName) ? currentTavernName : '';
     status.classList.remove('pcm-worldbook-error'); status.textContent = '';
+    sourcePicker?.close();
+    sourcePicker = openWorldbookSourcePicker({ parent: panel, names,
+      onChoose: async (name, isOpen) => {
+        const data = await host.request('read-worldbook', { name });
+        if (panel.isConnected && isOpen()) addBook(data, `酒馆：${name}`, true);
+      },
+      onClose: () => { sourcePicker = null; if (panel.isConnected) loadBooks.focus(); },
+    });
   }));
-  bookSelect.addEventListener('change', () => runBusy(bookSelect, async () => {
-    if (!bookSelect.value) return;
-    const name = bookSelect.value;
-    status.classList.remove('pcm-worldbook-error'); status.textContent = '正在读取世界书…';
-    try {
-      const data = await host.request('read-worldbook', { name });
-      if (!panel.isConnected) return;
-      addBook(data, `酒馆：${name}`, true);
-      currentTavernName = name;
-    } catch (error) { bookSelect.value = currentTavernName; throw error; }
-  }));
-  sources.append(fileLabel, loadBooks, bookSelect);
+  sources.append(fileLabel, loadBooks);
   file.addEventListener('change', () => {
     const files = [...file.files]; file.value = '';
     runBusy(file, async () => {
@@ -121,8 +114,8 @@ export function openWorldbookPanel({ dialog, title, onApply, onPick }) {
   search.setAttribute('aria-label', '搜索世界书条目');
   const filter = node('select'); filter.setAttribute('aria-label', '世界书条目状态');
   option(filter, 'all', '全部状态'); option(filter, 'enabled', '仅启用'); option(filter, 'disabled', '仅禁用');
+  search.value = session.query; filter.value = session.filter;
   filters.append(search, filter);
-  const selection = node('div', 'pcm-worldbook-controls');
   const count = node('span', 'pcm-worldbook-count');
   const visibleItems = () => {
     const query = search.value.trim().toLocaleLowerCase();
@@ -134,34 +127,57 @@ export function openWorldbookPanel({ dialog, title, onApply, onPick }) {
     count.textContent = `已选 ${selected.size} / ${items.length} 条（筛选不清除选择）`;
     applyButtons.forEach(button => { button.disabled = busy || !selected.size; });
   }
-  selection.append(button('全选筛选结果', () => { for (const item of visibleItems()) selected.add(keyOf(item)); render(); }),
-    button('取消选择', () => { selected.clear(); render(); }),
-    button('清空来源', () => { books.clear(); items = []; selected.clear(); currentTavernName = ''; bookSelect.value = ''; status.textContent = ''; render(); }), count);
   const list = node('div', 'pcm-worldbook-list');
   function render() {
     list.replaceChildren();
     const visible = visibleItems();
-    if (!visible.length) list.append(node('p', '', items.length ? '没有符合筛选条件的条目' : '导入文件或选择酒馆世界书后，在这里选择条目。'));
-    for (const item of visible) {
-      const row = node('div', 'pcm-worldbook-entry');
-      const check = node('input'); check.type = 'checkbox'; check.checked = selected.has(keyOf(item));
-      check.setAttribute('aria-label', `选择 ${item.name}`);
-      check.addEventListener('change', () => { if (check.checked) selected.add(keyOf(item)); else selected.delete(keyOf(item)); updateCount(); });
-      const details = node('details');
-      const summary = node('summary');
-      summary.append(node('strong', '', item.name), node('small', '', `${item.enabled ? '启用' : '禁用'} · ${item.source} · ${item.content.length} 字符`));
-      details.append(summary);
-      details.addEventListener('toggle', () => {
-        if (details.open && !details.querySelector('pre')) details.append(node('pre', '', item.content || '（空正文）'));
-      });
-      row.append(check, details); list.append(row);
+    if (!books.size) list.append(node('p', '', '导入文件或选择酒馆世界书后，在这里选择条目。'));
+    for (const [source, entries] of books) {
+      const group = node('section', 'pcm-worldbook-source-group');
+      const sourceHead = node('header', 'pcm-worldbook-source-head');
+      const sourceName = source.startsWith('文件：') ? source.slice(3).replace(/\.json$/i, '') : source.replace(/^酒馆：/, '');
+      const heading = node('strong', 'pcm-worldbook-source-title', sourceName);
+      heading.title = source;
+      const actions = node('div', 'pcm-worldbook-source-actions');
+      actions.append(button('全选', () => { for (const item of visibleItems().filter(item => item.source === source)) selected.add(keyOf(item)); render(); }),
+        button('取消选择', () => { for (const item of entries) selected.delete(keyOf(item)); render(); }),
+        button('清空来源', () => {
+          for (const item of entries) selected.delete(keyOf(item));
+          books.delete(source); items = [...books.values()].flat();
+          status.textContent = books.size ? `已加载 ${books.size} 本世界书` : '';
+          render();
+        }));
+      sourceHead.append(heading, actions); group.append(sourceHead);
+      const shown = visible.filter(item => item.source === source);
+      if (!shown.length) group.append(node('p', 'pcm-worldbook-source-empty', '没有符合筛选条件的条目'));
+      for (const item of shown) {
+        const row = node('div', 'pcm-worldbook-entry');
+        const check = node('input', 'pcm-worldbook-choice'); check.type = 'checkbox'; check.checked = selected.has(keyOf(item));
+        check.setAttribute('aria-label', `选择 ${item.name}`);
+        check.addEventListener('change', () => { if (check.checked) selected.add(keyOf(item)); else selected.delete(keyOf(item)); updateCount(); });
+        const details = node('details');
+        const summary = node('summary');
+        const entryName = node('strong', 'pcm-worldbook-entry-name', item.name); entryName.title = item.name;
+        const state = node('span', 'pcm-worldbook-state'); state.dataset.enabled = String(item.enabled);
+        state.setAttribute('role', 'img'); state.setAttribute('aria-label', `来源状态：${item.enabled ? '启用' : '禁用'}`);
+        state.title = `来源状态：${item.enabled ? '启用' : '禁用'}`;
+        summary.append(entryName, state, node('small', 'pcm-worldbook-chars', `${item.content.length} 字符`));
+        details.append(summary);
+        details.addEventListener('toggle', () => {
+          if (details.open && !details.querySelector('pre')) details.append(node('pre', '', item.content || '（空正文）'));
+        });
+        row.append(check, details); group.append(row);
+      }
+      list.append(group);
     }
     updateCount();
   }
-  search.addEventListener('input', render); filter.addEventListener('change', render);
+  search.addEventListener('input', () => { session.query = search.value; render(); });
+  filter.addEventListener('change', () => { session.filter = filter.value; render(); });
   const footer = node('footer', 'pcm-worldbook-footer');
   const keepLabel = node('label', 'pcm-worldbook-check');
-  const keep = node('input'); keep.type = 'checkbox'; keep.checked = true;
+  const keep = node('input'); keep.type = 'checkbox'; keep.checked = session.keepDisabled;
+  keep.addEventListener('change', () => { session.keepDisabled = keep.checked; });
   keepLabel.append(keep, document.createTextNode('保留禁用状态'));
   const positions = node('div', 'pcm-worldbook-positions');
   for (const [label, placement] of [['注入预设最前', 'start'], ['注入预设末尾', 'end'], ['注入指定位置', 'pick']]) {
@@ -180,7 +196,7 @@ export function openWorldbookPanel({ dialog, title, onApply, onPick }) {
     applyButtons.push(apply); positions.append(apply);
   }
   footer.append(keepLabel, positions);
-  body.append(sources, status, filters, selection, list);
+  body.append(sources, status, filters, count, list);
   box.append(head, body, footer); panel.append(box); dialog.append(panel);
   dialog.classList.add('pcm-worldbook-open');
   // 阻止面板操作落入预设主界面的委托路由；Esc 只关闭本浮层。
