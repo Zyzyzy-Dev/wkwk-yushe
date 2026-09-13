@@ -15,24 +15,24 @@ import {
   pairRegexScripts,
   parseVarContent,
   validatePreset as validate,
-} from '../core.js';
-import { buildSearchRows, plainSearchRows, normalizeSearchQuery } from './search-highlight.js';
-import { host } from './bridge.js';
-import { createToolboxHome } from './home.js';
-import { createSnapshotPanel } from './snapshot-panel.js';
-import { createApiPanel } from './api-panel.js';
+} from '../features/preset/core.js';
+import { buildSearchRows, plainSearchRows, normalizeSearchQuery } from '../features/preset/ui/search-highlight.js';
+import { host } from './bridge/bridge.js';
+import { createToolboxHome } from './home/home.js';
+import { createSnapshotPanel } from '../features/snapshot/ui/snapshot-panel.js';
+import { createApiPanel } from '../features/api/ui/api-panel.js';
 let apiPanel = null;
 function closeApiPanel(){apiPanel?.destroy();apiPanel=null;}
 let snapshotPanel = null;
-import {createWorldbookWorkbench,createWorkbenchSession} from './worldbook-workbench.js';
+import {createWorldbookWorkbench,createWorkbenchSession} from '../features/worldbook/ui/worldbook-workbench.js';
 let worldbookWorkbench=null;
 const worldbookSession=createWorkbenchSession();
-import { installPaneLayout } from './pane-layout.js';
+import { installPaneLayout } from '../features/preset/ui/pane-layout.js';
 let paneLayout = null;
-import { stitchWorldbook } from '../worldbook.js';
-import { openWorldbookPanel, createWorldbookImportSession } from './worldbook-panel.js';
+import { stitchWorldbook } from '../features/worldbook/worldbook.js';
+import { openWorldbookPanel, createWorldbookImportSession } from '../features/worldbook/ui/worldbook-panel.js';
 const worldbookImportSession = createWorldbookImportSession();
-import { beginWorldbookPlacement } from './worldbook-placement.js';
+import { beginWorldbookPlacement } from '../features/worldbook/ui/worldbook-placement.js';
 
 let worldbookPlacement = null;
 function manageWorldbook(side) {

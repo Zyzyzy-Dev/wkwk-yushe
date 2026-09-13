@@ -1,7 +1,7 @@
 // 移动列表比例的边界回归：拖动不能挤掉任意一侧控件，矮屏也必须保留可用高度。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { paneHeights } from '../src/ui/pane-layout.js';
+import { paneHeights } from '../src/features/preset/ui/pane-layout.js';
 
 test('mobile split redistributes a fixed total while honoring the requested ratio', () => {
   assert.deepEqual(paneHeights(700, 0.3), { old: 210, new: 490, total: 700 });

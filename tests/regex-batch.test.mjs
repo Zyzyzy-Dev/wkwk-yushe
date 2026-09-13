@@ -1,7 +1,7 @@
 // 批量正则迁移回归：原子写入、固定配对、视觉顺序、精确锚点及分组配置保真。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { transferRegexScripts as transfer, getRegexGroupModel } from '../src/core.js';
+import { transferRegexScripts as transfer, getRegexGroupModel } from '../src/features/preset/core.js';
 const script=(id, extra={})=>({id,scriptName:id,findRegex:'/'+id+'/g',replaceString:'',disabled:false,...extra});
 const preset=(ids,groups)=>({prompts:[],extensions:{custom:{keep:true},regex_scripts:ids.map(id=>typeof id==='string'?script(id):id),...(groups?{baibaiToolkit:{other:true,regexGroups:groups}}:{})}});
 const ids=p=>p.extensions.regex_scripts.map(s=>s.id);

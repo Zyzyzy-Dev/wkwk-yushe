@@ -1,5 +1,5 @@
 // 设置快照纯逻辑：捕获两层开关、按稳定 ID 制定恢复计划及解析聊天/角色绑定，不访问宿主。
-import { createIdentifier, findPromptOrderEntry } from './core.js';
+import { createIdentifier, findPromptOrderEntry } from '../preset/core.js';
 import { validateSnapshotResources } from './snapshot-resources.js';
 
 export function snapshotScope(snapshot) {
@@ -16,7 +16,7 @@ export function selectSnapshotScope(snapshot) {
   if (!scope.worlds) saved.worldNames=[];
   if (snapshot.resources) saved.resources = {...snapshot.resources,
     ...(!scope.worlds ? {worlds:{global:[]},worldEntries:[]} : {}),
-    ...(!scope.regex ? {regex:{global:[],preset:[],character:[]}} : {}),
+    regex:{global:scope.regex ? (snapshot.resources.regex?.global || []) : [],preset:[],character:[]},
   };
   return saved;
 }

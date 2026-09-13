@@ -4,27 +4,33 @@
 
 ## 代码结构与隔离
 
-插件使用原生 ES Module 拆分，并把完整工作区运行在独立 iframe document 中：
+功能代码全部位于 `src/`，按 `host`（酒馆宿主）、`features/api`（API 管理）、`features/snapshot`（设置快照）、`features/worldbook`（世界书）、`features/preset`（预设）、`shared`（公共工具）和 `ui`（iframe 入口与公共界面）分类。每个功能的界面放在对应目录的 `ui/` 中。
 
-- `index.js`：唯一扩展入口，只安装宿主控制器。
-- `src/host.js`：唯一允许接触酒馆主页面的模块；负责扩展菜单、iframe 外壳、preset-manager 调用、`PRESET_CHANGED` 订阅以及主题/输入法环境转发。
-- `src/core.js`：不接触 DOM 的预设校验、顺序节点选择、正则配对与迁移、正文相似度、混合粒度 diff 和变量宏解析，以及保存回酒馆时的「当前活动预设判定 / 内存同步」纯逻辑。
-- `src/ui/app.js`：iframe 内的状态、交互与渲染。
-- `src/ui/bridge.js`：基于 `MessageChannel` 的请求/响应和事件通道。
-- `src/snapshot.js`：设置快照的两层开关捕获、恢复计划和绑定优先级纯逻辑。
-- `src/snapshot-resources.js`：世界书配置与正则开关的捕获、校验及稳定标识恢复。
-- `src/worldbook-workbench.js`：完整世界书校验、条目配对、迁移、排序与预设转换的纯逻辑。
-- `src/ui/worldbook-workbench.js` / `worldbook-workbench.css`：双世界书工作台；`worldbook-entry-editor.js` 提供编辑与差异查看，`worldbook-workbench-drag.js` 处理鼠标与触屏拖拽。
-- `src/ui/snapshot-panel.js` / `snapshot-panel.css`：快照管理页面；持久化及常驻聊天监听由 `src/host.js` 执行。
-- `src/ui/snapshot-editor.js` / `snapshot-editor.css`：独立快照草稿编辑页，创建、覆盖和另存不会立即应用设置。
-- `src/ui/native-switch.css`：预设、世界书、正则与分组统一的原生滑钮样式。
-- `src/ui/index.html` / `src/ui/style.css`：iframe 自己的 HTML 与完整基础样式。
+根目录 `index.js` 只启动宿主控制器；JS 模块通过 import / export 连接，HTML 加载 iframe 独立样式。源文件开头说明用途，PNG 图片用途见资源目录说明。详见 [源码目录说明](src/README.md)。
+
+[tests/](tests/README.md) 仅供 Node 开发测试，在插件根目录执行 `node --test`；不参与插件运行，也不会被运行入口加载。
 
 本项目以 **SillyTavern 官方 Web 版为主目标**，同时对 **TauriTavern** 做可选适配：标准路径只使用 SillyTavern 的扩展加载器、`openai.js`、`preset-manager.js` 和事件总线；仅检测到 `window.__TAURITAVERN__` 时才动态加载 TauriTavern `layout-kit.js`，把同源 iframe 标记为 `ViewportHost` 并转发 IME 高度。Tauri 适配失败或超时不会阻塞标准 SillyTavern UI，普通浏览器继续使用 `visualViewport` 回退。
 
 `manifest.json` 不再向酒馆主 document 加载插件 CSS。主页面及其他美化插件的选择器默认无法跨过 iframe 边界，插件样式也无法影响酒馆外部；宿主只保留一个菜单入口和 iframe 外壳。业务 UI 不直接读取酒馆全局对象、TauriTavern API 或主页面 DOM；`bridge.js` 仅校验同源父窗口并接收专用消息端口。读取/保存预设、预设变更事件、主题变量与输入法高度统一经过该消息通道。除明确点击「保存回酒馆」外，iframe 逻辑不会写入或刷新酒馆预设管理器。
 
 纯功能回归测试运行：`node --test`（自动发现 `tests/` 下的用例）。
+
+## 1.8.3 更新公告
+
+本次从正式版 1.8.2 升级，改进快照正则切换、管理页面滚动与搜索，并按功能整理源码目录。
+
+### 管理页面交互
+
+API 管理和设置快照的顶部工具栏随滚动保持可见，快照「保存当前设置」移到「当前设置」同一行。悬浮球／快速回复打开的快切弹窗支持点击窗口外关闭。创建快照支持搜索预设及全局世界书；预设条目、世界书和正则列表隐藏滚动条，滚到边界后可继续滚动外层页面。
+
+### 快照正则范围与兼容性
+
+「保存正则」现为「保存全局正则开关」。预设正则随原生预设切换，角色正则不保存、不恢复；旧快照在应用时自动遵循此规则，无需重建，原有全局正则开关仍在勾选范围时生效。取消保存全局正则不会阻止目标预设加载自己的正则。
+
+API 编辑器不再使用浏览器密码输入框和登录式提交表单，密钥以文本遮罩显示，并关闭自动填充提示。此调整减少密码保存提示的触发；浏览器和第三方密码管理器的策略仍由其自身控制。
+
+已按 TauriTavern v2.2.0 固定标签核对原生预设、设置、世界书、密钥、连接检查和 iframe 布局接口，未发现阻断性接口差异；密钥／设置路由已用该版本实际 JS 与模拟 IPC 检查。未运行 TauriTavern 实机及 Rust 后端端到端测试。
 
 ## 1.8.2 更新公告
 
@@ -105,7 +111,7 @@ v1.7.6 提供三个插入位置按钮，指定位置回到预设对比界面点�
 
 世界书关键词、概率、递归、预算、原注入位置/深度等条件不会转换为预设触发逻辑。新条目统一采用预设相对位置，由预设列表顺序和开关控制；需要深度注入时可在缝合后编辑条目设置。为避免重复注入同样内容，请自行检查仍启用的来源世界书。支持标准世界书 `entries` 对象/数组及 JSON 角色卡的 `character_book.entries`；酒馆助手脚本 JSON 是参考代码，不是世界书数据。
 
-核心转换位于 `src/worldbook.js`，选择面板位于 `src/ui/worldbook-panel.js`，对比列表选点模式位于 `src/ui/worldbook-placement.js`，酒馆读取统一通过 `src/host.js` 调用官方 `world-info.js` 的 `world_names` / `loadWorldInfo`，不依赖酒馆助手。
+核心转换位于 `src/features/worldbook/worldbook.js`，选择面板位于 `src/features/worldbook/ui/worldbook-panel.js`，对比列表选点模式位于 `src/features/worldbook/ui/worldbook-placement.js`，酒馆读取统一通过 `src/host/host.js` 调用官方 `world-info.js` 的 `world_names` / `loadWorldInfo`，不依赖酒馆助手。
 
 ## 移动端适配
 
@@ -124,7 +130,7 @@ v1.7.6 提供三个插入位置按钮，指定位置回到预设对比界面点�
 
 ## 当前版本
 
-`1.8.2`（正式版）
+`1.8.3`（正式版）
 
 ### 1.8.1 更新
 
@@ -147,7 +153,7 @@ v1.7.6 提供三个插入位置按钮，指定位置回到预设对比界面点�
 - **世界书迁移与排序**：支持同侧排序、跨侧迁移、复制、删除、指定位置插入和整批撤回；手机长按拖拽，跨书迁移生成独立 UID 并保留来源，未编辑的名称、关键词、换行和其他配置保持不变。
 - **预设转换到世界书**：可从预设 JSON 或酒馆预设选择条目，转换后插入世界书最前、末尾或指定位置，保留正文、名称、开关及可转换的角色/深度设置。
 - **预设对比增强**：正文差异支持英文整词、中文逐字的混合粒度高亮；保留两侧独立草稿、搜索高亮、条目/正则迁移、批量拖拽、BaiBai Tools 分组兼容和撤回。
-- **设置快照**：支持按预设、全局世界书和正则分别选择保存范围，支持创建、编辑、覆盖、另存、应用、重命名、删除，以及聊天/角色绑定；取消范围不会丢弃当前草稿。
+- **设置快照**：支持按预设、全局世界书和全局正则开关分别选择保存范围，支持创建、编辑、覆盖、另存、应用、重命名、删除，以及聊天/角色绑定；取消范围不会丢弃当前草稿。
 - **稳定性与兼容性**：修复模块化加载、移动端滚动穿透、输入法遮挡、HTTP/旧 WebView 缺少 `crypto.randomUUID`、预设保存误切换活动预设等问题；保存前核对基线，失败时保留草稿并回滚已写入资源。
 
 ### 1.7.8 更新

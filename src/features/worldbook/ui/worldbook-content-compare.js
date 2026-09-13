@@ -1,5 +1,5 @@
 // 世界书正文双栏对比：复用预设差异算法，以同步背景高亮支持直接编辑，仅确认后更新草稿。
-import {diffLines,buildRows} from '../core.js';
+import {diffLines,buildRows} from '../../preset/core.js';
 
 export function openWorldbookContentCompare({parent,items,onSave,onClose}) {
   const node=(tag,cls='',text)=>{const el=document.createElement(tag);el.className=cls;if(text!==undefined)el.textContent=text;return el;};

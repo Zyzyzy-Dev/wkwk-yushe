@@ -18,7 +18,7 @@ import {
   reorderRegexScript,
   shouldRefreshActivePreset,
   validatePreset,
-} from '../src/core.js';
+} from '../src/features/preset/core.js';
 
 test('clone keeps preset data independent', () => {
   const source = { prompts: [{ identifier: 'a', content: 'old' }] };

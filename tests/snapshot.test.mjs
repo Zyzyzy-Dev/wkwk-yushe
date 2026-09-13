@@ -1,8 +1,8 @@
 // 设置快照纯功能回归：两层开关、节点隔离、引用匹配和绑定优先级。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { captureSnapshot, planSnapshotRestore, resolveSnapshotBinding, validateSnapshot } from '../src/snapshot.js';
-import * as snapshots from '../src/snapshot.js';
+import { captureSnapshot, planSnapshotRestore, resolveSnapshotBinding, validateSnapshot } from '../src/features/snapshot/snapshot.js';
+import * as snapshots from '../src/features/snapshot/snapshot.js';
 const settings = () => ({prompts:[{identifier:'a',name:'A',content:'current'},{identifier:'b',name:'B'}],prompt_order:[{character_id:7,order:[{identifier:'a',enabled:false}]},{character_id:100001,order:[{identifier:'a',enabled:true},{identifier:'b',enabled:false}]}]});
 const groups = () => ({groups:[{id:'g',name:'组',enabled:false}],prompts:{a:{groupId:'g'},b:{groupId:'g'}}});
 const capture = (extra={}) => captureSnapshot({id:'s',name:' 快照 ',presetName:'预设',settings:settings(),orderCharacterId:100001,groupState:groups(),worldNames:['书'],now:123,...extra});

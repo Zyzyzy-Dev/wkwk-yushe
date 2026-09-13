@@ -1,7 +1,7 @@
 // 快照范围回归：未选数据不持久化、不参与恢复，兼容旧范围并拒绝空范围。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as snapshots from '../src/snapshot.js';
+import * as snapshots from '../src/features/snapshot/snapshot.js';
 const base = () => ({id:'s',name:'部分设置',presetName:'已删除预设',orderCharacterId:1,entries:[{identifier:'a',enabled:true}],groups:[{id:'g',enabled:true}],worldNames:['书'],resources:{version:2,worlds:{global:['书']},worldEntries:[{name:'书',entries:[]}],regex:{global:[{id:'r',enabled:true}],preset:[],character:[]}}});
 test('saving selected scopes strips excluded data without mutating the editor draft',()=>{
  const draft=base();draft.scope={preset:true,worlds:true,regex:false};const before=JSON.stringify(draft);
@@ -24,4 +24,12 @@ test('legacy scope defaults keep pre-resource regex excluded and resource snapsh
 });
 test('empty or malformed explicit scope cannot silently fall back to restoring everything',()=>{
  for(const scope of [{preset:false,worlds:false,regex:false},{preset:true},null,{preset:'false',worlds:true,regex:true}])assert.throws(()=>snapshots.validateSnapshot({...base(),scope}),/范围/);
+});
+
+// Legacy per-preset and character regex switches are deliberately ignored under the new global-only scope.
+test('旧快照正则范围只保留全局开关，不携带预设或角色开关',()=>{
+ const snapshot={scope:{preset:true,worlds:false,regex:true},entries:[],groups:[],worldNames:[],resources:{regex:{global:[{id:'g',enabled:false}],preset:[{id:'p',enabled:false}],character:[{id:'c',enabled:false}]}}};
+ const result=snapshots.selectSnapshotScope(snapshot);
+ assert.deepEqual(result.resources.regex,{global:[{id:'g',enabled:false}],preset:[],character:[]});
+ assert.equal(snapshot.resources.regex.preset.length,1);
 });

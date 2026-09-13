@@ -129,7 +129,7 @@ export function normalizeSnapshotResources(resources) {
     version:2,
     worlds:{global:copy(resources.worlds?.global || [])},
     worldEntries:(resources.worldEntries || []).filter(book => resources.worlds?.global?.includes(book.name)).map(book => ({name:book.name,entries:book.entries.map(entry => ({uid:entry.uid,name:entry.name || entry.uid,settings:copy(entry.settings)}))})),
-    regex:Object.fromEntries(['global','preset','character'].map(scope => [scope,(resources.regex?.[scope] || []).map(({id,name,enabled}) => ({id,name:name || id,enabled}))])),
+    regex:{global:(resources.regex?.global || []).map(({id,name,enabled}) => ({id,name:name || id,enabled})),preset:[],character:[]},
   };
   return validateSnapshotResources(normalized);
 }

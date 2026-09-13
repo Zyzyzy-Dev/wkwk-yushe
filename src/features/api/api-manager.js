@@ -1,5 +1,5 @@
 // API 方案的数据校验与字段级切换计划；不访问宿主、不保存密钥明文或预设快照。
-import { createIdentifier } from './core.js';
+import { createIdentifier } from '../preset/core.js';
 
 export const API_ADDITIONAL_FIELDS = ['custom_include_body', 'custom_exclude_body', 'custom_include_headers'];
 export function normalizeApiAdditional(value) {

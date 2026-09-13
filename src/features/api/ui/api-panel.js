@@ -34,7 +34,7 @@ export function createApiPanel({ host, onBack, onClose, onCycleTheme, themeIcon,
   const status = node('p', 'pcm-snapshot-status'); status.setAttribute('role', 'status');
   const list = node('section', 'pcm-snapshot-list');
   const modal = node('dialog', 'pcm-api-modal'); modal.setAttribute('aria-label', 'API 方案编辑');
-  const editor = node('form', 'pcm-api-editor'); editor.hidden = true; modal.append(editor);
+  const editor = node('div', 'pcm-api-editor'); editor.hidden = true; modal.append(editor);
   const closeEditor = () => { if (busy) return; modal.close(); editor.hidden = true; editor.replaceChildren(); editing = null; };
   modal.addEventListener('cancel', event => { event.preventDefault(); closeEditor(); });
   const saveCurrent = button('保存当前设置', () => run(async () => {
@@ -99,7 +99,7 @@ export function createApiPanel({ host, onBack, onClose, onCycleTheme, themeIcon,
     // Keep the vault reference until the user replaces the masked field; never submit the mask as a key.
     const savedId = profile?.secretId || '';
     const masked = savedId ? (data.keys.find(key => key.id === savedId)?.masked || '••••••••') : '';
-    const secret = field('密钥', masked, 'password'); secret.autocomplete = 'new-password';
+    const secret = field('密钥', masked, 'text'); secret.autocomplete = 'off'; secret.classList.add('pcm-api-secret-text'); secret.setAttribute('data-lpignore','true'); secret.setAttribute('data-1p-ignore','true'); secret.spellcheck=false;
     secret.placeholder = '输入 API 密钥（可留空）';
     secret.addEventListener('focus', () => { if (secret.value === masked) secret.select(); });
     const credentials = () => secret.value === masked
@@ -126,8 +126,8 @@ export function createApiPanel({ host, onBack, onClose, onCycleTheme, themeIcon,
     const editorStatus = node('p', 'pcm-api-editor-status'); editorStatus.setAttribute('role', 'status'); editor.append(editorStatus);
     const actions = node('div', 'pcm-snapshot-actions');
     const extra = button('附加参数', async () => { const next = await editApiAdditional({parent:element,value:additional}); if(next !== null) {additional=next;clearModels();} }); extra.style.marginRight='auto'; actions.append(extra);
-    const save = node('button', '', '保存方案'); save.type = 'submit'; actions.append(save, button('取消', closeEditor)); editor.append(actions);
-    editor.onsubmit = event => { event.preventDefault(); void run(async () => {
+    const save = node('button', '', '保存方案'); save.type = 'button'; actions.append(save, button('取消', closeEditor)); editor.append(actions);
+    save.onclick = event => { event.preventDefault(); if (![name,url,model].every(input=>input.reportValidity())) return; void run(async () => {
       await host.request('api-manager-save', { profile: { id: editing?.id, name: name.value, source: 'custom', model: model.value, connection: { custom_url: url.value }, secretId: credentials().secretId, additional }, newSecret: credentials().newSecret });
       secret.value = ''; modal.close(); editor.hidden = true; editor.replaceChildren(); editing = null; await refresh(); message('方案已保存，当前连接保持原样');
     }); };

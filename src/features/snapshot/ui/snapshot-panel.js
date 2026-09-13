@@ -1,5 +1,5 @@
 // 设置快照页面：保存、恢复与聊天/角色绑定，通过 iframe 通信桥调用宿主，不访问酒馆全局。
-import { chooseApiSnapshotBinding } from './api-snapshot-bind.js';
+import { chooseApiSnapshotBinding } from '../../api/ui/api-snapshot-bind.js';
 import { createSnapshotEditor } from './snapshot-editor.js';
 import { snapshotScope } from '../snapshot.js';
 import { createSnapshotScopePicker, snapshotScopeLabels } from './snapshot-scope.js';
@@ -25,6 +25,8 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
   const contextTitle=node('summary','','当前设置'),contextBody=node('div','pcm-snapshot-context-body');context.append(contextTitle,contextBody);
   const toolbar = node('div', 'pcm-snapshot-toolbar');
   const save = button('＋ 保存当前设置', () => execute('save')); save.classList.add('pcm-snapshot-primary');
+  save.addEventListener('click',event=>event.preventDefault());
+  contextTitle.append(save);
   const saveScope={preset:true,worlds:true,regex:true};
   const scopePicker=createSnapshotScopePicker(saveScope);
   const create=button('＋ 创建快照',()=>openEditor());create.classList.add('pcm-snapshot-create');toolbar.append(create);
@@ -83,7 +85,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     const active = data.activeBinding;
     contextBody.append(node('small', '', active ? '进入聊天时应用：'+active.name+'（'+(active.source === 'chat' ? '聊天绑定' : '角色默认')+'）' : '当前没有自动绑定，手动切换即可。'));
     for(const warning of c.regexAuthorization||[])contextBody.append(node('small','',warning));
-    const currentActions=node('div','pcm-snapshot-actions');currentActions.append(save);contextBody.append(scopePicker,currentActions);
+    contextBody.append(scopePicker);
     if (!data.snapshots.length) {
       const empty = node('div', 'pcm-snapshot-empty');
       empty.append(node('strong', '', '把常用设置存成一份快照'), node('p', '', '保存当前设置，或点击「创建快照」自由搭配。'));

@@ -1,7 +1,7 @@
 // 世界书工作台纯测：安全规范化、跨书配对、原子迁移排序和预设转换。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as wb from '../src/worldbook-workbench.js';
+import * as wb from '../src/features/worldbook/worldbook-workbench.js';
 
 const book = () => ({ custom: { keep: [1, 2] }, entries: {
   5: { uid: 5, comment: '甲', content: 'alpha', displayIndex: 2, order: 77, custom: { a: 1 } },

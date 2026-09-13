@@ -1,5 +1,5 @@
 // 双世界书工作台：独立草稿、对比编辑、拖拽迁移、预设转换及显式保存，仅通过宿主桥读写。
-import {clone} from '../core.js';
+import {clone} from '../../preset/core.js';
 import {normalizeWorkbenchBook,workbenchEntries,compareWorldbooks,transferWorldEntries,reorderWorldEntries,presetWorkbenchEntries,insertPresetWorldEntries,createWorkbenchEntry} from '../worldbook-workbench.js';
 import {openWorkbenchEntryEditor} from './worldbook-entry-editor.js';
 import {openWorldbookContentCompare} from './worldbook-content-compare.js';

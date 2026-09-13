@@ -1,5 +1,5 @@
 // 响应式配置克隆回归：原生失败时兼容普通代理，保持独立性及数据结构。
-import test from 'node:test';import assert from 'node:assert/strict';import {clone} from '../src/clone.js';
+import test from 'node:test';import assert from 'node:assert/strict';import {clone} from '../src/shared/clone.js';
 test('嵌套代理配置可克隆，副本写入不影响原始数据',()=>{const source={enabled:true,extra:undefined};const proxy=new Proxy({records:new Proxy([new Proxy(source,{})],{})},{});assert.throws(()=>structuredClone(proxy));const result=clone(proxy);assert.deepEqual(result,{records:[source]});result.records[0].enabled=false;assert.equal(source.enabled,true);assert.ok(Object.hasOwn(result.records[0],'extra'));});
 test('代理回退保留循环、共享引用、稀疏数组和特殊键',()=>{const raw=JSON.parse('{"__proto__":{"safe":true}}');raw.list=new Array(3);const proxy=new Proxy(raw,{});raw.list[2]=proxy;raw.shared=raw.list;const result=clone(proxy);assert.equal(result.list[2],result);assert.equal(result.shared,result.list);assert.equal(0 in result.list,false);assert.ok(Object.hasOwn(result,'__proto__'));assert.equal(Object.getPrototypeOf(result),Object.prototype);});
 test('不吞掉读取异常，不静默丢弃函数字段',()=>{assert.throws(()=>clone(new Proxy({fn(){}},{})),/函数/);const input=new Proxy({x:1},{get(){throw Error('读取失败')}});assert.throws(()=>clone(input),/读取失败/);});

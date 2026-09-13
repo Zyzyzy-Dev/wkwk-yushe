@@ -100,3 +100,11 @@
 .pcm-native-api-row strong, .pcm-native-api-row small { display: block; overflow-wrap: anywhere; }
 .pcm-native-api-row:has(input:disabled) { opacity: .6; cursor: default; }
 .pcm-api-editor textarea { box-sizing: border-box; width: 100%; min-height: 90px; resize: vertical; font: inherit; color: inherit; background: var(--pcm-bg, transparent); scrollbar-width: none; }
+
+/* API token entry is visually masked without a browser login/password form. */
+.pcm-api-secret-text { -webkit-text-security: disc; }
+
+/* 两个管理页面及快切弹窗共享固定在滚动容器顶部的工具栏。 */
+.pcm-api-manager>.pcm-snapshot-header{position:sticky;top:0;z-index:10;padding:10px 0;background:var(--snap-bg);backdrop-filter:blur(24px)}
+.pcm-snapshot-manager>.pcm-snapshot-context>summary{display:flex;align-items:center;gap:8px}
+.pcm-snapshot-manager>.pcm-snapshot-context>summary>.pcm-snapshot-primary{margin-left:auto;padding:4px 9px;min-height:28px;font-size:12px;white-space:nowrap}

@@ -1,8 +1,8 @@
 // 世界书缝合回归：来源校验、正文完整性、开关/角色、插入位置、原数据隔离。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readWorldbook, stitchWorldbook } from '../src/worldbook.js';
-import { createIdentifier } from '../src/core.js';
+import { readWorldbook, stitchWorldbook } from '../src/features/worldbook/worldbook.js';
+import { createIdentifier } from '../src/features/preset/core.js';
 
 const preset = () => ({
   temperature: 0.73,

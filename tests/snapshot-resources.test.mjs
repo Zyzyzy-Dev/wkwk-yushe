@@ -1,8 +1,8 @@
 // 快照资源回归：世界书配置和正则按稳定标识恢复，不改正文、不混淆来源或原地修改输入。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {captureWorldEntries, restoreWorldEntries, captureRegexSwitches, restoreRegexSwitches, validateSnapshotResources} from '../src/snapshot-resources.js';
-import * as resources from '../src/snapshot-resources.js';
+import {captureWorldEntries, restoreWorldEntries, captureRegexSwitches, restoreRegexSwitches, validateSnapshotResources} from '../src/features/snapshot/snapshot-resources.js';
+import * as resources from '../src/features/snapshot/snapshot-resources.js';
 
 test('new resources have only global books; legacy migration drops attached books and display content', () => {
   const legacy={worlds:{global:['G'],character:['C'],chat:['T']},worldEntries:['G','C','T'].map(name=>({name,entries:[{uid:'0',name:'entry',content:'display only',settings:{disable:false}}]})),regex:{global:[],preset:[],character:[]}};

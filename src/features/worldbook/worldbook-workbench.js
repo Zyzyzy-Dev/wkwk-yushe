@@ -1,5 +1,5 @@
 // 世界书工作台纯数据逻辑：安全规范化、跨书配对、隔离迁移排序及预设条目转换。
-import { findPromptOrderEntry, validatePreset } from './core.js';
+import { findPromptOrderEntry, validatePreset } from '../preset/core.js';
 
 const forbidden = new Set(['__proto__', 'prototype', 'constructor']);
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);

@@ -43,3 +43,9 @@
 .pcm-snapshot-editor-actions .pcm-snapshot-primary{min-width:120px}
 @media(max-width:700px){.pcm-snapshot-world-summary{display:grid;grid-template-columns:15px 22px minmax(0,1fr) 74px;gap:7px;padding:10px 8px}.pcm-snapshot-world-name{min-width:0;width:auto}.pcm-snapshot-editor .pcm-snapshot-world-summary .pcm-snapshot-position{grid-column:1/4;grid-row:2;width:100%;min-width:0}.pcm-snapshot-world-numbers{grid-column:1/-1;grid-row:3;width:auto;justify-content:flex-end;margin-top:6px}.pcm-snapshot-world-numbers>.pcm-snapshot-field{width:calc((100% - 10px)/3)}.pcm-snapshot-editor .pcm-snapshot-world-summary .pcm-snapshot-trigger{grid-column:4;grid-row:1;width:74px}.pcm-snapshot-world-summary .pcm-snapshot-position{margin-top:2px}.pcm-snapshot-world-body{padding:10px}.pcm-snapshot-global-mounts .pcm-snapshot-world-choices{grid-template-columns:minmax(0,1fr);max-height:200px}.pcm-snapshot-world-toggles{grid-template-columns:minmax(0,1fr)}.pcm-snapshot-preset-rows{max-height:300px}}
 @media(max-width:700px){.pcm-snapshot-world-placement{display:flex;grid-column:1/-1;gap:6px;min-width:0;align-items:center;margin-top:6px}.pcm-snapshot-editor .pcm-snapshot-world-summary .pcm-snapshot-position{flex:1;min-width:0;width:0;margin-top:0}.pcm-snapshot-world-numbers{flex:0 0 53%;margin-top:0;min-width:0}.pcm-snapshot-world-numbers>.pcm-snapshot-field{width:calc((100% - 10px)/3)}}
+
+/* 内层列表保留滚动，边界交由外层页面接续。 */
+.pcm-snapshot-editor :is(.pcm-snapshot-preset-rows,.pcm-snapshot-world-choices,.pcm-snapshot-regex-choices){scrollbar-width:none;overscroll-behavior:auto}
+.pcm-snapshot-editor :is(.pcm-snapshot-preset-rows,.pcm-snapshot-world-choices,.pcm-snapshot-regex-choices)::-webkit-scrollbar{display:none}
+.pcm-snapshot-editor [hidden]{display:none!important}
+.pcm-snapshot-global-mounts>input[type=search]{margin-bottom:10px}

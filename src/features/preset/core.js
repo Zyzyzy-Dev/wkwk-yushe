@@ -8,7 +8,7 @@ const MYERS_MAX_DISTANCE = 800;
 
 export const VAR_GET_RE = /\{\{(?:getvar|getglobalvar|var)::([^:}]+)/g;
 
-import { clone } from './clone.js';
+import { clone } from '../../shared/clone.js';
 export { clone };
 
 let identifierSequence = 0;

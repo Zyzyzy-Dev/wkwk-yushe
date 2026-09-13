@@ -1,14 +1,14 @@
 // 预设更新编辑器 · 酒馆宿主桥：唯一可接触 SillyTavern 主 document/API 的模块。
-import { clone } from './clone.js';
-import { API_BINDINGS_KEY, bindApiSnapshot, isApiProfileActive } from './api-bindings.js';
+import { clone } from '../shared/clone.js';
+import { API_BINDINGS_KEY, bindApiSnapshot, isApiProfileActive } from '../features/api/api-bindings.js';
 // 扩展菜单入口、外层 dialog/iframe 外壳、preset-manager/openai 动态读取与保存、
 // PRESET_CHANGED 订阅转发、主题变量与 TauriTavern IME 高度转发。
-import { applyPresetToMemory, shouldRefreshActivePreset } from './core.js';
-import { captureSnapshot, normalizeSnapshotName, planSnapshotRestore, resolveSnapshotBinding, snapshotOrder, validateSnapshot, snapshotPresetEditor, snapshotScope, selectSnapshotScope } from './snapshot.js';
-import { captureWorldEntries, restoreWorldEntries, captureRegexSwitches, restoreRegexSwitches, validateSnapshotResources, normalizeSnapshotResources, regexEditor } from './snapshot-resources.js';
-import { createIdentifier } from './core.js';
-import { normalizeWorkbenchBook } from './worldbook-workbench.js';
-import { API_STORE_KEY, API_ADDITIONAL_FIELDS, normalizeApiAdditional, normalizeApiProfile, planApiSwitch, readNativeApiProfiles, maskApiSecret } from './api-manager.js';
+import { applyPresetToMemory, shouldRefreshActivePreset } from '../features/preset/core.js';
+import { captureSnapshot, normalizeSnapshotName, planSnapshotRestore, resolveSnapshotBinding, snapshotOrder, validateSnapshot, snapshotPresetEditor, snapshotScope, selectSnapshotScope } from '../features/snapshot/snapshot.js';
+import { captureWorldEntries, restoreWorldEntries, captureRegexSwitches, restoreRegexSwitches, validateSnapshotResources, normalizeSnapshotResources, regexEditor } from '../features/snapshot/snapshot-resources.js';
+import { createIdentifier } from '../features/preset/core.js';
+import { normalizeWorkbenchBook } from '../features/worldbook/worldbook-workbench.js';
+import { API_STORE_KEY, API_ADDITIONAL_FIELDS, normalizeApiAdditional, normalizeApiProfile, planApiSwitch, readNativeApiProfiles, maskApiSecret } from '../features/api/api-manager.js';
 
 // Track native worldbook writes from module startup, not only after a workbench window opens.
 // Other URLs, the fetch receiver/arguments, and the exact returned Promise are left untouched.
@@ -619,7 +619,7 @@ async function snapshotReadBooks(env, names, context, includeContent=false) {
 async function snapshotCaptureResources(env, context, scope = {worlds:true,regex:true}) {
   const resources=clone(snapshotResourceSummary(env,context));
   resources.version=2;resources.worlds={global:scope.worlds ? resources.worlds.global : []};
-  if (!scope.regex) resources.regex={global:[],preset:[],character:[]};
+  resources.regex={global:scope.regex ? resources.regex.global : [],preset:[],character:[]};
   resources.worldEntries=await snapshotReadBooks(env,resources.worlds.global,context);
   return validateSnapshotResources(resources);
 }
@@ -669,10 +669,10 @@ async function readSnapshotEditor(env, payload) {
   draft.resources=normalizeSnapshotResources(draft.resources);
   const preset=draft.presetName===context.presetName?env.openai.oai_settings:readPresetByName(env.manager,draft.presetName);
   if(!preset)throw new Error('找不到预设「'+draft.presetName+'」');
-  if (!draft.scope.regex) draft.resources.regex=Object.fromEntries(Object.entries(snapshotRegexSources(env,preset)).map(([scope,scripts])=>[scope,captureRegexSwitches(scripts)]));
+  if (!draft.scope.regex) draft.resources.regex={global:captureRegexSwitches(snapshotRegexSources(env,preset).global),preset:[],character:[]};
   const groups=draft.presetName===context.presetName?snapshotGroups(env):preset.extensions?.baibaiToolkit?.presetPromptGroups;
   const editor={...snapshotPresetEditor(draft,preset,groups),regex:{},regexGroups:{}};
-  for(const [scope,scripts] of Object.entries(snapshotRegexSources(env,preset))){
+  for(const [scope,scripts] of [['global',snapshotRegexSources(env,preset).global]]){
     const view=regexEditor(scripts,snapshotRegexGroups(env,scope,draft.presetName,preset),draft.resources.regex[scope]);
     editor.regex[scope]=view.entries;editor.regexGroups[scope]=view.groups;
   }
@@ -823,7 +823,7 @@ function syncSnapshotRegexCaches(env, context, plans, journal) {
   const runtime=baiBaiState()?.regexQuickOperationOptimization;
   if(!runtime)return;
   const seen=new Set(Object.values(snapshotRegexSources(env)).flat());
-  for(const scope of ['global','preset','character']){
+  for(const scope of Object.keys(plans)){
     const key=scope==='global'?'global':scope==='preset'?'preset:openai:'+context.presetName:'scoped:'+context.characterKey;
     const arrays=[],pending=runtime.pendingRegexScriptSaves?.get?.(key);
     if(Array.isArray(pending?.scripts))arrays.push(pending.scripts);
@@ -894,21 +894,21 @@ async function applySnapshotResources(env, prepared, context, journal) {
   const guard=()=>{assertSnapshotScope(env,context.scope,context.presetName);assertSnapshotIdle(env);};
   const sources=snapshotRegexSources(env), regexPlans={};
   if (included.regex) {
-  for (const scope of ['global','preset','character']) {
+  for (const scope of ['global']) {
     regexPlans[scope]=restoreRegexSwitches(resources.regex[scope],sources[scope]);
     if (regexPlans[scope].missing.length) warnings.push('已跳过缺失的'+({global:'全局',preset:'预设',character:'角色'}[scope])+'正则：'+regexPlans[scope].missing.join('、'));
   }
-  const previousGlobal=clone(sources.global), previousPreset=clone(sources.preset);
+  const previousGlobal=clone(sources.global);
   journal.push(async()=>{
     // 回滚持有的原始记录引用，不把整个新聊天/新预设设置替换成旧副本。
     // 正则只有两种状态：若已被外部改回原值，不再写入。
     if(env.extensions.extension_settings.regex===sources.global)rollbackSnapshotRegexArray(sources.global,previousGlobal,regexPlans.global.scripts,'global');
-    if(env.openai.oai_settings.extensions?.regex_scripts===sources.preset)rollbackSnapshotRegexArray(sources.preset,previousPreset,regexPlans.preset.scripts,'preset');
+
 
   });
   syncSnapshotRegexCaches(env,context,regexPlans,journal);
   env.extensions.extension_settings.regex=patchSnapshotRegexArray(sources.global,regexPlans.global.scripts,'global');
-  env.openai.oai_settings.extensions ??= {};env.openai.oai_settings.extensions.regex_scripts=patchSnapshotRegexArray(sources.preset,regexPlans.preset.scripts,'preset');
+
   }
   for (const book of books) {
     guard();
@@ -921,18 +921,6 @@ async function applySnapshotResources(env, prepared, context, journal) {
     });
     await writeSnapshotBook(env,book.name,book.after);guard();
   }
-  const character=snapshotCharacter(env);
-  if (included.regex && character && JSON.stringify(sources.character)!==JSON.stringify(regexPlans.character.scripts)) {
-    guard();const before=clone(sources.character);
-    journal.push(async()=>{
-      const current=await readSnapshotPersistence(env,'/api/characters/get',{avatar_url:character.avatar});
-      const scripts=current?.data?.extensions?.regex_scripts || [];
-      if(JSON.stringify(scripts)!==JSON.stringify(before)&&JSON.stringify(scripts)!==JSON.stringify(regexPlans.character.scripts))throw new Error('角色正则已被外部修改，保留新内容');
-      await writeSnapshotCharacterRegex(env,character,before);
-    });
-    await writeSnapshotCharacterRegex(env,character,regexPlans.character.scripts);guard();
-  }
-  if (included.regex) warnings.push(...snapshotContext(env).regexAuthorization);
   return warnings;
 }
 
@@ -975,29 +963,15 @@ async function waitSnapshotPreset(env, context) {
   assertSnapshotScope(env, context.scope, context.presetName);
 }
 
-async function selectSnapshotPreset(env, name, scope, preserveRegex = false) {
+async function selectSnapshotPreset(env, name, scope) {
   if (snapshotContext(env).presetName === name) return;
   const {preset_names: names} = env.manager.getPresetList();
   const value = Array.isArray(names) ? names.indexOf(name) : (Object.hasOwn(names || {}, name) ? names[name] : undefined);
   if (value === undefined || value === -1) throw new Error('找不到预设「'+name+'」，请更新快照');
   const events = env.script.eventSource, type = env.script.event_types?.OAI_PRESET_CHANGED_AFTER;
   if (!events?.on || !type || !env.manager.selectPreset) throw new Error('当前酒馆不支持等待预设切换，请手动选择预设后重试');
-  const beforeType=env.script.event_types?.OAI_PRESET_CHANGED_BEFORE;
-  if (preserveRegex && !beforeType) throw new Error('当前酒馆无法在切换预设时保留正则，请更新酒馆后重试');
-  const originalRegex=preserveRegex ? clone(env.openai.oai_settings.extensions?.regex_scripts || []) : null;
-  const originalGroups=preserveRegex ? clone(snapshotRegexGroups(env,'preset',snapshotContext(env).presetName,env.openai.oai_settings)) : null;
-  const allowed=env.extensions.extension_settings.preset_allowed_regex?.openai || [];
-  if (preserveRegex && originalRegex.some(script=>script.disabled!==true) && allowed.includes(name)!==allowed.includes(snapshotContext(env).presetName)) throw new Error('两个预设的正则授权状态不同，无法保持正则不变；请先在酒馆统一授权状态后重试');
-  // 只修改原生本次加载的副本，预设文件和预设库保持原样；原生随后正常绘制正则。
-  const preserve=({preset,presetName})=>{
-    if (presetName!==name || snapshotContext(env).scope!==scope) return;
-    preset.extensions ??= {};preset.extensions.regex_scripts=clone(originalRegex);
-    preset.extensions.baibaiToolkit ??= {};
-    preset.extensions.baibaiToolkit.regexGroups={...(originalGroups ? clone(originalGroups) : {groups:[],scripts:{},ungrouped:{}}),version:1};
-  };
   let listener, timer;
   try {
-    if (preserveRegex) (events.makeFirst || events.on).call(events,beforeType,preserve);
     await new Promise((resolve, reject) => {
       listener = () => {
         try { assertSnapshotScope(env, scope, name); resolve(); } catch (error) { reject(error); }
@@ -1010,7 +984,6 @@ async function selectSnapshotPreset(env, name, scope, preserveRegex = false) {
   } finally {
     clearTimeout(timer);
     if (listener) (events.removeListener || events.off)?.call(events, type, listener);
-    if (preserveRegex) (events.removeListener || events.off)?.call(events, beforeType, preserve);
   }
 }
 
@@ -1090,7 +1063,6 @@ async function refreshSnapshotPrompts(env) {
 }
 
 async function applySettingsSnapshot(env, snapshot, payload, automatic = false) {
-  const preserveRegex=snapshot.scope!==undefined && !snapshotScope(snapshot).regex;
   snapshot=selectSnapshotScope(snapshot);
   if(snapshot.resources)snapshot={...snapshot,resources:normalizeSnapshotResources(snapshot.resources)};
   validateSnapshot(snapshot);
@@ -1114,7 +1086,7 @@ async function applySettingsSnapshot(env, snapshot, payload, automatic = false) 
   if (included.worlds && !document.getElementById('world_info')) throw new Error('全局世界书列表尚未就绪');
   const prepared=await prepareSnapshotResources(env,snapshot,context,payload.allowMissingWorlds);
   await settleBaiBai(env, context);
-  await selectSnapshotPreset(env, targetName, context.scope, preserveRegex);
+  await selectSnapshotPreset(env, targetName, context.scope);
   const target = snapshotContext(env);
   await waitSnapshotPreset(env, target);
   await settleBaiBai(env, target);
@@ -1408,6 +1380,16 @@ class AppHost {
     const mounted = createHostDialog();
     this.dialog = mounted.dialog;
     this.iframe = mounted.iframe;
+    let backdropPointer = false;
+    const outside = event => {
+      const rect = this.dialog.getBoundingClientRect();
+      return event.target === this.dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom);
+    };
+    this.dialog.addEventListener('pointerdown', event => { backdropPointer = outside(event); });
+    this.dialog.addEventListener('click', event => {
+      if (this.apiQuick && backdropPointer && outside(event)) this.close();
+      backdropPointer = false;
+    });
     this.dialog.addEventListener('close', () => {
       this.openRequested = false;
       this.sendEvent('host-closed');
@@ -1432,7 +1414,7 @@ class AppHost {
       // standard iframe has started; on normal SillyTavern this remains a no-op.
       setTimeout(() => this.configureTauriSurface(), 1_500);
     }
-    this.iframe.src = new URL('./ui/index.html', import.meta.url).href;
+    this.iframe.src = new URL('../ui/index.html', import.meta.url).href;
   }
 
   // TT 布局快照统一处理：layout-kit 与硬 ABI 两条订阅路径共用，转发键盘高度与安全区。

@@ -1,7 +1,7 @@
 // API 字段隔离、导入白名单与输入校验回归，不包含真实地址或用户密钥。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeApiProfile, planApiSwitch, importApiProfiles, readNativeApiProfiles, maskApiSecret } from '../src/api-manager.js';
+import { normalizeApiProfile, planApiSwitch, importApiProfiles, readNativeApiProfiles, maskApiSecret } from '../src/features/api/api-manager.js';
 test('密钥无论服务器是否开放明文均强制打码，短密钥不暴露任何字符', () => {
   assert.equal(maskApiSecret('sk-sensitive-example'), '••••••••ple');
   assert.equal(maskApiSecret('abc'), '••••••••');

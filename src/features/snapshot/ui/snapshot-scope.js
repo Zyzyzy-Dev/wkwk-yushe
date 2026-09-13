@@ -1,5 +1,5 @@
 // 快照范围选择控件：共用于当前设置保存与隔离草稿编辑，不访问宿主。
-export const snapshotScopeLabels = {preset:'预设',worlds:'世界书',regex:'正则'};
+export const snapshotScopeLabels = {preset:'预设',worlds:'世界书',regex:'全局正则开关'};
 export function createSnapshotScopePicker(scope, onChange = () => {}) {
   const element=document.createElement('fieldset');element.className='pcm-snapshot-scope-picker';
   const legend=document.createElement('legend');legend.textContent='保存范围';element.append(legend);
@@ -10,6 +10,6 @@ export function createSnapshotScopePicker(scope, onChange = () => {}) {
     input.addEventListener('change',()=>{scope[key]=input.checked;onChange();});
     label.append(input,document.createTextNode(text));element.append(label);
   }
-  const hint=document.createElement('small');hint.textContent='只保存勾选项；应用时，未勾选的设置保持当前状态。';element.append(hint);
+  const hint=document.createElement('small');hint.textContent='仅保存勾选项。预设正则随预设切换；角色正则不保存、不修改。';element.append(hint);
   return element;
 }

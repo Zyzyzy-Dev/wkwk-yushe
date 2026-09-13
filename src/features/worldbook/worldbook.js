@@ -1,5 +1,5 @@
 // 世界书缝合纯逻辑：读取导出格式，将所选条目转换并插入预设；不执行正文或改写来源。
-import { clone, createIdentifier, findPromptOrderEntry, validatePreset } from './core.js';
+import { clone, createIdentifier, findPromptOrderEntry, validatePreset } from '../preset/core.js';
 
 export function readWorldbook(data, source = '世界书') {
   const entries = data?.entries ?? data?.character_book?.entries ?? data?.data?.character_book?.entries;

@@ -1,5 +1,5 @@
 // 世界书条目编辑：独立草稿、原生字段排版与深度角色组合，保留未展示配置。
-import {clone} from '../core.js';
+import {clone} from '../../preset/core.js';
 import {normalizeWorkbenchBook} from '../worldbook-workbench.js';
 
 export function openWorkbenchEntryEditor({parent, entry, title, onSave}) {

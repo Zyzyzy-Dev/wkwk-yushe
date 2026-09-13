@@ -1,6 +1,6 @@
 // 世界书缝合面板：文件/宿主读取、条目筛选与正文预览，提交所选条目给应用草稿。
 import { readWorldbook } from '../worldbook.js';
-import { host } from './bridge.js';
+import { host } from '../../../ui/bridge/bridge.js';
 import { openWorldbookSourcePicker } from './worldbook-source-picker.js';
 
 const node = (tag, className = '', text) => {

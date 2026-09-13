@@ -1,8 +1,8 @@
 // 正文搜索回归：字面量/Unicode、原文保真、diff 跨片段/跨行和安全 DOM 渲染。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildRows, diffLines} from '../src/core.js';
-import {findSearchRanges, normalizeSearchQuery, plainSearchRows, buildSearchRows, appendSearchText} from '../src/ui/search-highlight.js';
+import {buildRows, diffLines} from '../src/features/preset/core.js';
+import {findSearchRanges, normalizeSearchQuery, plainSearchRows, buildSearchRows, appendSearchText} from '../src/features/preset/ui/search-highlight.js';
 
 test('literal search trims query, ignores case and never treats punctuation as a regex',()=>{
   assert.equal(normalizeSearchQuery('  HeLLo  '),'hello');

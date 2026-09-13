@@ -9,7 +9,7 @@ export function createSnapshotEditor({host, model, existingId, onCancel, onSaved
   let editor=copy(model.editor||{}),disposed=false,busy=false;
   draft.resources.version=2;
   draft.resources.worlds={global:[...draft.resources.worlds.global]};
-  const scopes=['global','preset','character'],scopeNames={global:'全局正则',preset:'预设正则',character:'角色正则'};
+  const scopes=['global'],scopeNames={global:'全局正则',preset:'预设正则',character:'角色正则'};
   const node=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;};
   const element=node('section','pcm-snapshot-editor');element.setAttribute('aria-label',existingId?'修改快照':'创建快照');
   const status=node('p','pcm-snapshot-status');status.setAttribute('role','status');
@@ -18,8 +18,16 @@ export function createSnapshotEditor({host, model, existingId, onCancel, onSaved
   form.append(label('快照名称',name));
   form.append(createSnapshotScopePicker(draft.scope,()=>setBusy(busy)));
   const preset=node('select');preset.setAttribute('aria-label','预设选择');
-  for(const value of new Set([draft.presetName,...model.presets]))addOption(preset,value,value);
-  preset.value=draft.presetName;form.append(label('预设选择',preset));
+  const presetNames=[...new Set([draft.presetName,...model.presets])];
+  const presetSearch=node('input');presetSearch.type='search';presetSearch.placeholder='搜索预设';presetSearch.setAttribute('aria-label','搜索预设');
+  function filterPresets(){
+    const selected=draft.presetName,query=presetSearch.value.trim().toLocaleLowerCase();
+    preset.replaceChildren();
+    for(const value of presetNames)if(value===selected||value.toLocaleLowerCase().includes(query))addOption(preset,value,value);
+    preset.value=selected;
+  }
+  presetSearch.addEventListener('input',filterPresets);filterPresets();
+  const presetField=label('预设选择',presetSearch);presetField.append(preset);form.append(presetField);
   const presetDetails=node('details','pcm-snapshot-preset-details');presetDetails.open=true;
   presetDetails.dataset.snapshotScope='preset';
   const presetSummary=node('summary');const presetRows=node('div','pcm-snapshot-preset-rows');
@@ -39,7 +47,12 @@ export function createSnapshotEditor({host, model, existingId, onCancel, onSaved
   }));
   const mounts=node('section','pcm-snapshot-field-group pcm-snapshot-global-mounts');mounts.append(node('h3','','全局世界书'));
   mounts.dataset.snapshotScope='worlds';
-  const choices=node('div','pcm-snapshot-world-choices');mounts.append(choices);
+  const worldSearch=node('input');worldSearch.type='search';worldSearch.placeholder='搜索全局世界书';worldSearch.setAttribute('aria-label','搜索全局世界书');
+  const choices=node('div','pcm-snapshot-world-choices');mounts.append(worldSearch,choices);
+  worldSearch.addEventListener('input',()=>{
+    const query=worldSearch.value.trim().toLocaleLowerCase();
+    for(const row of choices.querySelectorAll('label'))row.hidden=!row.textContent.toLocaleLowerCase().includes(query);
+  });
   const bookCache=new Map(),bookViews=new Map();
   const contentCache=new Map((editor.worldEntries||[]).map(book=>[book.name,new Map(book.entries.map(entry=>[String(entry.uid),String(entry.content??'')]))]));
   for(const book of draft.resources.worldEntries)cacheBook(book);
@@ -79,7 +92,8 @@ export function createSnapshotEditor({host, model, existingId, onCancel, onSaved
     busy=value;element.setAttribute('aria-busy',String(value));
     for(const section of element.querySelectorAll('[data-snapshot-scope]'))section.hidden=!draft.scope[section.dataset.snapshotScope];
     for(const el of element.querySelectorAll('input,select,textarea,button'))el.disabled=(value&&el!==cancel)||el.dataset.unavailable==='true'||!!el.closest('[data-snapshot-scope][hidden]');
-    preset.disabled=value||(!draft.scope.preset&&!draft.scope.regex);
+    preset.disabled=value||!draft.scope.preset;
+    presetSearch.disabled=preset.disabled;
   }
   async function run(action){if(busy||disposed)return;setBusy(true);status.textContent='';status.classList.remove('is-error');try{await action();}catch(error){if(!disposed){status.textContent=error.message;status.classList.add('is-error');toast.error(error.message);}}finally{if(!disposed)setBusy(false);}}
   function updatePresetSummary(){presetSummary.textContent='预设条目与分组 · '+draft.entries.filter(item=>item.enabled).length+'/'+draft.entries.length+' 条目开启';}
@@ -135,7 +149,7 @@ export function createSnapshotEditor({host, model, existingId, onCancel, onSaved
   }
   function renderRegex(){
     const expanded=new Set([...regex.querySelectorAll('details[open][data-scope]')].map(el=>el.dataset.scope));
-    regex.replaceChildren(node('h3','','正则开关'));
+    regex.replaceChildren(node('h3','','全局正则开关'));
     for(const scope of scopes){
       const scripts=draft.resources.regex[scope]||[],groups=editor.regexGroups?.[scope]||[];
       const details=node('details','pcm-snapshot-regex-details');details.dataset.scope=scope;details.open=expanded.has(scope);

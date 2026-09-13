@@ -2,10 +2,10 @@
 const svg = (body) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
 const star = svg('<path d="M12 2c1.2 6.3 3.7 8.8 10 10-6.3 1.2-8.8 3.7-10 10C10.8 15.7 8.3 13.2 2 12c6.3-1.2 8.8-3.7 10-10Z"/>');
 const arrow = svg('<path d="M5 12h14m-6-6 6 6-6 6"/>');
-const notesCat = new URL('./assets/kitten-notes.png', import.meta.url).href;
-const boxCat = new URL('./assets/kitten-box.png', import.meta.url).href;
-const comingSoon = new URL('./assets/kitten-coming-soon.png', import.meta.url).href;
-const masterpiece = new URL('./assets/gpt-masterpiece.png', import.meta.url).href;
+const notesCat = new URL('../assets/kitten-notes.png', import.meta.url).href;
+const boxCat = new URL('../assets/kitten-box.png', import.meta.url).href;
+const comingSoon = new URL('../assets/kitten-coming-soon.png', import.meta.url).href;
+const masterpiece = new URL('../assets/gpt-masterpiece.png', import.meta.url).href;
 
 export function createToolboxHome({ themeIcon, onCycleTheme }) {
   const home = document.createElement('main');
