@@ -50,3 +50,13 @@ test('原生缺字段、排除字段、其他来源及失效密钥逐项给出�
   assert.deepEqual(readNativeApiProfiles([] ,[]),[]);
   assert.ok(readNativeApiProfiles([native,native],[{id:'key-a'}]).every(x=>x.error));
 });
+
+test('附加参数按方案保存和切换，模型单切及旧方案保留当前参数',()=>{
+ const additional={custom_include_body:'top_k: 20\n',custom_exclude_body:'- frequency_penalty',custom_include_headers:'X-Route: relay'};
+ const input={...profile,additional};const normalized=normalizeApiProfile(input);
+ assert.deepEqual(normalized.additional,additional);assert.notEqual(normalized.additional,additional);
+ assert.deepEqual(planApiSwitch(settings,input,'both').patch,{custom_url:profile.connection.custom_url,custom_model:profile.model,...additional});
+ assert.deepEqual(planApiSwitch(settings,input,'model').patch,{custom_model:profile.model});
+ assert.equal(Object.hasOwn(planApiSwitch(settings,profile,'both').patch,'custom_include_body'),false);
+ assert.equal(planApiSwitch(settings,{...profile,additional:{}},'both').patch.custom_include_headers,'');
+});

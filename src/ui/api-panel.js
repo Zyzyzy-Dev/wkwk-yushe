@@ -1,4 +1,5 @@
 // API 管理页面：方案编辑、酒馆原生方案导入与独立切换，所有宿主操作均通过通信桥。
+import { editApiAdditional } from './api-additional.js';
 import { chooseNativeApiProfiles } from './api-native-import.js';
 import { chooseApiSnapshotBinding } from './api-snapshot-bind.js';
 export function createApiPanel({ host, onBack, onClose, onCycleTheme, themeIcon, prompt, confirm, quick = false, onSnapshots }) {
@@ -89,6 +90,7 @@ export function createApiPanel({ host, onBack, onClose, onCycleTheme, themeIcon,
   }
   function edit(profile = null) {
     if (!data || busy) return;
+    let additional = profile ? profile.additional : {custom_include_body:'',custom_exclude_body:'',custom_include_headers:''};
     editing = profile; editor.replaceChildren(); editor.hidden = false;
     const editorHead = node('header', 'pcm-api-editor-head'); editorHead.append(node('h3', '', profile ? '编辑 API' : '创建 API'), iconButton('关闭编辑', 'm6 6 12 12M6 18 18 6', closeEditor)); editor.append(editorHead);
     const name = field('方案名称', profile?.name); name.required = true; name.maxLength = 100;
@@ -115,7 +117,7 @@ export function createApiPanel({ host, onBack, onClose, onCycleTheme, themeIcon,
     };
     model.addEventListener('input', renderModels); model.addEventListener('focus', renderModels);
     modelRow.append(iconButton('拉取模型', refreshPath, () => run(async () => {
-      models = await host.request('api-manager-models', { url: url.value.trim(), ...credentials() });
+      models = await host.request('api-manager-models', { url: url.value.trim(), ...credentials(), additional });
       renderModels(); message(models.length ? '已拉取 '+models.length+' 个模型，点击选择或搜索' : '未返回模型，可手动填写');
     })));
     modelRow.parentElement.append(modelMenu);
@@ -123,9 +125,10 @@ export function createApiPanel({ host, onBack, onClose, onCycleTheme, themeIcon,
     url.addEventListener('input', clearModels); secret.addEventListener('input', clearModels);
     const editorStatus = node('p', 'pcm-api-editor-status'); editorStatus.setAttribute('role', 'status'); editor.append(editorStatus);
     const actions = node('div', 'pcm-snapshot-actions');
+    const extra = button('附加参数', async () => { const next = await editApiAdditional({parent:element,value:additional}); if(next !== null) {additional=next;clearModels();} }); extra.style.marginRight='auto'; actions.append(extra);
     const save = node('button', '', '保存方案'); save.type = 'submit'; actions.append(save, button('取消', closeEditor)); editor.append(actions);
     editor.onsubmit = event => { event.preventDefault(); void run(async () => {
-      await host.request('api-manager-save', { profile: { id: editing?.id, name: name.value, source: 'custom', model: model.value, connection: { custom_url: url.value }, secretId: credentials().secretId }, newSecret: credentials().newSecret });
+      await host.request('api-manager-save', { profile: { id: editing?.id, name: name.value, source: 'custom', model: model.value, connection: { custom_url: url.value }, secretId: credentials().secretId, additional }, newSecret: credentials().newSecret });
       secret.value = ''; modal.close(); editor.hidden = true; editor.replaceChildren(); editing = null; await refresh(); message('方案已保存，当前连接保持原样');
     }); };
     modal.showModal(); name.focus();

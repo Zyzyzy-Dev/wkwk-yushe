@@ -1,6 +1,15 @@
 // API 方案的数据校验与字段级切换计划；不访问宿主、不保存密钥明文或预设快照。
 import { createIdentifier } from './core.js';
 
+export const API_ADDITIONAL_FIELDS = ['custom_include_body', 'custom_exclude_body', 'custom_include_headers'];
+export function normalizeApiAdditional(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('附加参数格式无效');
+  return Object.fromEntries(API_ADDITIONAL_FIELDS.map(key => {
+    const text = value[key] ?? '';
+    if (typeof text !== 'string' || text.length > 100000) throw new Error('附加参数必须是文本，且每项不能超过 100000 字符');
+    return [key, text];
+  }));
+}
 export const API_STORE_KEY = 'preset_compare_api_manager';
 export function maskApiSecret(value) {
   const text = typeof value === 'string' ? value : '';
@@ -27,6 +36,7 @@ export function normalizeApiProfile(value) {
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hash || url.search) throw new Error('API 地址必须为 HTTP(S)，不能包含账号、密码、查询参数或片段');
   }
   return { id: String(value.id || createIdentifier()), name, source, model, connection,
+    ...(value.additional === undefined ? {} : { additional: normalizeApiAdditional(value.additional) }),
     secretId: String(value.secretId || ''), updatedAt: Number(value.updatedAt) || Date.now() };
 }
 
@@ -37,6 +47,7 @@ export function planApiSwitch(settings, profile, mode) {
   const patch = {};
   if (mode !== 'model') Object.assign(patch, item.connection);
   if (mode !== 'api') patch[config.model] = item.model;
+  if (mode !== 'model' && item.additional) Object.assign(patch, item.additional);
   return { patch, secretKey: config.secret, secretId: mode === 'model' ? null : item.secretId };
 }
 

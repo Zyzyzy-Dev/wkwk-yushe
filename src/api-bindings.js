@@ -7,5 +7,6 @@ export function bindApiSnapshot(links, apiId, snapshotId) {
 }
 export function isApiProfileActive(profile, current) {
   return profile.source === current.source && profile.connection.custom_url.replace(/\/$/, '') === current.connection.custom_url.replace(/\/$/, '')
+    && (!profile.additional || Object.keys(profile.additional).every(key => profile.additional[key] === (current.additional?.[key] || '')))
     && profile.model === current.model && profile.secretId === current.secretId;
 }

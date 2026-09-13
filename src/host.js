@@ -8,7 +8,7 @@ import { captureSnapshot, normalizeSnapshotName, planSnapshotRestore, resolveSna
 import { captureWorldEntries, restoreWorldEntries, captureRegexSwitches, restoreRegexSwitches, validateSnapshotResources, normalizeSnapshotResources, regexEditor } from './snapshot-resources.js';
 import { createIdentifier } from './core.js';
 import { normalizeWorkbenchBook } from './worldbook-workbench.js';
-import { API_STORE_KEY, normalizeApiProfile, planApiSwitch, readNativeApiProfiles, maskApiSecret } from './api-manager.js';
+import { API_STORE_KEY, API_ADDITIONAL_FIELDS, normalizeApiAdditional, normalizeApiProfile, planApiSwitch, readNativeApiProfiles, maskApiSecret } from './api-manager.js';
 
 // Track native worldbook writes from module startup, not only after a workbench window opens.
 // Other URLs, the fetch receiver/arguments, and the exact returned Promise are left untouched.
@@ -230,10 +230,10 @@ async function handleApiManagerRequest(method, payload) {
     for(const key of ['quickReply','floating']) if(typeof payload[key]==='boolean')next[key]=payload[key];
     extensions.extension_settings.preset_compare_api_entries=next;script.saveSettingsDebounced();apiEntrySync?.(next);return next;
   }
-  const current = keys => ({ source: settings.chat_completion_source, model: settings.custom_model || '', connection: { custom_url: settings.custom_url || '' }, secretId: activeId(keys) });
+  const current = keys => ({ source: settings.chat_completion_source, model: settings.custom_model || '', connection: { custom_url: settings.custom_url || '' }, additional: normalizeApiAdditional(settings), secretId: activeId(keys) });
   if (method === 'api-manager-models') {
     const profile = normalizeApiProfile({ name: '模型查询', model: 'query', connection: { custom_url: payload.url } });
-    const body = { chat_completion_source: 'openai', reverse_proxy: profile.connection.custom_url, proxy_password: String(payload.newSecret || '') };
+    const body = { chat_completion_source: 'openai', reverse_proxy: profile.connection.custom_url, proxy_password: String(payload.newSecret || ''), custom_include_headers: payload.additional === undefined ? '' : normalizeApiAdditional(payload.additional).custom_include_headers };
     if (!payload.newSecret && payload.secretId) {
       if (!(await readKeys()).some(item => item.id === payload.secretId)) throw new Error('所选密钥已不存在，请重新选择');
       // Native /status can address a vault entry without rotating the active key or exposing its value.
@@ -317,7 +317,7 @@ async function handleApiManagerRequest(method, payload) {
     ready();
     if (JSON.stringify(settings) !== JSON.stringify(before)) throw new Error('酒馆设置已变化，请重试');
     if (payload.mode !== 'model' && String(document.querySelector('#api_key_custom')?.value || '').trim()) throw new Error('原生 API 密钥输入框有未保存内容，请先保存或清空后再切换');
-    if (payload.mode !== 'model' && before.custom_url !== plan.patch.custom_url && String(settings.custom_include_headers || '').trim()) throw new Error('当前连接使用自定义请求头。第一版尚不管理请求头，请先在酒馆清空或迁移其中的认证信息后再跨地址切换');
+    if (payload.mode !== 'model' && before.custom_url !== plan.patch.custom_url && !Object.hasOwn(plan.patch, 'custom_include_headers') && String(settings.custom_include_headers || '').trim()) throw new Error('当前连接使用自定义请求头。目标旧方案未保存附加参数，请先编辑该方案的附加参数后再跨地址切换');
     if (method === 'api-manager-preflight') return true;
     // Abort pending native model discovery before it can choose a default model on response.
     const previousStatus = script.online_status;
@@ -338,7 +338,7 @@ async function handleApiManagerRequest(method, payload) {
       Object.assign(settings, plan.patch);
       fieldsApplied = true;
       // Assign DOM values without input/change: those events can reapply presets or clamp generation parameters.
-      for (const [field, selector] of [['custom_url', '#custom_api_url_text'], ['custom_model', '#custom_model_id']]) {
+      for (const [field, selector] of [['custom_url', '#custom_api_url_text'], ['custom_model', '#custom_model_id'], ...API_ADDITIONAL_FIELDS.map(key => [key, '#'+key])]) {
         if (Object.hasOwn(plan.patch, field)) { const control = document.querySelector(selector); if (control) control.value = settings[field]; }
       }
       if (payload.mode !== 'model') {
@@ -381,7 +381,7 @@ async function handleApiManagerRequest(method, payload) {
     } catch (error) {
       // Roll back only our own field writes; leave any external edits intact.
       if (fieldsApplied) for (const [field, value] of Object.entries(plan.patch)) if (settings[field] === value) settings[field] = before[field];
-      for (const [field, selector] of [['custom_url', '#custom_api_url_text'], ['custom_model', '#custom_model_id']]) {
+      for (const [field, selector] of [['custom_url', '#custom_api_url_text'], ['custom_model', '#custom_model_id'], ...API_ADDITIONAL_FIELDS.map(key => [key, '#'+key])]) {
         const control = document.querySelector(selector); if (control && Object.hasOwn(plan.patch, field)) control.value = settings[field];
       }
       if (target && target !== previous) {
