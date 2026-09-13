@@ -34,6 +34,10 @@ export function createToolboxHome({ themeIcon, onCycleTheme }) {
         <span class="pcm-toolbox-card-copy"><strong>世界书工作台</strong><small><span>世界书对比 · 编辑 · 拖拽迁移</span><span>预设条目转换并插入世界书</span></small></span>
         <span class="pcm-home-card-go" aria-hidden="true">${arrow}</span>
       </button>
+      <button type="button" class="pcm-toolbox-card" data-action="open-api-manager">
+        <span class="pcm-toolbox-card-icon pcm-snapshot-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v5m8-5v5M6 8h12v3a6 6 0 0 1-6 6v4m-6-13v3a6 6 0 0 0 6 6"/></svg></span>
+        <span class="pcm-toolbox-card-copy"><strong>API 管理</strong><small><span>地址与密钥 · 模型独立切换</span><span>保存当前连接 · 快速回复命令</span></small></span>
+      </button>
       <img class="pcm-home-coming-soon" src="${comingSoon}" alt="更多酒馆工具将陆续加入" width="1536" height="1024" draggable="false">
     </div>
     <button type="button" class="pcm-home-flip" aria-label="点我翻转查看GPT巨作" aria-pressed="false">

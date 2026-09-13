@@ -1,4 +1,6 @@
 // 预设更新编辑器 · 酒馆宿主桥：唯一可接触 SillyTavern 主 document/API 的模块。
+import { clone } from './clone.js';
+import { API_BINDINGS_KEY, bindApiSnapshot, isApiProfileActive } from './api-bindings.js';
 // 扩展菜单入口、外层 dialog/iframe 外壳、preset-manager/openai 动态读取与保存、
 // PRESET_CHANGED 订阅转发、主题变量与 TauriTavern IME 高度转发。
 import { applyPresetToMemory, shouldRefreshActivePreset } from './core.js';
@@ -6,6 +8,7 @@ import { captureSnapshot, normalizeSnapshotName, planSnapshotRestore, resolveSna
 import { captureWorldEntries, restoreWorldEntries, captureRegexSwitches, restoreRegexSwitches, validateSnapshotResources, normalizeSnapshotResources, regexEditor } from './snapshot-resources.js';
 import { createIdentifier } from './core.js';
 import { normalizeWorkbenchBook } from './worldbook-workbench.js';
+import { API_STORE_KEY, normalizeApiProfile, planApiSwitch, readNativeApiProfiles, maskApiSecret } from './api-manager.js';
 
 // Track native worldbook writes from module startup, not only after a workbench window opens.
 // Other URLs, the fetch receiver/arguments, and the exact returned Promise are left untouched.
@@ -71,11 +74,7 @@ const THEME_VARIABLES = [
   '--monoFontFamily',
 ];
 
-const clone = value => {
-  if (value === undefined) return undefined;
-  if (typeof structuredClone === 'function') return structuredClone(value);
-  return JSON.parse(JSON.stringify(value));
-};
+
 
 function readPresetByName(manager, name) {
   const { presets, preset_names: names } = manager.getPresetList();
@@ -106,6 +105,16 @@ async function listTavernPresets() {
 }
 
 async function handleRequest(method, payload) {
+  if (method === 'api-manager-apply' && payload?.mode === 'both') return snapshotSerial(async () => {
+    const {extension_settings} = await import('/scripts/extensions.js');
+    const link = (extension_settings[API_BINDINGS_KEY] || []).find(item => item.apiId === payload.id);
+    if (!link) return handleApiManagerRequest(method, payload);
+    const env = await snapshotEnvironment();
+    const snapshot = snapshotStore(env).snapshots.find(item => item.id === link.snapshotId);
+    if (!snapshot) throw new Error('绑定快照已删除，请取消绑定后重试');
+    return applyLinkedSnapshot(env, snapshot, {...payload, contextKey:snapshotContext(env).key}, false);
+  });
+  if (method.startsWith('api-manager-')) return snapshotSerial(() => handleApiManagerRequest(method, payload || {}), !['api-manager-native-list','api-manager-list','api-manager-links','api-manager-models','api-manager-preflight'].includes(method));
   if (method === 'workbench-read-worldbook' || method === 'workbench-save-worldbook') {
     // Share the resource queue with snapshot writes so the two features cannot overwrite each other.
     return snapshotSerial(() => handleWorkbenchWorldbook(method, payload || {}));
@@ -149,6 +158,246 @@ async function handleRequest(method, payload) {
     return clone(readPresetByName(manager, name));
   }
   throw new Error(`未知宿主请求：${method}`);
+}
+
+async function handleApiManagerRequest(method, payload) {
+  const [openai, script, extensions, secrets] = await Promise.all([
+    import('/scripts/openai.js'), import('/script.js'), import('/scripts/extensions.js'), import('/scripts/secrets.js'),
+  ]);
+  const settings = openai.oai_settings;
+  const store = extensions.extension_settings[API_STORE_KEY] ?? { version: 1, profiles: [] };
+  if (store.version !== 1 || !Array.isArray(store.profiles)) throw new Error('API 方案库格式不受支持，请更新插件');
+  const key = 'api_key_custom';
+  const post = async (action, body) => {
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch(`/api/secrets/${action}`, { method: 'POST', headers: script.getRequestHeaders(), body: JSON.stringify(body), signal: controller.signal });
+      if (!response.ok) throw new Error(`密钥管理请求失败（${response.status}），请核对酒馆密钥管理器`);
+      return action === 'read' || action === 'write' ? await response.json() : null;
+    } finally { clearTimeout(timer); }
+  };
+  const readKeys = async () => {
+    const state = await post('read', {});
+    const list = state[key];
+    if (list != null && !Array.isArray(list)) throw new Error('当前酒馆不支持多密钥管理，请升级酒馆');
+    // Never return the value field: it may be unmasked when the server allows key exposure.
+    return (list || []).map(item => ({ id: item.id, label: item.label, active: !!item.active, masked: maskApiSecret(item.value) }));
+  };
+  const activeId = list => list.find(item => item.active)?.id || '';
+  let generationLocked = false;
+  const idle = () => {
+    if (generationLocked) return;
+    if (script.isGenerating?.() || script.is_send_press) throw new Error('正在生成，请结束生成后再操作 API');
+  };
+  const lockGeneration = () => {
+    idle();
+    if (typeof script.setSendButtonState !== 'function') throw new Error('当前酒馆缺少生成保护接口，请更新酒馆');
+    script.setSendButtonState(true); generationLocked = true;
+  };
+  const unlockGeneration = () => { if (generationLocked) { script.setSendButtonState(false); generationLocked = false; } };
+  const ready = () => {
+    idle();
+    if (script.main_api !== 'openai' || settings.chat_completion_source !== 'custom') throw new Error('第一版支持自定义兼容 API，请先在酒馆选择“聊天补全 → 自定义（兼容 OpenAI）”');
+  };
+  const rotate = async id => {
+    await post('rotate', { key, id });
+    if (activeId(await readKeys()) !== id) throw new Error('密钥切换未生效，请检查密钥是否已被删除');
+    await secrets.readSecretState();
+    if (Array.isArray(secrets.secret_state?.[key]) && activeId(secrets.secret_state[key]) !== id) throw new Error('原生密钥显示未同步，请刷新后核对');
+  };
+  const persist = async profiles => {
+    extensions.extension_settings[API_STORE_KEY] = { version: 1, profiles };
+    script.saveSettingsDebounced();
+  };
+  if (method === 'api-manager-links') {
+    const snapshots = extensions.extension_settings[SNAPSHOT_KEY]?.snapshots || [];
+    return {preferences:clone(extensions.extension_settings.preset_compare_api_entries || {}), links:clone(extensions.extension_settings[API_BINDINGS_KEY] || []), snapshots:snapshots.map(({id,name})=>({id,name})), profiles:store.profiles.map(({id,name})=>({id,name}))};
+  }
+  if (method === 'api-manager-bind') {
+    const links = extensions.extension_settings[API_BINDINGS_KEY] || [];
+    let next;
+    if (payload.cancel) next = links.filter(link => payload.apiId ? link.apiId !== payload.apiId : link.snapshotId !== payload.snapshotId);
+    else {
+      if (!store.profiles.some(item=>item.id===payload.apiId)) throw new Error('API 方案已删除');
+      if (!(extensions.extension_settings[SNAPSHOT_KEY]?.snapshots || []).some(item=>item.id===payload.snapshotId)) throw new Error('快照已删除');
+      next = bindApiSnapshot(links, payload.apiId, payload.snapshotId);
+    }
+    extensions.extension_settings[API_BINDINGS_KEY] = next; script.saveSettingsDebounced(); return {links:clone(next)};
+  }
+  if(method==='api-manager-preferences'){
+    const old=extensions.extension_settings.preset_compare_api_entries||{};
+    const next={quickReply:!!old.quickReply,floating:!!old.floating};
+    for(const key of ['quickReply','floating']) if(typeof payload[key]==='boolean')next[key]=payload[key];
+    extensions.extension_settings.preset_compare_api_entries=next;script.saveSettingsDebounced();apiEntrySync?.(next);return next;
+  }
+  const current = keys => ({ source: settings.chat_completion_source, model: settings.custom_model || '', connection: { custom_url: settings.custom_url || '' }, secretId: activeId(keys) });
+  if (method === 'api-manager-models') {
+    const profile = normalizeApiProfile({ name: '模型查询', model: 'query', connection: { custom_url: payload.url } });
+    const body = { chat_completion_source: 'openai', reverse_proxy: profile.connection.custom_url, proxy_password: String(payload.newSecret || '') };
+    if (!payload.newSecret && payload.secretId) {
+      if (!(await readKeys()).some(item => item.id === payload.secretId)) throw new Error('所选密钥已不存在，请重新选择');
+      // Native /status can address a vault entry without rotating the active key or exposing its value.
+      delete body.reverse_proxy; delete body.proxy_password;
+      Object.assign(body, { chat_completion_source: 'custom', custom_url: profile.connection.custom_url, secret_id: String(payload.secretId) });
+    }
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch('/api/backends/chat-completions/status', { method: 'POST', headers: script.getRequestHeaders(), body: JSON.stringify(body), signal: controller.signal });
+      if (!response.ok) throw new Error(`拉取模型失败（${response.status}），请检查地址和密钥`);
+      const result = await response.json(), models = result?.data ?? result?.models;
+      if (!Array.isArray(models) || result?.error) throw new Error('未取得模型列表，请检查地址和密钥，或手动填写模型名称');
+      return [...new Set(models.map(item => typeof item === 'string' ? item : item?.id).filter(item => typeof item === 'string' && item.length > 0 && item.length <= 500))].sort();
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('拉取模型超时，请重试或手动填写');
+      if (error instanceof TypeError) throw new Error('拉取模型网络失败，请检查连接');
+      throw error;
+    } finally { clearTimeout(timer); }
+  }
+  if (method === 'api-manager-list') {
+    const keys = await readKeys();
+    return { preferences: clone(extensions.extension_settings.preset_compare_api_entries || {}), profiles: clone(store.profiles), activeIds:store.profiles.filter(profile=>isApiProfileActive(profile,current(keys))).map(profile=>profile.id), links:clone(extensions.extension_settings[API_BINDINGS_KEY] || []), keys, current: current(keys), supported: script.main_api === 'openai' && settings.chat_completion_source === 'custom' };
+  }
+  if (method === 'api-manager-native-list' || method === 'api-manager-native-import') {
+    const entries = readNativeApiProfiles(extensions.extension_settings.connectionManager?.profiles ?? [], await readKeys());
+    if (method === 'api-manager-native-list') return entries;
+    if (!Array.isArray(payload.ids) || !payload.ids.length || payload.ids.length > 500) throw new Error('请选择要导入的酒馆方案（最多 500 个）');
+    const selected = [...new Set(payload.ids)].map(id => {
+      const entry = entries.find(item => item.id === id);
+      if (!entry || entry.error) throw new Error('酒馆方案已改变或无法导入，请重新打开列表：' + (entry?.error || '方案已删除'));
+      return entry.profile;
+    });
+    if (store.profiles.length + selected.length > 500) throw new Error('最多保存 500 个 API 方案');
+    await persist([...store.profiles, ...selected]);
+    return { count: selected.length };
+  }
+  if (method === 'api-manager-delete') {
+    extensions.extension_settings[API_BINDINGS_KEY] = (extensions.extension_settings[API_BINDINGS_KEY] || []).filter(link=>link.apiId!==payload.id);
+    await persist(store.profiles.filter(item => item.id !== payload.id));
+    return true;
+  }
+  if (method === 'api-manager-save') {
+    idle();
+    const keys = await readKeys();
+    if (payload.capture) ready();
+    const profile = normalizeApiProfile(payload.capture ? { ...current(keys), name: payload.name, id: payload.id } : payload.profile);
+    if (!payload.newSecret?.trim() && profile.secretId && !keys.some(item => item.id === profile.secretId)) throw new Error('所选密钥已不存在，请重新选择');
+    if (store.profiles.length >= 500 && !store.profiles.some(item => item.id === profile.id)) throw new Error('最多保存 500 个 API 方案');
+    // New keys go only to the native vault. Restore its previous active key before saving the profile.
+    if (typeof payload.newSecret === 'string' && payload.newSecret.trim()) {
+      ready();
+      lockGeneration();
+      let previous = activeId(keys);
+      try {
+        if (!previous) previous = (await post('write', { key, value: '', label: '酒馆盒子 · 无密钥' })).id;
+        if (!previous) throw new Error('无法保存原密钥状态');
+        const result = await post('write', { key, value: payload.newSecret.trim(), label: profile.name });
+        if (!result.id) throw new Error('密钥保存失败');
+        profile.secretId = result.id;
+      } finally {
+        try { if (previous) await rotate(previous); }
+        catch { throw new Error('新密钥操作后恢复原活动密钥失败，请先在酒馆密钥管理器核对当前密钥；方案尚未保存'); }
+        finally { unlockGeneration(); }
+      }
+    }
+    profile.updatedAt = Date.now();
+    const profiles = [...store.profiles], index = profiles.findIndex(item => item.id === profile.id);
+    if (index < 0) profiles.push(profile); else profiles[index] = profile;
+    await persist(profiles);
+    return { id: profile.id };
+  }
+  if (method === 'api-manager-apply' || method === 'api-manager-preflight') {
+    ready();
+    const profile = store.profiles.find(item => item.id === payload.id);
+    if (!profile) throw new Error('API 方案不存在，请刷新列表');
+    const plan = planApiSwitch(settings, profile, payload.mode);
+    const before = clone(settings), keys = await readKeys();
+    let previous = activeId(keys), target = plan.secretId;
+    if (target !== null && keys.length && !previous) throw new Error('原生密钥库没有活动密钥，请先在酒馆密钥管理器选择一个');
+    if (target && !keys.some(item => item.id === target)) throw new Error('方案引用的密钥已被删除或不属于当前酒馆，请编辑方案重新选择');
+    ready();
+    if (JSON.stringify(settings) !== JSON.stringify(before)) throw new Error('酒馆设置已变化，请重试');
+    if (payload.mode !== 'model' && String(document.querySelector('#api_key_custom')?.value || '').trim()) throw new Error('原生 API 密钥输入框有未保存内容，请先保存或清空后再切换');
+    if (payload.mode !== 'model' && before.custom_url !== plan.patch.custom_url && String(settings.custom_include_headers || '').trim()) throw new Error('当前连接使用自定义请求头。第一版尚不管理请求头，请先在酒馆清空或迁移其中的认证信息后再跨地址切换');
+    if (method === 'api-manager-preflight') return true;
+    // Abort pending native model discovery before it can choose a default model on response.
+    const previousStatus = script.online_status;
+    let fieldsApplied = false;
+    lockGeneration();
+    try {
+      script.cancelStatusCheck?.('酒馆盒子独立切换 API');
+      if (target !== null) {
+        if (!target && previous) {
+          const result = await post('write', { key, value: '', label: '酒馆盒子 · 无密钥' });
+          target = result.id;
+          if (!target) throw new Error('无法启用无密钥连接');
+        }
+        if (target && target !== previous) await rotate(target);
+      }
+      ready();
+      if (JSON.stringify(settings) !== JSON.stringify(before)) throw new Error('切换期间酒馆设置已被外部修改，未覆盖新设置');
+      Object.assign(settings, plan.patch);
+      fieldsApplied = true;
+      // Assign DOM values without input/change: those events can reapply presets or clamp generation parameters.
+      for (const [field, selector] of [['custom_url', '#custom_api_url_text'], ['custom_model', '#custom_model_id']]) {
+        if (Object.hasOwn(plan.patch, field)) { const control = document.querySelector(selector); if (control) control.value = settings[field]; }
+      }
+      if (payload.mode !== 'model') {
+        if (Array.isArray(openai.model_list)) openai.model_list.splice(0);
+        for (const select of document.querySelectorAll('.model_custom_select')) select.replaceChildren(new Option(settings.custom_model, settings.custom_model, true, true));
+      } else {
+        for (const select of document.querySelectorAll('.model_custom_select')) {
+          if (![...select.options].some(option => option.value === settings.custom_model)) select.add(new Option(settings.custom_model, settings.custom_model));
+          select.value = settings.custom_model;
+        }
+      }
+      script.saveSettingsDebounced();
+      // Check the new connection once without native model-selection events or preset reapplication.
+      // A network failure does not undo the user's successful configuration switch.
+      const applied = JSON.stringify(settings), connectionKey = target === null ? previous : target;
+      const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
+      let connection;
+      try {
+        const response = await fetch('/api/backends/chat-completions/status', {
+          method: 'POST', headers: script.getRequestHeaders(), signal: controller.signal, cache: 'no-cache',
+          body: JSON.stringify({ chat_completion_source: 'custom', custom_url: settings.custom_url,
+            custom_include_headers: settings.custom_include_headers || '', secret_id: connectionKey || undefined }),
+        });
+        if (!response.ok) throw new Error('连接检查失败（'+response.status+'），请检查地址和密钥');
+        const result = await response.json();
+        if (!result || result.error) throw new Error('连接检查失败，请检查地址和密钥');
+        connection = result.bypass ? { ok: true, message: '已执行连接，服务端跳过验证', status: 'Status check bypassed' }
+          : { ok: true, message: '连接检查通过', status: '有效的' };
+      } catch (error) {
+        connection = { ok: false, message: error.name === 'AbortError' ? '连接检查超时，可稍后重试' : '连接检查失败，请检查地址、密钥或网络', status: 'no_connection' };
+      } finally { clearTimeout(timer); }
+      // Do not let a late response overwrite the status of a connection changed outside this plugin.
+      if (script.main_api === 'openai' && JSON.stringify(settings) === applied) {
+        try {
+          if (activeId(await readKeys()) === connectionKey && script.main_api === 'openai' && JSON.stringify(settings) === applied) script.setOnlineStatus?.(connection.status);
+          else connection = { ok: false, message: '连接已被外部修改，请刷新核对' };
+        } catch { connection = { ok: false, message: '无法核对当前密钥，请刷新核对连接' }; }
+      } else connection = { ok: false, message: '连接已被外部修改，请刷新核对' };
+      return { mode: payload.mode, connection };
+    } catch (error) {
+      // Roll back only our own field writes; leave any external edits intact.
+      if (fieldsApplied) for (const [field, value] of Object.entries(plan.patch)) if (settings[field] === value) settings[field] = before[field];
+      for (const [field, selector] of [['custom_url', '#custom_api_url_text'], ['custom_model', '#custom_model_id']]) {
+        const control = document.querySelector(selector); if (control && Object.hasOwn(plan.patch, field)) control.value = settings[field];
+      }
+      if (target && target !== previous) {
+        try {
+          if (activeId(await readKeys()) === target) {
+            if (previous) await rotate(previous);
+            else { await post('delete', { key, id: target }); await secrets.readSecretState(); }
+          }
+        } catch { throw new Error('切换未完成且密钥恢复失败，请在酒馆密钥管理器核对当前密钥后重试'); }
+      }
+      script.saveSettingsDebounced();
+      if (previousStatus !== undefined) script.setOnlineStatus?.(previousStatus);
+      throw error;
+    } finally { unlockGeneration(); }
+  }
+  throw new Error('未知 API 管理操作');
 }
 
 function workbenchWorldName(value) {
@@ -687,11 +936,11 @@ async function applySnapshotResources(env, prepared, context, journal) {
   return warnings;
 }
 
-function snapshotSerial(action) {
+function snapshotSerial(action, notify = true) {
   const run = snapshotQueue.then(async () => {
     snapshotBusy++;
     try { return await action(); }
-    finally { snapshotBusy--; snapshotNotify(); }
+    finally { snapshotBusy--; if (notify) snapshotNotify(); }
   });
   snapshotQueue = run.catch(() => {});
   return run;
@@ -905,6 +1154,24 @@ async function applySettingsSnapshot(env, snapshot, payload, automatic = false) 
   return {warnings};
 }
 
+// Called only inside the shared queue; invoke low-level operations to avoid recursive binding/queue deadlock.
+async function applyLinkedSnapshot(env, snapshot, payload, automatic = false) {
+  const link = (env.extensions.extension_settings[API_BINDINGS_KEY] || []).find(item=>item.snapshotId===snapshot.id);
+  if (!link) return applySettingsSnapshot(env,snapshot,payload,automatic);
+  const scope = snapshotContext(env).scope;
+  await handleApiManagerRequest('api-manager-preflight', {id:link.apiId, mode:'both'});
+  const result = await applySettingsSnapshot(env,snapshot,payload,automatic);
+  if (result.needsConfirmation) return result;
+  try {
+    assertSnapshotScope(env, scope);
+    const api = await handleApiManagerRequest('api-manager-apply', {id:link.apiId, mode:'both'});
+    if (!api.connection.ok) result.warnings.push(api.connection.message);
+    return {...result, ...api};
+  } catch (error) {
+    throw new Error('快照已应用，但绑定 API 未完成：'+error.message+'。请核对当前设置后重试');
+  }
+}
+
 async function handleSnapshotRequest(method, payload) {
   if (method === 'snapshot-list') {await snapshotQueue; return snapshotList(await snapshotEnvironment());}
   if (['snapshot-editor','snapshot-draft-preset','snapshot-draft-worlds'].includes(method)) {await snapshotQueue;return readSnapshotEditor(await snapshotEnvironment(),payload);}
@@ -917,7 +1184,7 @@ async function handleSnapshotRequest(method, payload) {
       assertSnapshotContext(env, payload.contextKey);
       snapshotAutoPending = false;
       snapshotAutoToken++;
-      return applySettingsSnapshot(env, existing, payload);
+      return applyLinkedSnapshot(env, existing, payload);
     }
     if (method === 'snapshot-save' || method === 'snapshot-save-draft') {
       assertSnapshotContext(env, payload.contextKey);
@@ -965,9 +1232,11 @@ async function handleSnapshotRequest(method, payload) {
     } else if (method === 'snapshot-delete') {
       if (!existing) throw new Error('快照已删除');
       const before = clone(store);
+      const previousLinks = env.extensions.extension_settings[API_BINDINGS_KEY];
+      env.extensions.extension_settings[API_BINDINGS_KEY] = (previousLinks || []).filter(link=>link.snapshotId!==payload.id);
       store.snapshots = store.snapshots.filter(s => s.id !== payload.id);
       for (const key of Object.keys(store.characterBindings)) if (store.characterBindings[key] === payload.id) delete store.characterBindings[key];
-      try {await saveSnapshotSettings(env);} catch (error) {Object.assign(store, before); throw error;}
+      try {await saveSnapshotSettings(env);} catch (error) {Object.assign(store, before); env.extensions.extension_settings[API_BINDINGS_KEY]=previousLinks; throw error;}
       // 其他聊天的引用在加载时视为失效；不遍历或改写用户的聊天文件。
     } else if (method === 'snapshot-bind') {
       assertSnapshotContext(env, payload.contextKey);
@@ -1030,7 +1299,7 @@ async function installSnapshotBindings(controller) {
         const latestContext = snapshotContext(env);
         const latest = resolveSnapshotBinding(snapshotStore(env), latestContext.chatBindingId, latestContext.characterKey);
         if (!latest) return;
-        const result = await applySettingsSnapshot(env, latest.snapshot, {contextKey: latestContext.key}, true);
+        const result = await applyLinkedSnapshot(env, latest.snapshot, {contextKey: latestContext.key}, true);
         if (result.warnings.length) globalThis.toastr?.warning?.(result.warnings.join('\n'), '设置快照');
         else globalThis.toastr?.success?.('已应用「'+latest.snapshot.name+'」', '设置快照');
       });
@@ -1111,7 +1380,8 @@ class AppHost {
     this.tauriLayoutCleanup = null;
   }
 
-  open() {
+  open(apiQuick = false) {
+    this.apiQuick = apiQuick;
     this.openRequested = true;
     if (!this.dialog?.isConnected) this.mount();
     try {
@@ -1120,7 +1390,8 @@ class AppHost {
       console.error(`[${APP_ID}] open host dialog failed`, error);
       this.dialog.setAttribute('open', '');
     }
-    if (this.uiReady) this.sendEvent('open');
+    applyImportantStyles(this.dialog, apiQuick ? {width:'min(600px, 96vw)',height:'min(780px, 92dvh)',margin:'auto','border-radius':'16px'} : {width:'100vw',height:'100dvh',margin:'0','border-radius':'0'});
+    if (this.uiReady) this.sendEvent('open', {apiQuick:this.apiQuick});
   }
 
   close() {
@@ -1242,7 +1513,7 @@ class AppHost {
       this.uiReady = true;
       this.bindTavernEvents();
       this.sendEnvironment();
-      if (this.openRequested) this.sendEvent('open');
+      if (this.openRequested) this.sendEvent('open', {apiQuick:this.apiQuick});
     } else if (message.name === 'close') {
       this.close();
     }
@@ -1344,6 +1615,93 @@ class AppHost {
   }
 }
 
+let apiEntrySync = null;
+async function installApiEntries(controller) {
+  const { extension_settings } = await import('/scripts/extensions.js');
+  let preferences = extension_settings.preset_compare_api_entries || {};
+  const qrId = APP_ID + '-api-qr', ballId = APP_ID + '-api-ball', railId = APP_ID + '-api-rail';
+  let position = null, drag = null, moved = false;
+  const make = (id, text) => {
+    const button = document.createElement('button'); button.id = id; button.type = 'button'; button.textContent = text;
+    button.title = '打开 API 快切'; button.setAttribute('aria-label', '打开 API 快切');
+    applyImportantStyles(button, { display:'inline-flex', visibility:'visible', opacity:'1', 'align-items':'center', 'justify-content':'center',
+      'box-sizing':'border-box', margin:'0', padding:'5px 10px', width:'auto', height:'30px', 'min-width':'0', 'min-height':'30px',
+      border:'1px solid var(--SmartThemeBorderColor, #888)', 'border-radius':'8px', background:'var(--SmartThemeBlurTintColor, #333)',
+      color:'var(--SmartThemeBodyColor, #eee)', font:'13px system-ui', 'white-space':'nowrap', cursor:'pointer', 'pointer-events':'auto' });
+    button.addEventListener('click', event => {
+      event.preventDefault(); event.stopPropagation();
+      if (id === ballId && moved) { moved = false; return; }
+      controller.open(true);
+    }); return button;
+  };
+  const placeBall = () => {
+    const button = document.getElementById(ballId); if (!button) return;
+    const viewport = window.visualViewport;
+    const left = viewport?.offsetLeft || 0, top = viewport?.offsetTop || 0;
+    const width = viewport?.width || innerWidth, height = viewport?.height || innerHeight;
+    const x = Math.max(left + 8, Math.min(left + width - 56, position?.x ?? left + width - 64));
+    const y = Math.max(top + 8, Math.min(top + height - 56, position?.y ?? top + height - 160));
+    applyImportantStyles(button, {left:x+'px', top:y+'px', right:'auto', bottom:'auto'});
+  };
+  const syncQrVisibility = () => {
+    const qr = document.getElementById(qrId), rail = document.getElementById(railId);
+    if (!qr || !rail) return;
+    const hidden = document.body.classList.contains('qra-enabled') && qr.classList.contains('qrq-hidden-by-plugin') && !qr.classList.contains('qrq-whitelisted-original');
+    const display = hidden ? 'none' : 'flex';
+    if (rail.style.display !== display) rail.style.setProperty('display', display, 'important');
+  };
+  const visibilityObserver = new MutationObserver(syncQrVisibility);
+  visibilityObserver.observe(document.body, {attributes:true, attributeFilter:['class'], subtree:true});
+  const sync = () => {
+    // QR Assistant's public third-party registry (uhhhh15/QR); preserve all other extensions' entries.
+    if (!window.qrAssistantExtensionApi) window.qrAssistantExtensionApi = [];
+    const registry = window.qrAssistantExtensionApi;
+    if (Array.isArray(registry)) {
+      const index = registry.findIndex(entry=>entry.dom_id===qrId);
+      if (preferences.quickReply && index < 0) registry.push({dom_id:qrId, group_name:'酒馆盒子', button_name:'API / 设置快照'});
+      if (!preferences.quickReply && index >= 0) registry.splice(index,1);
+    }
+    if (!preferences.quickReply) document.getElementById(railId)?.remove();
+    else {
+      const form = document.getElementById('send_form');
+      if (form && !document.getElementById(railId)) {
+        // Own a separate row: native QR visibility/popout/rebuild must not hide this extension's entry.
+        const rail = document.createElement('div'); rail.id = railId;
+        applyImportantStyles(rail, {display:'flex', visibility:'visible', opacity:'1', 'justify-content':'center',
+          'flex':'0 0 100%', 'grid-column':'1 / -1', order:'-1', width:'100%', 'min-height':'34px', padding:'2px', position:'relative', 'box-sizing':'border-box'});
+        rail.append(make(qrId, 'API快切')); form.prepend(rail);
+      }
+    }
+    if (!preferences.floating) { document.getElementById(ballId)?.remove(); position = null; }
+    else if (!document.getElementById(ballId)) {
+      const button = make(ballId, 'API');
+      applyImportantStyles(button, {position:'fixed', width:'48px', height:'48px', 'border-radius':'50%', 'z-index':'29999',
+        'box-shadow':'0 3px 12px #0004', 'touch-action':'none', transform:'none', 'max-width':'48px', 'max-height':'48px'});
+      button.addEventListener('pointerdown', event => {
+        if (event.button !== 0) return;
+        const rect = button.getBoundingClientRect(); drag = { x:event.clientX, y:event.clientY, left:rect.left, top:rect.top }; moved = false;
+        button.setPointerCapture(event.pointerId);
+      });
+      button.addEventListener('pointermove', event => {
+        if (!drag) return;
+        const dx = event.clientX-drag.x, dy = event.clientY-drag.y;
+        if (Math.hypot(dx,dy)>5) moved = true;
+        if (moved) { position = {x:drag.left+dx,y:drag.top+dy}; placeBall(); }
+      });
+      button.addEventListener('pointerup', () => {drag=null;});
+      button.addEventListener('pointercancel', () => {drag=null;moved=false;});
+      document.body.append(button); placeBall();
+    }
+  };
+  apiEntrySync = next => { preferences=next; sync(); syncQrVisibility(); };
+  const observer = new MutationObserver(() => {if(preferences.quickReply||preferences.floating) sync();});
+  observer.observe(document.body, {childList:true,subtree:true});
+  window.addEventListener('resize', placeBall);
+  window.visualViewport?.addEventListener('resize', placeBall);
+  window.visualViewport?.addEventListener('scroll', placeBall);
+  sync();
+}
+
 function addMenu(controller) {
   const menu = document.getElementById('extensionsMenu');
   if (!menu || document.getElementById(`${APP_ID}-button`)) return false;
@@ -1370,6 +1728,8 @@ function addMenu(controller) {
 
 export function installPresetCompareHost() {
   const controller = new AppHost();
+  void installApiEntries(controller).catch(error => console.warn(`[${APP_ID}] API entries unavailable`, error));
+  void installApiQuickCommand().catch(error => console.warn(`[${APP_ID}] API quick command unavailable`, error));
   void installSnapshotBindings(controller).catch(error => console.warn(`[${APP_ID}] snapshot bindings unavailable`, error));
   const installMenu = () => {
     if (addMenu(controller)) return;
@@ -1381,6 +1741,22 @@ export function installPresetCompareHost() {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installMenu, { once: true });
   else installMenu();
   return controller;
+}
+
+async function installApiQuickCommand() {
+  const [{ SlashCommandParser }, { SlashCommand }, { SlashCommandArgument, SlashCommandNamedArgument, ARGUMENT_TYPE }] = await Promise.all([
+    import('/scripts/slash-commands/SlashCommandParser.js'), import('/scripts/slash-commands/SlashCommand.js'), import('/scripts/slash-commands/SlashCommandArgument.js'),
+  ]);
+  SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+    name: 'box-api',
+    callback: async (args, value) => {
+      await handleRequest('api-manager-apply', { id: String(value || '').trim(), mode: String(args.mode || 'both') });
+      return '';
+    },
+    namedArgumentList: [SlashCommandNamedArgument.fromProps({ name: 'mode', description: 'api 仅切 API / model 仅切模型 / both 两者', typeList: [ARGUMENT_TYPE.STRING], defaultValue: 'both' })],
+    unnamedArgumentList: [SlashCommandArgument.fromProps({ description: '酒馆盒子 API 方案 ID', typeList: [ARGUMENT_TYPE.STRING], isRequired: true })],
+    helpString: '切换酒馆盒子的自定义兼容 API 方案，保留预设、正则、世界书及生成参数。可用于原生快速回复按钮。',
+  }));
 }
 
 // 扩展更新 hook（ST 官方约定，manifest.hooks.update 指向本导出）：

@@ -1,0 +1,101 @@
+/* API 管理表单与快切命令：复用快照主题变量，适配窄屏与输入法。 */
+.pcm-api-editor{padding:16px;border:1px solid var(--snap-border);border-radius:14px;background:var(--snap-card);margin:16px auto;max-width:1000px}
+.pcm-api-field{display:flex;flex-direction:column;gap:6px;margin:12px 0;min-width:0}
+.pcm-api-manager input,.pcm-api-manager select{box-sizing:border-box;width:100%;min-width:0;min-height:40px;padding:9px;border:1px solid var(--snap-border);border-radius:8px;background:var(--snap-bg);color:var(--snap-fg);font:inherit}
+.pcm-api-manager button{min-height:38px}.pcm-api-manager button:disabled{opacity:.55;cursor:wait}
+.pcm-api-commands{display:grid;gap:8px;margin-top:12px}.pcm-api-commands input{font-size:12px}
+@media(max-width:650px){.pcm-api-manager input,.pcm-api-manager select{font-size:16px}.pcm-api-editor{padding:12px}.pcm-api-manager .pcm-snapshot-toolbar{flex-wrap:wrap}}
+.pcm-api-manager .pcm-api-icon{display:inline-grid;place-items:center;flex:0 0 34px;width:34px;height:34px;min-height:34px;padding:7px;border:1px solid var(--snap-border);border-radius:9px;background:var(--snap-card);color:var(--snap-fg);cursor:pointer}
+.pcm-api-icon svg{display:block;width:18px;height:18px}
+.pcm-api-current-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pcm-api-details{display:grid;grid-template-columns:48px minmax(0,1fr);gap:9px 16px;margin:16px 0}
+.pcm-api-details dt{opacity:.7}.pcm-api-details dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.pcm-api-current-actions{display:flex;justify-content:flex-end;margin-top:10px}
+.pcm-api-modal{box-sizing:border-box;width:min(540px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:0;border:1px solid var(--snap-border);border-radius:16px;background:var(--snap-card);color:var(--snap-fg);overflow:auto;overscroll-behavior:contain}
+.pcm-api-modal::backdrop{background:#0008}
+.pcm-api-modal .pcm-api-editor{border:0;margin:0;padding:22px;max-width:none}
+.pcm-api-editor-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.pcm-api-editor-head h3{margin:0;font-size:19px}
+.pcm-api-input-row{display:flex;gap:8px;align-items:center;min-width:0}.pcm-api-input-row input{flex:1}
+.pcm-api-model-menu{max-height:190px;overflow:auto;border:1px solid var(--snap-border);border-radius:8px;margin-top:6px;background:var(--snap-bg)}
+.pcm-api-model-menu button{display:block;text-align:left;white-space:normal;overflow-wrap:anywhere;width:100%;border:0;border-radius:0;background:transparent;padding:9px 12px;color:var(--snap-fg)}
+.pcm-api-model-menu button:hover,.pcm-api-model-menu button:focus-visible{background:var(--snap-card)}
+.pcm-api-editor-status{font-size:12px;line-height:1.5}.pcm-api-editor-status:empty{display:none}.pcm-api-editor-status.is-error{border-left:3px solid #ca967b;padding-left:8px}
+.pcm-api-editor>.pcm-snapshot-actions{justify-content:flex-end;margin-top:20px}
+@media(max-width:650px){.pcm-api-modal .pcm-api-editor{padding:16px}.pcm-api-details{gap:8px 10px}.pcm-api-manager .pcm-snapshot-header{gap:6px}}
+.pcm-api-profile-head{display:flex;align-items:center;gap:8px}.pcm-api-profile-head h3{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcm-api-profile-actions{display:flex;flex:0 0 auto;gap:4px}.pcm-api-manager .pcm-api-profile-actions button{display:grid;place-items:center;width:28px;height:28px;min-height:28px;flex:0 0 28px;padding:4px;font-size:12px}.pcm-api-profile-actions svg{width:15px;height:15px}
+.pcm-api-profile-model{margin:6px 0 0;font-size:13px}.pcm-api-entry-settings{display:flex;flex-wrap:wrap;gap:16px;margin:12px 0}.pcm-api-entry-settings label{display:flex;align-items:center;gap:7px;font-size:13px}.pcm-api-manager .pcm-api-entry-settings input{width:16px;min-height:16px;accent-color:var(--snap-accent)}
+.pcm-api-quick .pcm-snapshot-list{grid-template-columns:minmax(0,1fr)}.pcm-api-quick{padding:16px}.pcm-api-quick .pcm-snapshot-header{margin-bottom:14px}.pcm-api-quick .pcm-snapshot-card{padding:12px}
+
+/* 入口开关与窗口控制分组；滚动仍可触摸、滚轮及键盘操作。 */
+.pcm-api-entry-settings{display:flex;flex-wrap:nowrap;gap:5px;margin:0 8px 0 0;padding-right:10px;border-right:1px solid var(--snap-border)}
+.pcm-api-manager .pcm-api-entry-toggle{display:flex;align-items:center;gap:6px;border-radius:18px;min-height:30px;padding:5px 9px;font-size:12px;white-space:nowrap;background:transparent;border-style:dashed}
+.pcm-api-entry-toggle::before{content:'';width:6px;height:6px;flex:none;border:1px solid currentColor;border-radius:50%}
+.pcm-api-manager .pcm-api-entry-toggle[aria-pressed=true]{border-style:solid;border-color:var(--snap-accent);background:color-mix(in srgb,var(--snap-accent) 22%,var(--snap-bg))}
+.pcm-api-entry-toggle[aria-pressed=true]::before{background:currentColor}
+.pcm-api-modal,.pcm-api-model-menu,.pcm-dialog:has(>.pcm-api-manager){scrollbar-width:none}
+.pcm-api-modal::-webkit-scrollbar,.pcm-api-model-menu::-webkit-scrollbar,.pcm-dialog:has(>.pcm-api-manager)::-webkit-scrollbar{display:none}
+/* 标题与全部控制始终同行，窄屏缩小控制尺寸。 */
+.pcm-api-manager .pcm-snapshot-header{flex-wrap:nowrap}
+.pcm-api-manager .pcm-snapshot-heading{flex:1;white-space:nowrap}
+.pcm-api-current{padding:10px 14px}.pcm-api-current-head{justify-content:flex-start;gap:10px}
+.pcm-api-manager .pcm-api-current-head button{font-size:11px;min-height:26px;padding:4px 8px}
+.pcm-api-manager .pcm-api-profile{padding:10px 14px}
+.pcm-api-connection-line{margin:8px 0 0;padding:4px 7px;border:1px solid var(--snap-border);border-radius:5px;font-size:12px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--snap-bg)}
+@media(max-width:650px){
+.pcm-api-manager{padding:12px 8px 24px}
+.pcm-api-manager .pcm-snapshot-header{gap:4px}
+.pcm-api-manager .pcm-snapshot-header h2{font-size:15px;white-space:nowrap}
+.pcm-api-manager .pcm-snapshot-heading{gap:3px}
+.pcm-api-manager .pcm-snapshot-header .pcm-api-icon,.pcm-api-manager .pcm-snapshot-header [data-theme-toggle],.pcm-api-manager .pcm-snapshot-header>button:last-child{width:25px;height:27px;min-height:27px;flex:0 0 25px;padding:4px;font-size:19px}
+.pcm-api-manager .pcm-snapshot-header svg{width:16px;height:16px}
+.pcm-api-entry-settings{gap:3px;margin:0;padding-right:4px}
+.pcm-api-manager .pcm-api-entry-toggle{font-size:10px;gap:3px;padding:4px;min-height:25px}
+.pcm-api-entry-toggle::before{width:4px;height:4px}
+}
+@media(max-width:350px){.pcm-api-manager .pcm-snapshot-header{gap:3px}.pcm-api-manager .pcm-snapshot-header h2{font-size:13px}.pcm-api-manager .pcm-snapshot-header .pcm-api-icon,.pcm-api-manager .pcm-snapshot-header [data-theme-toggle],.pcm-api-manager .pcm-snapshot-header>button:last-child{width:22px;flex-basis:22px}.pcm-api-manager .pcm-api-entry-toggle{padding:4px 3px;gap:2px}}
+
+/* 单行连接无边框；活动状态只依据实际连接核对。 */
+.pcm-api-connection-line{border:0;background:none;padding:0;margin-top:6px}
+.pcm-api-profile.is-active{background:color-mix(in srgb,var(--snap-accent) 18%,var(--snap-card));border-color:var(--snap-accent)}
+.pcm-api-active-badge{display:inline-block;font-size:9px;font-weight:500;border-radius:7px;margin-left:5px;padding:2px 4px;background:color-mix(in srgb,var(--snap-accent) 30%,var(--snap-bg));vertical-align:middle}
+.pcm-quick-tabs:empty{display:none}.pcm-quick-tabs{margin-top:0;margin-bottom:10px}
+.pcm-snapshot-manager .pcm-snapshot-card-title{flex-wrap:nowrap;align-items:center;gap:5px}
+.pcm-snapshot-manager .pcm-snapshot-card-title>button{width:28px;min-height:28px;height:28px;padding:4px;font-size:12px}
+.pcm-snapshot-manager .pcm-snapshot-card-title h3{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcm-snapshot-manager .pcm-snapshot-manage:empty{display:none}
+.pcm-dialog:has(>.pcm-snapshot-manager),.pcm-dialog:has(>.pcm-api-manager){overflow-y:auto!important;overflow-x:hidden!important}
+
+/* 顶部统一控制尺寸，图标以 SVG 几何中心居中，不依赖文字基线。 */
+.pcm-api-manager .pcm-snapshot-header{--control:30px;gap:6px}
+.pcm-api-manager .pcm-snapshot-header button{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;line-height:1;margin:0;height:var(--control);min-height:var(--control);padding:0;flex-shrink:0}
+.pcm-api-manager .pcm-snapshot-header .pcm-api-icon,.pcm-api-manager .pcm-snapshot-header [data-theme-toggle],.pcm-api-manager .pcm-snapshot-header>button:last-child{width:var(--control);height:var(--control);min-height:var(--control);flex-basis:var(--control);padding:0}
+.pcm-api-manager .pcm-snapshot-header svg{display:block;flex:none;width:16px;height:16px;margin:0}
+.pcm-api-manager .pcm-api-entry-toggle{width:66px;font-size:11px;font-weight:400;font-family:inherit;-webkit-text-size-adjust:none;text-size-adjust:none;gap:3px;justify-content:center}
+.pcm-api-entry-settings{margin:0;padding-right:6px;gap:4px}
+.pcm-header-switch{display:flex;flex:none}.pcm-header-switch:empty{display:none}
+.pcm-api-manager .pcm-header-switch button{padding:0 6px;font-size:11px;white-space:nowrap}
+@media(max-width:650px){
+.pcm-api-manager .pcm-snapshot-header{--control:23px;gap:3px}
+.pcm-api-manager .pcm-snapshot-heading{gap:3px}
+.pcm-api-manager .pcm-snapshot-header h2{font-size:13px}
+.pcm-api-manager .pcm-api-entry-toggle{width:51px;font-size:9px;gap:2px;padding:0}
+.pcm-api-entry-settings{gap:2px;padding-right:3px}
+.pcm-api-manager .pcm-header-switch button{font-size:10px;padding:0 3px}
+.pcm-api-manager .pcm-snapshot-header svg{width:14px;height:14px}
+}
+@media(max-width:350px){
+.pcm-api-manager .pcm-snapshot-header{--control:20px;gap:2px}
+.pcm-api-manager .pcm-snapshot-header h2{font-size:11px}
+.pcm-api-manager .pcm-api-entry-toggle{width:46px;font-size:9px}
+.pcm-api-manager .pcm-header-switch button{font-size:9px;padding:0 2px}
+.pcm-api-manager .pcm-snapshot-heading{gap:2px}
+}
+/* Native saved connections: scroll within the picker without stretching the mobile dialog. */
+.pcm-native-api-list { max-height: 45vh; overflow-y: auto; scrollbar-width: none; }
+.pcm-native-api-list::-webkit-scrollbar { display: none; }
+.pcm-native-api-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; }
+.pcm-native-api-row input { flex: 0 0 auto; width: 18px; height: 18px; }
+.pcm-native-api-row span { min-width: 0; }
+.pcm-native-api-row strong, .pcm-native-api-row small { display: block; overflow-wrap: anywhere; }
+.pcm-native-api-row:has(input:disabled) { opacity: .6; cursor: default; }

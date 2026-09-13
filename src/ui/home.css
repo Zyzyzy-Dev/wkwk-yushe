@@ -60,3 +60,19 @@
 }
 @media(max-width:350px){.pcm-home-brand h1{font-size:18px}.pcm-toolbox-card{gap:7px;padding:12px 10px}.pcm-toolbox-card-icon{flex-basis:54px;width:54px;height:54px}.pcm-toolbox-card-copy strong{font-size:18px;line-height:1.15}.pcm-toolbox-card-copy small{font-size:9px;line-height:1.15;margin-top:2px}.pcm-home-card-go{flex-basis:25px;width:25px;height:25px}}
 @media(prefers-reduced-motion:reduce){.pcm-toolbox-card,.pcm-home-flip-inner{transition:none}.pcm-toolbox-card:hover{transform:none}}
+/* 宽屏功能入口贴齐左侧内容边距，避免大面积空白；窄屏保持原单列尺寸。 */
+@media(min-width:901px){.pcm-home-content{margin-left:0;margin-right:auto}}
+
+/* 首页固定在可视区域内：插图作为居中背景，不参与内容高度。 */
+.pcm-dialog:has(>.pcm-toolbox-home:not([hidden]):not(.pcm-view-hidden)){overflow:hidden!important}
+.pcm-toolbox-home{height:100%;min-height:0;padding-bottom:22px;overflow:hidden}
+.pcm-home-top{position:relative;z-index:1;flex:none;margin-bottom:clamp(12px,4vh,40px)}
+.pcm-home-content{flex:1;min-height:0;max-height:580px;align-items:stretch;gap:clamp(8px,1.6vh,16px)}
+.pcm-toolbox-card{z-index:1;flex:1;min-height:0;max-height:132px;padding-block:clamp(6px,1.8vh,20px)}
+.pcm-home-coming-soon{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(580px,80%);height:auto;margin:0;z-index:0}
+.pcm-home-flip{z-index:2}
+@media(max-width:900px){.pcm-toolbox-home{padding-bottom:calc(124px + var(--pcm-safe-bottom))}.pcm-home-content{max-height:580px}.pcm-toolbox-card-icon{max-height:72px}}
+@media(max-height:720px) and (max-width:900px){.pcm-toolbox-home{padding-top:12px;padding-bottom:100px}.pcm-home-top{margin-bottom:12px}.pcm-home-flip{height:84px;width:124px}.pcm-home-flip-front img{width:84px;height:56px}.pcm-home-flip-back img{width:64px;height:64px}.pcm-toolbox-card{padding-block:6px}.pcm-toolbox-card-icon{height:48px;flex-basis:48px;width:48px}.pcm-toolbox-card-copy strong{font-size:18px}}
+@media(max-height:500px) and (min-width:600px){.pcm-toolbox-home{padding:12px}.pcm-home-content{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:calc(100% - 190px);margin:0}.pcm-toolbox-card{max-height:none;padding:8px;gap:8px}.pcm-toolbox-card-icon{width:45px;height:45px;flex-basis:45px}.pcm-toolbox-card-copy strong{font-size:18px}.pcm-toolbox-card-copy small{font-size:10px}.pcm-home-card-go{display:none}}
+
+@media(max-height:720px) and (max-width:900px){.pcm-snapshot-home-icon{padding:8px}}

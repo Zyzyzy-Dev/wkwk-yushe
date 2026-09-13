@@ -1,18 +1,26 @@
 // 设置快照页面：保存、恢复与聊天/角色绑定，通过 iframe 通信桥调用宿主，不访问酒馆全局。
+import { chooseApiSnapshotBinding } from './api-snapshot-bind.js';
 import { createSnapshotEditor } from './snapshot-editor.js';
 import { snapshotScope } from '../snapshot.js';
 import { createSnapshotScopePicker, snapshotScopeLabels } from './snapshot-scope.js';
-export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeIcon, prompt, confirm, toast}) {
+export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeIcon, prompt, confirm, toast, quick=false, onApi}) {
   const node = (tag, cls, text) => {const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n;};
-  const element = node('main', 'pcm-snapshots');
+  const element = node('main', 'pcm-snapshots pcm-api-manager pcm-snapshot-manager');
   element.setAttribute('aria-label', '设置快照');
   const header = node('header', 'pcm-snapshot-header');
-  const back = button('← 首页', () => editor ? closeEditor() : onBack()), title = node('h2', '', '设置快照');
+  const back = iconButton('首页', 'home', () => editor ? closeEditor() : onBack()), title = node('h2', '', '设置快照');
   const theme = button('', onCycleTheme); theme.dataset.themeToggle = ''; theme.title = '切换配色'; theme.setAttribute('aria-label', '切换配色'); theme.innerHTML = themeIcon;
-  const close = button('×', onClose); close.setAttribute('aria-label', '关闭插件');
+  const close = iconButton('关闭插件','close',onClose); close.setAttribute('aria-label', '关闭插件');
   const reload = iconButton('刷新', 'refresh', () => refresh());reload.classList.add('pcm-snapshot-refresh');
   const heading=node('div','pcm-snapshot-heading');heading.append(title,reload);
-  header.append(back, heading, theme, close);
+  const preferences=node('div','pcm-api-entry-settings'),toggles={};
+  for(const [key,label] of [['quickReply','快速回复'],['floating','悬浮球']]){
+    const toggle=button(label,async()=>{if(busy)return;setBusy(true);try{const next=await host.request('api-manager-preferences',{[key]:toggle.getAttribute('aria-pressed')!=='true'});for(const id of Object.keys(toggles))toggles[id].setAttribute('aria-pressed',String(!!next[id]));}catch(error){showStatus(error.message,true);}finally{setBusy(false);}});
+    toggle.className='pcm-api-entry-toggle';toggle.setAttribute('aria-label','启用'+label);toggle.setAttribute('aria-pressed','false');toggles[key]=toggle;preferences.append(toggle);
+  }
+  if(!quick)header.append(back);header.append(heading,preferences,theme,close);
+  const tabs=node('div','pcm-header-switch');if(onApi)tabs.append(button('API 管理',onApi));heading.append(tabs);
+  if(quick)element.classList.add('pcm-api-quick');
   const context = node('details', 'pcm-snapshot-context');context.open=true;
   const contextTitle=node('summary','','当前设置'),contextBody=node('div','pcm-snapshot-context-body');context.append(contextTitle,contextBody);
   const toolbar = node('div', 'pcm-snapshot-toolbar');
@@ -33,8 +41,8 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     return b;
   }
   function iconButton(label, icon, action) {
-    const b=button('',action);b.className='pcm-snapshot-icon';b.title=label;b.setAttribute('aria-label',label);
-    const paths={refresh:'M20 7v5h-5 M4 17v-5h5 M6.1 7a7 7 0 0 1 11.5-1L20 9 M4 15l2.4 3A7 7 0 0 0 18 17',rename:'m14 5 5 5 M4 20l4-1L20 7a2.1 2.1 0 0 0-3-3L5 16l-1 4Z',delete:'M3 6h18 M9 6V3h6v3 M6 6l1 15h10l1-15 M10 10v7 M14 10v7'};
+    const b=button('',action);b.className='pcm-snapshot-icon pcm-api-icon';b.title=label;b.setAttribute('aria-label',label);
+    const paths={close:'m6 6 12 12M6 18 18 6',home:'m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9',refresh:'M20 7v5h-5 M4 17v-5h5 M6.1 7a7 7 0 0 1 11.5-1L20 9 M4 15l2.4 3A7 7 0 0 0 18 17',rename:'m14 5 5 5 M4 20l4-1L20 7a2.1 2.1 0 0 0-3-3L5 16l-1 4Z',delete:'M3 6h18 M9 6V3h6v3 M6 6l1 15h10l1-15 M10 10v7 M14 10v7'};
     b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+paths[icon]+'"/></svg>';
     return b;
   }
@@ -83,7 +91,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     }
     for (const snapshot of data.snapshots) {
       const card = node('article', 'pcm-snapshot-card'); card.dataset.snapshotId = snapshot.id;
-      const top = node('div', 'pcm-snapshot-card-title'); top.append(node('h3', '', snapshot.name),iconButton('重命名','rename',()=>execute('rename',snapshot)),iconButton('删除','delete',()=>execute('delete',snapshot)));top.lastElementChild.classList.add('pcm-snapshot-delete');
+      const top = node('div', 'pcm-snapshot-card-title'); top.append(node('h3', '', snapshot.name),iconButton('编辑快照详情','rename',()=>openEditor(snapshot.id)),iconButton('删除','delete',()=>execute('delete',snapshot)));top.lastElementChild.classList.add('pcm-snapshot-delete');
       if (snapshot.id === c.chatBindingId || snapshot.id === c.characterBindingId) top.append(node('span', 'pcm-snapshot-badge', [snapshot.id === c.chatBindingId ? '此聊天' : '', snapshot.id === c.characterBindingId ? '此角色' : ''].filter(Boolean).join(' / ')));
       const books = snapshot.resources?.worlds?.global || snapshot.worldNames || [];
       const included=snapshotScope(snapshot);
@@ -91,13 +99,14 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
       const mounts = node('p', 'pcm-snapshot-books', !included.worlds ? '全局世界书：保持当前' : books.length ? '全局世界书：'+books.join('、') : '全局世界书：不挂载');
       const range=node('p','pcm-snapshot-saved-scope','保存范围：'+Object.keys(snapshotScopeLabels).filter(key=>included[key]).map(key=>snapshotScopeLabels[key]).join('、'));
       const actions = node('div', 'pcm-snapshot-actions');
-      const apply = button('应用', () => execute('apply', snapshot)); apply.classList.add('pcm-snapshot-primary');
+      const apply = button('切', () => execute('apply', snapshot)); apply.classList.add('pcm-snapshot-primary');
       const chat = button('绑定此聊天', () => execute('bind', {...snapshot, target: 'chat'}));
       const character = button('绑定此角色', () => execute('bind', {...snapshot, target: 'character'}));
       chat.dataset.unavailable = String(!c.canBindChat); character.dataset.unavailable = String(!c.canBindCharacter);
-      actions.append(apply, chat, character);
+      top.append(apply);
+      actions.append(button('绑定api',async()=>{try{await chooseApiSnapshotBinding({host,parent:element,snapshotId:snapshot.id});}catch(error){showStatus(error.message,true);}}), chat, character);
       const manage = node('div', 'pcm-snapshot-actions');
-      manage.classList.add('pcm-snapshot-manage');manage.append(button('查看快照详情',()=>openEditor(snapshot.id)));
+      manage.classList.add('pcm-snapshot-manage');
       card.append(top, range, summary, mounts);
       card.append(actions,manage);list.append(card);
     }
@@ -111,6 +120,8 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     setBusy(true);
     try {
       const result = await host.request('snapshot-list');
+      const prefs = await host.request('api-manager-links');
+      for(const key of Object.keys(toggles))toggles[key].setAttribute('aria-pressed',String(!!prefs.preferences?.[key]));
       if (disposed || token !== revision) return;
       data = result; render(); showStatus('');
     } catch (error) {if (!disposed) showStatus(error.message, true);}
@@ -122,7 +133,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
   function closeEditor(result) {
     editor?.destroy();editor=null;
     for(const part of [context,toolbar,notice,status,list])part.hidden=false;
-    title.textContent='设置快照';back.textContent='← 首页';
+    title.textContent='设置快照';back.innerHTML=iconButton('首页','home',()=>{}).innerHTML;
     reload.hidden=false;
     if(result?.snapshots){data=result;refreshPending=false;render();showStatus('快照已保存');}
     else void refresh();
@@ -136,7 +147,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
       if(disposed)return;
       editor=createSnapshotEditor({host,model,existingId:id,onCancel:()=>closeEditor(),onSaved:closeEditor,toast});
       for(const part of [context,toolbar,notice,status,list])part.hidden=true;
-      title.textContent=id?'快照详情':'创建快照';reload.hidden=true;back.textContent='← 快照';element.append(editor.element);element.closest('dialog')?.scrollTo(0,0);
+      title.textContent=id?'快照详情':'创建快照';reload.hidden=true;back.innerHTML='←';element.append(editor.element);element.closest('dialog')?.scrollTo(0,0);
     }catch(error){if(!disposed){showStatus(error.message,true);toast.error(error.message);}}
     finally{if(!disposed)setBusy(false);}
   }
@@ -162,7 +173,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
         result = await host.request('snapshot-delete', {id: snapshot.id}); message = '快照已删除';
       } else if (action === 'bind' || action === 'unbind') {
         result = await host.request('snapshot-bind', {id: action === 'unbind' ? null : snapshot.id, target: snapshot.target, contextKey});
-        message = action === 'unbind' ? '已解除绑定，下次进入聊天时按剩余绑定应用' : '已绑定，下次进入聊天自动应用；现在可点击「应用」';
+        message = action === 'unbind' ? '已解除绑定，下次进入聊天时按剩余绑定应用' : '已绑定，下次进入聊天自动应用；现在可点击「切」';
       } else if (action === 'apply') {
         result = await host.request('snapshot-apply', {id: snapshot.id, contextKey});
         if (result.needsConfirmation) {

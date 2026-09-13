@@ -57,7 +57,7 @@ async function request(method, payload) {
   await connection;
   const id = ++requestId;
   // 多本世界书需要逐本保存与读回核验，不能沿用单次编辑操作的短超时。
-  const timeoutMs = method.startsWith('snapshot-') ? 180_000 : REQUEST_TIMEOUT_MS;
+  const timeoutMs = method.startsWith('snapshot-') || method.startsWith('api-manager-') ? 180_000 : REQUEST_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);

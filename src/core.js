@@ -8,7 +8,8 @@ const MYERS_MAX_DISTANCE = 800;
 
 export const VAR_GET_RE = /\{\{(?:getvar|getglobalvar|var)::([^:}]+)/g;
 
-export const clone = value => structuredClone(value);
+import { clone } from './clone.js';
+export { clone };
 
 let identifierSequence = 0;
 // 条目/项目标识，不用于安全凭证。HTTP 酒馆与部分 WebView 没有 randomUUID。
