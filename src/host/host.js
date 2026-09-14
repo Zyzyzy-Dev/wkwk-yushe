@@ -424,8 +424,8 @@ function assertWorkbenchCache(world, name, base, create = false) {
   }
 }
 
-async function workbenchDiskNames(env) {
-  const data = await readSnapshotPersistence(env, '/api/settings/get', {});
+async function workbenchDiskNames(env, options) {
+  const data = await readSnapshotPersistence(env, '/api/settings/get', {}, options);
   if (!Array.isArray(data.world_names) || !data.world_names.every(name => typeof name === 'string')) throw new Error('无法核验世界书列表，请重试');
   return data.world_names;
 }
@@ -450,10 +450,13 @@ async function handleWorkbenchWorldbook(method, payload) {
   const name = workbenchWorldName(payload.name);
   const [script, world] = await Promise.all([import('/script.js'), import('/scripts/world-info.js')]);
   const env = {script, world};
-  const names = await workbenchDiskNames(env);
+  // Android local servers may need longer to enumerate settings/presets and read large books.
+  // Keep disk existence checks: the native get endpoint returns an empty book for missing files.
+  const reading = method === 'workbench-read-worldbook';
+  const names = await workbenchDiskNames(env, reading ? {timeoutMs:45000, label:'世界书列表'} : undefined);
   if (method === 'workbench-read-worldbook') {
     if (!names.includes(name)) throw new Error('该世界书不存在，请重新读取列表');
-    const book = await readSnapshotPersistence(env, '/api/worldinfo/get', {name});
+    const book = await readSnapshotPersistence(env, '/api/worldinfo/get', {name}, {timeoutMs:45000, label:'世界书正文'});
     normalizeWorkbenchBook(book);
     assertWorkbenchCache(world, name, book);
     world.worldInfoCache.set(name, clone(book));
@@ -739,14 +742,18 @@ function snapshotList(env) {
   return clone({snapshots: store.snapshots, context, activeBinding: active ? {id: active.snapshot.id, name: active.snapshot.name, source: active.source} : null, busy: snapshotBusy > 0});
 }
 
-async function readSnapshotPersistence(env, url, body) {
+async function readSnapshotPersistence(env, url, body, {timeoutMs = 8000, label} = {}) {
   const getHeaders = env.script.getRequestHeaders || globalThis.SillyTavern?.getContext?.().getRequestHeaders;
   if (typeof getHeaders !== 'function') throw new Error('酒馆未提供保存核验接口，请更新酒馆后重试');
-  const abort = new AbortController(), timer = setTimeout(() => abort.abort(), 8000);
+  const abort = new AbortController(), timer = setTimeout(() => abort.abort(), timeoutMs);
   try {
     const response = await fetch(url, {method: 'POST', headers: getHeaders(), body: JSON.stringify(body), cache: 'no-cache', signal: abort.signal});
-    if (!response.ok) throw new Error('保存后读取失败，请检查服务器连接');
+    if (!response.ok) throw new Error(label ? label+'读取失败（HTTP '+response.status+'），请检查酒馆服务后重试' : '保存后读取失败，请检查服务器连接');
     return await response.json();
+  } catch (error) {
+    if (label && abort.signal.aborted) throw new Error(label+'读取超时（'+timeoutMs/1000+' 秒），请保持酒馆在前台后重试，或导入世界书 JSON');
+    if (label && error.name === 'AbortError') throw new Error(label+'读取被中断，请保持酒馆在前台后重试，或导入世界书 JSON');
+    throw error;
   } finally {clearTimeout(timer);}
 }
 
