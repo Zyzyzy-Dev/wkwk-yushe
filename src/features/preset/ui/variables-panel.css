@@ -1,0 +1,125 @@
+/* 预设变量三视图：独立滚动、移动端表单、来源分组与变更预览；颜色继承当前主题。 */
+.pcm-variable-panel{width:min(900px,100%);display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.pcm-variable-panel [hidden]{display:none!important}
+.pcm-variable-target{border-bottom:1px solid #8885;padding:8px 0;overflow-wrap:anywhere}
+.pcm-variable-scope{display:flex;gap:8px;align-items:center;font-size:12px}
+.pcm-variable-scope input{appearance:auto!important;width:17px!important;height:17px!important;accent-color:#888}
+.pcm-variable-choice-group{border-bottom:1px solid #8884;padding:4px}
+.pcm-variable-choice-group summary{font-weight:600;cursor:pointer;padding:6px 0;overflow-wrap:anywhere}
+.pcm-variable-diff mark{color:inherit;border-radius:2px;padding:0}
+.pcm-variable-diff .pcm-variable-del{background:#d9494938;text-decoration:line-through;text-decoration-color:#b22}
+.pcm-variable-diff .pcm-variable-add{background:#32945340;box-shadow:inset 0 -1px #28773e}
+.pcm-theme-night .pcm-variable-diff .pcm-variable-del{background:#ed656550}
+.pcm-theme-night .pcm-variable-diff .pcm-variable-add{background:#62c98245}
+.pcm-variable-panel .pcm-picker-head{flex:none;gap:8px;min-width:0}
+.pcm-variable-panel .pcm-picker-head h3{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px}
+.pcm-variable-tabs{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--pcm-border,#8885);flex:none}
+.pcm-variable-tabs button{flex:1;min-width:0}
+.pcm-variable-tabs button[aria-pressed=true]{font-weight:700;box-shadow:inset 0 -2px currentColor}
+.pcm-variable-body{padding:14px;overflow:auto;min-height:0;overscroll-behavior:contain;display:flex;flex-direction:column;gap:12px}
+.pcm-variable-body h4,.pcm-variable-body h5,.pcm-variable-body p{margin:0}
+.pcm-variable-body input:not([type=checkbox]):not([type=radio]),.pcm-variable-body select,.pcm-variable-body textarea{box-sizing:border-box;width:100%;max-width:100%;min-width:0;color:inherit;background:transparent;border:1px solid #8886;border-radius:7px;padding:8px;font:inherit}
+.pcm-variable-body textarea{resize:vertical;min-height:100px;white-space:pre-wrap;overflow-wrap:anywhere}
+.pcm-variable-body select option{color:CanvasText;background:Canvas}
+.pcm-variable-body [disabled]{opacity:.5}
+.pcm-variable-field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.pcm-variable-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pcm-variable-actions input{flex:1;min-width:120px!important}
+.pcm-variable-note{font-size:12px;opacity:.8;line-height:1.6;overflow-wrap:anywhere}
+.pcm-variable-message{padding:0 14px;color:inherit;flex:none;font-size:13px;overflow-wrap:anywhere}
+.pcm-variable-message:not(:empty){padding-top:8px;padding-bottom:8px;border-bottom:1px solid #8885}
+.pcm-variable-picklist{max-height:230px;overflow:auto;border:1px solid #8885;border-radius:8px;flex:none;padding:5px}
+.pcm-variable-picklist label{display:flex;align-items:center;gap:8px;padding:7px;overflow-wrap:anywhere;cursor:pointer}
+.pcm-variable-picklist input,.pcm-variable-modes input{appearance:auto!important;flex:none;width:17px!important;height:17px!important;margin:0 6px 0 0!important;accent-color:#888}
+.pcm-variable-modes{display:flex;gap:10px;flex-wrap:wrap;border:1px solid #8885;border-radius:8px;padding:10px;margin:0;min-width:0}
+.pcm-variable-modes label{display:flex;align-items:center;font-size:13px}
+.pcm-variable-group,.pcm-variable-preview{border:1px solid #8885;border-radius:9px;padding:10px;margin-bottom:8px;overflow-wrap:anywhere;min-width:0}
+.pcm-variable-group summary,.pcm-variable-preview summary{cursor:pointer;font-weight:600;padding:3px 0}
+.pcm-variable-group[open]>button{margin-top:8px}
+.pcm-variable-source{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #8883;min-width:0;flex-wrap:wrap}
+.pcm-variable-source strong{overflow-wrap:anywhere}
+.pcm-variable-source span,.pcm-variable-source code{flex:1;font-size:12px;min-width:80px;overflow-wrap:anywhere;opacity:.85}
+.pcm-variable-source button{margin-left:auto;flex:none}
+.pcm-variable-preview pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;max-height:320px;overflow:auto;padding:9px;background:#8881}
+.pcm-variable-section{display:flex;flex-direction:column;gap:8px}
+.pcm-variable-chips{display:flex;gap:6px;flex-wrap:wrap}
+.pcm-variable-unreferenced{color:#a73c0d;background:#e98b2020;border-radius:4px;padding:2px 4px}
+.pcm-theme-night .pcm-variable-unreferenced{color:#ffb078}
+@media(max-width:520px){.pcm-variable-panel .pcm-picker-head{padding:8px}.pcm-variable-panel .pcm-picker-head h3{font-size:13px}.pcm-variable-body{padding:10px}.pcm-variable-tabs{padding:6px;gap:4px}.pcm-variable-tabs button{font-size:12px!important;padding:6px 3px!important}.pcm-variable-source{align-items:flex-start}.pcm-variable-source strong{width:100%}.pcm-variable-picklist{max-height:180px}}
+
+/* 参考排版：固定页头、紧凑工具栏、原文直接标注和分组行；不覆盖主题配色。 */
+.pcm-variable-panel{height:min(780px,90dvh);max-height:90dvh}
+.pcm-variable-panel,.pcm-variable-panel *{scrollbar-width:none}
+.pcm-variable-panel::-webkit-scrollbar,.pcm-variable-panel *::-webkit-scrollbar{display:none;width:0;height:0}
+.pcm-variable-panel .pcm-picker-head h3{flex:0 1 auto}
+.pcm-variable-panel .pcm-picker-head button{flex:none;border-radius:50%;width:34px;height:34px;padding:0!important;display:grid;place-items:center;font-size:21px}
+.pcm-variable-panel .pcm-picker-head button:last-child{margin-left:auto}
+.pcm-variable-tabs{gap:0;padding-bottom:0}
+.pcm-dialog .pcm-variable-panel .pcm-variable-tabs .menu_button{border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:10px 4px!important;margin:0!important}
+.pcm-dialog .pcm-variable-panel .pcm-variable-tabs .menu_button[aria-pressed=true]{box-shadow:inset 0 -2px currentColor!important}
+.pcm-variable-body{flex:1;gap:8px}
+.pcm-variable-target{display:flex;align-items:center;gap:8px;padding:0;border:0;font-size:13px;flex-wrap:wrap}
+.pcm-variable-target strong{font-weight:400;background:#8881;border-radius:20px;padding:4px 12px;min-width:100px;max-width:65%;overflow-wrap:anywhere}
+.pcm-variable-target button{margin-left:auto;flex:none}
+.pcm-variable-body .pcm-variable-original,.pcm-variable-reference{box-sizing:border-box;height:clamp(170px,28dvh,280px);min-height:170px;flex:none;margin:0;background:#8881;border:1px solid #8883;border-radius:12px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;overflow:auto;font:inherit;font-size:13px;line-height:1.5}
+.pcm-variable-referenced{background:#43976830;color:inherit;border-radius:3px;box-shadow:inset 0 -1px #439768}
+.pcm-variable-reference-summary{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
+.pcm-variable-chips code{border-radius:20px;padding:3px 10px}
+.pcm-variable-section{margin-top:4px;gap:4px}
+.pcm-variable-section h4{font-size:14px}
+.pcm-variable-source{padding:4px 0;border:0;flex-wrap:nowrap;gap:8px}
+.pcm-variable-source strong{font-size:13px;min-width:0;font-weight:400}
+.pcm-variable-section .pcm-variable-source strong{flex:0 1 45%;background:#8881;padding:5px 10px;border-radius:15px}
+.pcm-variable-source button{font-size:12px!important;padding:5px 12px!important;border-radius:18px}
+.pcm-variable-end{justify-content:flex-end}
+.pcm-variable-group{background:#8881;border:0;border-radius:16px;padding:6px 12px;margin-bottom:5px}
+.pcm-variable-group summary{display:flex;align-items:center;gap:8px;list-style:none;min-height:28px;font-size:13px;font-weight:400}
+.pcm-variable-group summary::-webkit-details-marker{display:none}
+.pcm-variable-group summary span{flex:1;min-width:0}
+.pcm-variable-group summary button{flex:none;font-size:12px!important;padding:5px 10px!important;border-radius:18px}
+.pcm-variable-group:not([open]) summary button{display:none}
+.pcm-variable-group .pcm-variable-source{padding-left:8px}
+.pcm-variable-group .pcm-variable-source strong{flex:1;background:#8881;border-radius:16px;padding:5px 10px}
+.pcm-variable-group .pcm-variable-source code{flex:0 1 auto;min-width:0}
+.pcm-variable-form-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pcm-variable-form-heading h4{font-size:16px}
+.pcm-variable-form-heading button{margin-left:auto}
+.pcm-variable-count{font-size:12px;background:#8881;border-radius:16px;padding:4px 10px}
+.pcm-variable-selection-bar{flex-wrap:nowrap}
+.pcm-variable-selection-bar button{flex:none;font-size:12px!important}
+.pcm-variable-picklist{max-height:210px;border:0;background:#8881;padding:8px;border-radius:12px}
+.pcm-variable-choice-group{border:0;background:#8881;border-radius:12px;padding:4px 10px;margin-bottom:6px}
+.pcm-variable-choice-group summary{padding:5px;font-weight:400;font-size:13px}
+.pcm-variable-picklist label{background:#8881;border-radius:16px;padding:6px 10px;margin:4px 0;font-size:13px}
+.pcm-variable-picklist label:has(input:checked){box-shadow:inset 0 0 0 1px currentColor}
+.pcm-variable-modes,.pcm-variable-kind-buttons{border:0;background:#8881;border-radius:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 12px;margin:0;min-width:0}
+.pcm-variable-modes legend,.pcm-variable-kind-buttons legend{float:left;margin-right:12px;font-size:13px;padding:0;line-height:30px}
+.pcm-variable-kind-buttons label{position:relative;cursor:pointer}
+.pcm-variable-kind-buttons input{position:absolute;opacity:0;width:1px;height:1px}
+.pcm-variable-kind-buttons span{display:block;border-radius:18px;padding:7px 16px;background:#8881;font-size:13px;border:1px solid transparent}
+.pcm-variable-kind-buttons input:checked+span{border-color:currentColor;font-weight:700}
+.pcm-variable-kind-buttons input:focus-visible+span{outline:2px solid currentColor;outline-offset:2px}
+.pcm-variable-kind-buttons input:disabled+span{opacity:.4;cursor:not-allowed}
+.pcm-variable-field{background:#8881;padding:8px 12px;border-radius:12px;font-size:13px}
+.pcm-variable-field:has(input){flex-direction:row;align-items:center}
+.pcm-variable-field:has(input)>span{flex:none;min-width:48px}
+.pcm-variable-save-actions{padding:4px 0;flex:none}
+@media(max-width:520px){
+ .pcm-variable-panel{height:92dvh;max-height:92dvh}
+ .pcm-variable-panel .pcm-picker-head h3{font-size:12px}
+ .pcm-variable-panel .pcm-picker-head button{width:29px;height:29px}
+ .pcm-variable-target{gap:5px;font-size:12px}.pcm-variable-target strong{min-width:0;max-width:50%;flex:1}
+ .pcm-variable-body .pcm-variable-original,.pcm-variable-reference{height:24dvh;min-height:150px}
+ .pcm-variable-source{align-items:center}.pcm-variable-source strong{width:auto}
+ .pcm-variable-section .pcm-variable-source span{display:none}
+ .pcm-variable-section .pcm-variable-source strong{flex:1}
+ .pcm-variable-group .pcm-variable-source code{display:none}
+ .pcm-variable-group{padding:6px 9px}.pcm-variable-group .pcm-variable-source{padding-left:0}
+ .pcm-variable-selection-bar{flex-wrap:wrap;gap:5px}.pcm-variable-selection-bar input{flex-basis:100%}
+ .pcm-variable-selection-bar button{flex:1}.pcm-variable-picklist{max-height:190px}
+ .pcm-variable-form-heading h4{font-size:14px}.pcm-variable-form-heading button{font-size:11px!important;padding:5px!important}
+ .pcm-variable-count{font-size:11px;padding:3px 6px}
+ .pcm-variable-kind-buttons{gap:6px;padding:8px}.pcm-variable-kind-buttons span{padding:7px 10px;font-size:12px}
+ .pcm-variable-kind-buttons legend{margin-right:4px;font-size:12px}
+ .pcm-variable-modes{gap:6px;padding:8px}.pcm-variable-modes legend{float:none;line-height:1.5}.pcm-variable-modes label{font-size:12px}
+}

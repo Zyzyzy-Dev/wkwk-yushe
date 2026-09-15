@@ -5,7 +5,7 @@
 - `features/api/`：API 方案、附加参数、快照绑定；`ui/` 为编辑与选择弹窗。
 - `features/snapshot/`：快照捕获、恢复、资源校验；`ui/` 为快照页面与草稿编辑。
 - `features/worldbook/`：世界书转换、工作台数据操作；`ui/` 为选择、迁移、拖拽与对比界面。
-- `features/preset/`：预设对比、迁移、分组等纯逻辑；`ui/` 为布局、搜索高亮与正则样式。
+- `features/preset/`：预设对比、迁移、分组、变量解析与批量变更计划；`ui/` 为布局、搜索高亮、正则样式与变量三视图。
 - `shared/`：跨模块公共工具。
 - `ui/app.js`：iframe 应用协调入口，组装各功能页面。
 - `ui/index.html`：iframe HTML 入口，通过 module script 和 stylesheet link 加载资源。
