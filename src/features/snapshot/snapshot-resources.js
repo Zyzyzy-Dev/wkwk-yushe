@@ -1,5 +1,6 @@
 // 快照资源纯逻辑：保存世界书配置与正则开关，按稳定标识恢复并保留当前正文和新增记录。
-const copy = value => JSON.parse(JSON.stringify(value));
+// undefined 没有 JSON 表示，直接走 JSON.parse 会抛「"undefined" is not valid JSON」。
+const copy = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 const reserved = new Set(['__proto__', 'prototype', 'constructor']);
 const contentFields = new Set(['uid', 'content', 'comment']);
 function object(value) {return value && typeof value === 'object' && !Array.isArray(value);}
@@ -125,6 +126,11 @@ export function normalizeSnapshotResources(resources) {
   if (!object(resources)) throw new Error('快照资源格式无效');
   if(!Array.isArray(resources.worlds?.global)||!Array.isArray(resources.worldEntries)||['global','preset','character'].some(scope=>!Array.isArray(resources.regex?.[scope])))throw new Error('快照资源配置不完整');
   if (resources.version !== undefined && resources.version !== 1 && resources.version !== 2) throw new Error('快照资源版本不受支持');
+  // 先查记录形状：下游按名字与 uid 取值，混进 null 记录或缺 settings 的条目会抛原生错误。
+  for (const book of resources.worldEntries) {
+    if (!object(book) || !Array.isArray(book.entries)) throw new Error('快照世界书记录格式无效');
+    for (const entry of book.entries) if (!object(entry) || !object(entry.settings)) throw new Error('快照条目配置格式无效');
+  }
   const normalized = {
     version:2,
     worlds:{global:copy(resources.worlds?.global || [])},

@@ -27,9 +27,17 @@ export function createIdentifier() {
   return `pcm-${Date.now().toString(36)}-${(++identifierSequence).toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
+// 触发列表来自用户导入的预设，元素类型不受控；默认 sort 的隐式 String 转换遇到无原型对象会抛异常。
+function triggerKey(value) {
+  try { return String(value); } catch { return ''; }
+}
+
 function normalizeTrigger(value) {
   if (!Array.isArray(value)) return [];
-  const sorted = [...value].sort();
+  const sorted = [...value].sort((left, right) => {
+    const a = triggerKey(left), b = triggerKey(right);
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
   return sorted.length === ALL_TRIGGERS.length && ALL_TRIGGERS.every((trigger, index) => sorted[index] === trigger)
     ? []
     : sorted;

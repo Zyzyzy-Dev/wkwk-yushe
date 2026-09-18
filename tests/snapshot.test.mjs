@@ -56,3 +56,12 @@ test('empty global mount list is a valid restore, malformed lists and booleans a
 test('deleted chat snapshot falls back to character, chat binding wins, none is inert',()=>{
  const a=capture(),b=capture({id:'b'});const store={snapshots:[a,b],characterBindings:{'a.png':'b'}};assert.equal(resolveSnapshotBinding(store,'s','a.png').source,'chat');assert.equal(resolveSnapshotBinding(store,'deleted','a.png').snapshot.id,'b');assert.equal(resolveSnapshotBinding(store,null,'none'),null);
 });
+test('缺失或损坏的快照在恢复入口给出提示，而不是崩在属性读取上',()=>{
+ assert.throws(()=>snapshots.snapshotScope(null),/快照数据无效/);
+ assert.throws(()=>snapshots.snapshotScope(undefined),/快照数据无效/);
+ assert.throws(()=>snapshots.snapshotScope('not-a-snapshot'),/快照数据无效/);
+ assert.throws(()=>snapshots.planSnapshotRestore(null,{settings:settings(),orderCharacterId:100001,groupState:groups(),worldNames:[]}),/快照数据无效/);
+ assert.throws(()=>snapshots.selectSnapshotScope(null),/快照数据无效/);
+ const s=capture();
+ assert.deepEqual(snapshots.snapshotScope(s),{preset:true,worlds:true,regex:false});
+});

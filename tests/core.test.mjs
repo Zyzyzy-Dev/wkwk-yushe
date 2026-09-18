@@ -13,6 +13,7 @@ import {
   findPromptOrderEntry,
   getRegexGroupModel,
   getRegexScripts,
+  normalizeForCompare,
   pairRegexScripts,
   parseVarContent,
   reorderRegexScript,
@@ -255,4 +256,13 @@ test('preset memory sync writes only existing slots', () => {
   assert.equal(presets[1], incoming);
   assert.equal(applyPresetToMemory(presets, ['A', 'B'], 'Nope', incoming), false);
   assert.equal(applyPresetToMemory('not-an-array', namesByIndex, 'A', incoming), false);
+});
+
+test('触发列表含非字符串元素时归一化不崩，字符串语义保持不变', () => {
+  const all = ['swipe', 'normal', 'continue', 'quiet', 'regenerate', 'impersonate'];
+  assert.deepEqual(normalizeForCompare({ injection_trigger: all }), { injection_trigger: [] });
+  assert.deepEqual(normalizeForCompare({ injection_trigger: ['swipe', 'normal'] }), { injection_trigger: ['normal', 'swipe'] });
+  for (const list of [[{}, [], null, 'x'], [Object.create(null)], [undefined], [{}]]) {
+    assert.doesNotThrow(() => equalValues({ injection_trigger: list }, {}));
+  }
 });

@@ -3,6 +3,8 @@ import { createIdentifier, findPromptOrderEntry } from '../preset/core.js';
 import { validateSnapshotResources } from './snapshot-resources.js';
 
 export function snapshotScope(snapshot) {
+  // 存储损坏时恢复流程的第一个入口就会走到这里，先给出可读提示。
+  if (!snapshot || typeof snapshot !== 'object') throw new Error('快照数据无效，请重新保存');
   if (snapshot.scope === undefined) return {preset:true, worlds:true, regex:!!snapshot.resources};
   const scope = snapshot.scope;
   if (!scope || ['preset','worlds','regex'].some(key => typeof scope[key] !== 'boolean') || !['preset','worlds','regex'].some(key => scope[key])) throw new Error('请至少勾选一项有效的快照保存范围');

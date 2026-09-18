@@ -95,3 +95,12 @@ test('identical legacy definitions keep distinct switches; changed multiplicity 
   assert.equal(restoreRegexSwitches(saved,[scripts[0]]).missing.length,2);
   assert(saved.every(row=>!JSON.stringify(row).includes('findRegex')));
 });
+
+test('残缺的世界书记录收到中文拒绝，不会抛原生异常',()=>{
+ const base={version:2,worlds:{global:['书']},regex:{global:[],preset:[],character:[]}};
+ assert.throws(()=>resources.normalizeSnapshotResources({...base,worldEntries:[null]}),/快照世界书记录格式无效/);
+ assert.throws(()=>resources.normalizeSnapshotResources({...base,worldEntries:[{name:'书'}]}),/快照世界书记录格式无效/);
+ assert.throws(()=>resources.normalizeSnapshotResources({...base,worldEntries:[{name:'书',entries:[{uid:'0'}]}]}),/快照条目配置格式无效/);
+ assert.throws(()=>resources.normalizeSnapshotResources({...base,worldEntries:[{name:'书',entries:[{uid:'0',settings:undefined}]}]}),/快照条目配置格式无效/);
+ assert.equal(resources.normalizeSnapshotResources({...base,worldEntries:[{name:'书',entries:[]}]}).worldEntries.length,1);
+});

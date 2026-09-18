@@ -2,6 +2,16 @@
 import { createIdentifier } from '../preset/core.js';
 
 export const API_ADDITIONAL_FIELDS = ['custom_include_body', 'custom_exclude_body', 'custom_include_headers'];
+
+// 方案字段来自用户文件与原生配置，可能带无原型对象；String/Number 直接作用会抛异常。
+const asText = value => {
+  if (!value) return '';
+  try { return String(value); } catch { return ''; }
+};
+const asNumber = value => {
+  try { return Number(value); } catch { return NaN; }
+};
+
 export function normalizeApiAdditional(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('附加参数格式无效');
   return Object.fromEntries(API_ADDITIONAL_FIELDS.map(key => {
@@ -21,23 +31,25 @@ export const API_SOURCES = Object.freeze({
 
 export function normalizeApiProfile(value) {
   if (!value || typeof value !== 'object') throw new Error('API 方案格式无效');
-  const source = String(value.source || 'custom');
+  const source = asText(value.source) || 'custom';
   const config = API_SOURCES[source];
   if (!config) throw new Error('此 API 来源暂不支持');
-  const name = String(value.name || '').trim();
-  const model = String(value.model || '').trim();
+  const name = asText(value.name).trim();
+  const model = asText(value.model).trim();
   if (!name || name.length > 100) throw new Error('方案名称需为 1–100 个字符');
   if (!model || model.length > 500 || /[\r\n\0]/.test(model)) throw new Error('请输入有效的模型名称');
   const connection = {};
-  for (const key of config.fields) connection[key] = String(value.connection?.[key] ?? (key === 'custom_url' ? value.apiUrl || '' : '')).trim();
+  for (const key of config.fields) connection[key] = asText(value.connection?.[key] ?? (key === 'custom_url' ? value.apiUrl : '')).trim();
   if (source === 'custom') {
     let url;
     try { url = new URL(connection.custom_url); } catch { throw new Error('请输入完整的 API 地址（http:// 或 https://）'); }
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hash || url.search) throw new Error('API 地址必须为 HTTP(S)，不能包含账号、密码、查询参数或片段');
   }
-  return { id: String(value.id || createIdentifier()), name, source, model, connection,
+  // 空数组之类的值能骗过 || 兜底产出空 id，非有限时间戳也会顺着方案列表传下去，这里一并夹住。
+  const updatedAt = asNumber(value.updatedAt);
+  return { id: asText(value.id) || createIdentifier(), name, source, model, connection,
     ...(value.additional === undefined ? {} : { additional: normalizeApiAdditional(value.additional) }),
-    secretId: String(value.secretId || ''), updatedAt: Number(value.updatedAt) || Date.now() };
+    secretId: asText(value.secretId), updatedAt: Number.isFinite(updatedAt) && updatedAt ? updatedAt : Date.now() };
 }
 
 export function planApiSwitch(settings, profile, mode) {

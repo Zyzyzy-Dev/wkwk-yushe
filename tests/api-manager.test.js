@@ -60,3 +60,15 @@ test('附加参数按方案保存和切换，模型单切及旧方案保留当�
  assert.equal(Object.hasOwn(planApiSwitch(settings,profile,'both').patch,'custom_include_body'),false);
  assert.equal(planApiSwitch(settings,{...profile,additional:{}},'both').patch.custom_include_headers,'');
 });
+
+test('时间戳只接受有限值，空数组 id 不能绕过兜底',()=>{
+ for(const updatedAt of [Infinity,-Infinity,NaN,'abc',undefined]){
+ const {updatedAt:stamp}=normalizeApiProfile({...profile,updatedAt});
+ assert.ok(Number.isFinite(stamp),`${String(updatedAt)} 应回落到当前时间`);
+ }
+ assert.equal(normalizeApiProfile({...profile,updatedAt:1234}).updatedAt,1234);
+ assert.equal(normalizeApiProfile({...profile,updatedAt:'1234'}).updatedAt,1234);
+ assert.ok(normalizeApiProfile({...profile,id:[]}).id.length>0);
+ const [imported]=importApiProfiles({profiles:[{...profile,updatedAt:Infinity}]});
+ assert.ok(Number.isFinite(imported.updatedAt));
+});
