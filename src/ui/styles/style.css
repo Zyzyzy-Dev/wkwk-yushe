@@ -795,3 +795,8 @@ dialog{font-family:var(--mainFontFamily)}
 /* 世界书转换列表隐藏滚动条，保留触摸、滚轮与键盘滚动。 */
 .pcm-worldbook-panel,.pcm-worldbook-panel *{scrollbar-width:none}
 .pcm-worldbook-panel::-webkit-scrollbar,.pcm-worldbook-panel *::-webkit-scrollbar{display:none;width:0;height:0}
+/* 酒馆预设名称搜索固定在列表上方，滚动只作用于候选列表。 */
+[data-tavern-picker]>.pcm-picker-panel{grid-template-rows:auto auto minmax(0,1fr);overflow:hidden}
+.pcm-preset-search{padding:10px 12px;border-bottom:1px solid var(--SmartThemeBorderColor)}
+.pcm-preset-search input{display:block;width:100%;min-width:0;box-sizing:border-box;margin:0;padding:9px 12px;font:inherit;color:var(--SmartThemeBodyColor);background:var(--SmartThemeBlurTintColor);border:1px solid var(--SmartThemeBorderColor);border-radius:8px}
+.pcm-preset-search-empty{padding:16px 8px;text-align:center;opacity:.7}

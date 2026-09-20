@@ -588,7 +588,35 @@ function applyDropGroup(side,id,groupId){const groupState=getBaiBaiGroupState(st
 function onDragOver(event){html5DragPointer={x:event.clientX,y:event.clientY,t:performance.now()};const list=event.target.closest('.pcm-list');if(!list)return;event.preventDefault();const row=event.target.closest('.pcm-row');if(row){markDropTarget(row,event);return;}const groupHead=event.target.closest('.pcm-group-head'),group=groupHead?.closest('.pcm-group');if(group?.dataset.groupId){clearDropMarker();group.classList.add('pcm-group-drop');dropEndList=group;return;}if(dropEndList!==list){clearDropMarker();list.classList.add('pcm-drop-end');dropEndList=list;}}function onDrop(event){stopDragAutoScroll();const list=event.target.closest('.pcm-list');if(!list)return;event.preventDefault();const row=event.target.closest('.pcm-row');if(row){try{const data=JSON.parse(event.dataTransfer.getData('text/plain')),beforeId=markDropTarget(row,event,data.ids&&data.ids.length?data.ids:data.id),targetSide=list.dataset.list,targetGroupId=groupIdForRow(row);clearDropMarker();if(data.ids&&data.ids.length>1){movePrompts(data.side,targetSide,data.ids,beforeId);for(const x of data.ids)applyDropGroup(targetSide,x,targetGroupId);}else{movePrompt(data.side,targetSide,data.id,beforeId);applyDropGroup(targetSide,data.id,targetGroupId);}rebuildCache();renderList(targetSide);}catch{clearDropMarker();}return;}const groupHead=event.target.closest('.pcm-group-head'),group=groupHead?.closest('.pcm-group');if(group?.dataset.groupId){try{const data=JSON.parse(event.dataTransfer.getData('text/plain'));group.classList.remove('pcm-group-drop');for(const x of (data.ids&&data.ids.length>1?data.ids:[data.id]))assignPromptToGroup(data.side,group.dataset.groupSide,x,group.dataset.groupId);}catch{}clearDropMarker();return;}try{const data=JSON.parse(event.dataTransfer.getData('text/plain'));clearDropMarker();if(data.ids&&data.ids.length>1)movePrompts(data.side,list.dataset.list,data.ids,null);else movePrompt(data.side,list.dataset.list,data.id,null);}catch{clearDropMarker();}}
 function onDragEnd(event){if(event.target instanceof Element)event.target.closest('.pcm-row')?.classList.remove('pcm-dragging');clearDropMarker();stopDragAutoScroll();if(html5DragLock){html5DragLock=false;pcmUnlock();}}
 async function tavernPresetCandidates(){try{return new Map(await host.request('list-presets'));}catch(error){console.warn('[preset-compare-migrator] Failed to read host presets',error);return new Map();}}
-async function pullTavernPreset(){const candidates=await tavernPresetCandidates();if(!candidates.size){pcmToastr.warning('未能读取 Chat Completion/OpenAI 预设。','未找到酒馆预设');return;}tavernPresetPickerData=candidates;let picker=document.querySelector('[data-tavern-picker]');if(!picker){picker=el('section','pcm-picker');picker.dataset.tavernPicker='';const panel=el('div','pcm-picker-panel'),head=el('header','pcm-picker-head');head.append(el('h3','', '选择酒馆预设'),btn('×','close-picker','pcm-collapse'));panel.append(head);const list=el('div','pcm-picker-list');list.dataset.pickerList='';panel.append(list);picker.append(panel);document.getElementById(APP_ID+'-dialog').append(picker);}const list=picker.querySelector('[data-picker-list]');list.replaceChildren();for(const [name,preset] of candidates){const item=btn(name,'choose-tavern','pcm-picker-item');item.dataset.presetName=name;item.append(el('small','',preset.prompts.length+' 个条目'));list.append(item);}picker.classList.add('open');}
+function renderTavernPresetPicker(picker){
+  const list=picker.querySelector('[data-picker-list]');
+  const query=picker.querySelector('[data-preset-search]').value.trim().toLocaleLowerCase();
+  list.replaceChildren();
+  for(const [name,preset] of tavernPresetPickerData){
+    if(query&&!name.toLocaleLowerCase().includes(query))continue;
+    const item=btn(name,'choose-tavern','pcm-picker-item');item.dataset.presetName=name;
+    item.append(el('small','',preset.prompts.length+' 个条目'));list.append(item);
+  }
+  if(!list.childElementCount){const empty=el('p','pcm-preset-search-empty','没有找到匹配的预设');empty.setAttribute('role','status');list.append(empty);}
+  list.scrollTop=0;
+}
+async function pullTavernPreset(){
+  const candidates=await tavernPresetCandidates();
+  if(!candidates.size){pcmToastr.warning('未能读取 Chat Completion/OpenAI 预设。','未找到酒馆预设');return;}
+  tavernPresetPickerData=candidates;
+  let picker=document.querySelector('[data-tavern-picker]');
+  if(!picker){
+    picker=el('section','pcm-picker');picker.dataset.tavernPicker='';
+    const panel=el('div','pcm-picker-panel'),head=el('header','pcm-picker-head');
+    head.append(el('h3','', '选择酒馆预设'),btn('×','close-picker','pcm-collapse'));panel.append(head);
+    const searchRow=el('div','pcm-preset-search'),search=el('input','text_pole');
+    search.type='search';search.placeholder='搜索预设名称';search.setAttribute('aria-label','搜索酒馆预设');search.autocomplete='off';search.dataset.presetSearch='';
+    search.addEventListener('input',()=>renderTavernPresetPicker(picker));searchRow.append(search);panel.append(searchRow);
+    const list=el('div','pcm-picker-list');list.dataset.pickerList='';panel.append(list);
+    picker.append(panel);document.getElementById(APP_ID+'-dialog').append(picker);
+  }
+  picker.querySelector('[data-preset-search]').value='';renderTavernPresetPicker(picker);picker.classList.add('open');
+}
 function chooseTavernPreset(name){const preset=tavernPresetPickerData.get(name);if(!preset)return;state.old=validate(clone(preset));state.oldName=name+'.json';state.tavernSource.old=name;state.dirty.old=false;state.activeId=null;document.querySelector('[data-tavern-picker]')?.classList.remove('open');hideCompare();rebuildCache();renderAll(false);pcmToastr.success('已从酒馆载入：'+name);}
 let pendingGroupSnapshot=null;function snapshotGroupChange(side){const isBatch=state.multiSelect.enabled&&(state.multiSelect.selected.old.size>1||state.multiSelect.selected.new.size>1);if(isBatch&&pendingGroupSnapshot?.side===side)return;const action=moveSnapshot(side);pushUndo(action);if(isBatch){pendingGroupSnapshot=action;queueMicrotask(()=>{if(pendingGroupSnapshot===action)pendingGroupSnapshot=null;});}}
 async function deletePrompt(side,id){const preset=state[side];if(!preset)return;if(!(await pcmConfirm('确定从'+(side==='old'?'旧版':'新版')+'删除该条目吗？（可撤回）')))return;snapshotGroupChange(side);preset.prompts=preset.prompts.filter(p=>p.identifier!==id);const order=orderArray(preset),oi=order.findIndex(x=>(typeof x==='string'?x:x?.identifier)===id);if(oi>=0)order.splice(oi,1);if(isComparisonActive(side,id)){state.activeId=null;state.activeSide=null;hideCompare();}state.dirty[side]=true;rebuildCache();renderAll();pcmToastr.success('已删除条目');}
