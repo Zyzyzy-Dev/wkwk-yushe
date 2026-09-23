@@ -1,5 +1,5 @@
 // 预设变量面板：获取/引用/编辑三个视图、局部草稿表单及批量变更预览；通过回调写入预设草稿。
-import {VARIABLE_KINDS, scanVariables, collectVariables, variableKey, makeVariable, missingVariableInitializers,
+import {variableInitializer, VARIABLE_KINDS, scanVariables, collectVariables, variableKey, makeVariable, missingVariableInitializers,
   planVariableInitializers, planVariableAdd, planVariableEdit, planVariableRename} from '../variables.js';
 import {buildRows, diffLines} from '../core.js';
 
@@ -37,28 +37,31 @@ export function openVariablesPanel({dialog, title, getPrompts, getPresentation, 
   box.append(header,tabs,message,body); root.append(box); dialog.append(root);
   const candidates = () => getPrompts().filter(p=>!p.marker);
   let view='get', dirty=false, targetId=null, searchValue='';
-  const initial = candidates().filter(p=>scanVariables(p.content).some(m=>m.kind.startsWith('set'))).sort((a,b)=>scanVariables(b.content).filter(m=>m.kind.startsWith('set')).length-scanVariables(a.content).filter(m=>m.kind.startsWith('set')).length)[0];
+  let renderedPrompts=JSON.stringify(getPrompts()), resume=()=>{};
+  const initial = variableInitializer(candidates());
   targetId=initial?.identifier;
   const attempt = action => {try {message.textContent=''; return action();} catch(error) {message.textContent=error.message;}};
   async function discard() {return !dirty || await confirm('当前表单还有未应用的修改，放弃这些修改吗？');}
-  async function close() {if(await discard())root.remove();}
+  // 关闭仅隐藏，当前预设会复用面板；表单草稿、预览和滚动位置随之保留。
+  function close() {root.style.display='none';}
   root.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();void close();}});
   const markDirty = () => {dirty=true;};
   for (const [key,label] of [['get','获取变量'],['ref','引用变量'],['edit','编辑变量']]) {
     const tab=button(label,async()=>{if(key===view)return;if(!(await discard())||!root.isConnected)return;view=key;dirty=false;render();});
     tab.dataset.variableView=key;tabs.append(tab);
   }
-  function commit(changes) {
+  function commit(changes, onSuccess) {
     if(!changes.length){message.textContent='没有需要修改的内容（相同宏会自动跳过）';return;}
-    apply(changes);dirty=false;render();message.textContent='已更新 '+changes.length+' 个条目的草稿，可撤回；保存回酒馆后生效';
+    apply(changes);dirty=false;if(onSuccess)onSuccess();else render();renderedPrompts=JSON.stringify(getPrompts());message.textContent='已更新 '+changes.length+' 个条目的草稿，可撤回；保存回酒馆后生效';
   }
-  function preview(changes, heading, extra='') {
+  function preview(changes, heading, extra='', onSuccess) {
     if (!changes.length) {message.textContent='没有需要修改的内容（相同宏会自动跳过）';return;}
-    const previous=[...body.childNodes], previousDirty=dirty;
+    const previous=[...body.childNodes], previousDirty=dirty, previousScroll=body.scrollTop;
+    const restore=()=>{body.replaceChildren(...previous);body.scrollTop=previousScroll;};
     body.replaceChildren();
     body.append(node('h4','',heading),node('p','pcm-variable-note',extra || '核对下列条目，确认后仅更新当前侧预设草稿。'));
     const actions=node('div','pcm-variable-actions');
-    actions.append(button('返回修改',()=>{body.replaceChildren(...previous);dirty=previousDirty;}),button('确认应用',()=>attempt(()=>commit(changes))));body.append(actions);
+    actions.append(button('返回修改',()=>{restore();dirty=previousDirty;}),button('确认应用',()=>attempt(()=>commit(changes,onSuccess?()=>{restore();onSuccess();}:undefined))));body.append(actions);
     for(const item of changes) {
       const card=node('details','pcm-variable-preview');card.open=changes.length===1;
       card.append(node('summary','',item.name));
@@ -76,6 +79,7 @@ export function openVariablesPanel({dialog, title, getPrompts, getPresentation, 
     dirty=true;
   }
   function render() {
+    renderedPrompts=JSON.stringify(getPrompts());resume=()=>{if(!dirty)render();};
     body.replaceChildren();message.textContent='';
     root.dataset.view=view;
     for(const tab of tabs.children)tab.setAttribute('aria-pressed',String(tab.dataset.variableView===view));
@@ -108,27 +112,39 @@ export function openVariablesPanel({dialog, title, getPrompts, getPresentation, 
       if(raw.value===original){dirty=false;return;}
       commit([{id:target.identifier,name:target.name,before:original,after:raw.value}]);
     }));save.setAttribute('aria-label','保存条目内容');body.querySelector('.pcm-variable-target').append(save);
-    const requireSaved=()=>{if(raw.value!==original)throw new Error('请先保存条目原文的修改，再补写变量');};
-    const missing=missingVariableInitializers(candidates(),targetId);
-    const section=node('section','pcm-variable-section');section.append(node('h4','','未收录的变量 · '+missing.length));
-    for(const group of missing){
-      const row=node('div','pcm-variable-source');
-      const sources=[...new Set(group.occurrences.filter(m=>m.id!==targetId&&/^(set|add)/.test(m.kind)).map(m=>m.entryName))];
-      row.append(node('strong','',(group.scope==='global'?'全局 · ':'')+group.name),node('span','',sources.join('、')),
-        button('写入',()=>attempt(()=>{requireSaved();preview(planVariableInitializers(candidates(),targetId,[group.key]),'写入 '+group.name);})));
-      section.append(row);
+    const draftPrompts=()=>candidates().map(p=>p.identifier===targetId?{...p,content:raw.value}:p);
+    const pending=node('div','pcm-variable-pending');body.append(pending);
+    const stage=changes=>{
+      if(!changes.length){message.textContent='文本框中已包含这些变量，无需重复写入';return;}
+      raw.value=changes[0].after;dirty=raw.value!==original;drawPending();
+      message.textContent='已写入上方文本框，点击右上角“保存”后才会更新条目草稿';
+    };
+    function drawPending() {
+      pending.replaceChildren();
+      const prompts=draftPrompts(),missing=missingVariableInitializers(prompts,targetId);
+      const section=node('section','pcm-variable-section');section.append(node('h4','','未收录的变量 · '+missing.length));
+      for(const group of missing){
+        const row=node('div','pcm-variable-source');
+        const sources=[...new Set(group.occurrences.filter(m=>m.id!==targetId&&/^(set|add)/.test(m.kind)).map(m=>m.entryName))];
+        row.append(node('strong','',(group.scope==='global'?'全局 · ':'')+group.name),node('span','',sources.join('、')),
+          button('写入',()=>attempt(()=>stage(planVariableInitializers(draftPrompts(),targetId,[group.key])))));
+        section.append(row);
+      }
+      if(!missing.length)section.append(node('p','pcm-variable-note','其他条目的设置／追加变量均已收录到上方文本框'));
+      if(missing.length){const actions=node('div','pcm-variable-actions pcm-variable-end');actions.append(button('一键写入变量',()=>attempt(()=>stage(planVariableInitializers(draftPrompts(),targetId)))));section.append(actions);}
+      pending.append(section);
+      const draftGroups=collectVariables(prompts);
+      const undefinedGroups=draftGroups.filter(g=>g.occurrences.some(m=>m.kind.startsWith('get')&&isInjected(m.id))&&!g.occurrences.some(m=>m.kind.startsWith('set')&&(m.id===targetId||isInjected(m.id))));
+      if(undefinedGroups.length){const section=node('section','pcm-variable-section');section.append(node('h4','','被引用但没有 setvar 初始化'));
+        for(const group of undefinedGroups){const row=node('div','pcm-variable-source');row.append(node('strong','',(group.scope==='global'?'全局 · ':'')+group.name),button('补写',()=>attempt(()=>{
+          stage(planVariableAdd(draftPrompts(),[targetId],{kind:group.scope==='global'?'setglobalvar':'setvar',name:group.name}));
+        })));section.append(row);}pending.append(section);
+      }
     }
-    if(!missing.length)section.append(node('p','pcm-variable-note','其他条目的设置／追加变量均已收录'));
-    if(missing.length){const actions=node('div','pcm-variable-actions pcm-variable-end');actions.append(button('一键写入变量',()=>attempt(()=>{requireSaved();preview(planVariableInitializers(candidates(),targetId),'一键写入变量','按名称及作用域去重，只补空值 setvar；已有值和来源正文保持不变。初始化应先于 addvar 执行。');})));section.append(actions);}
-    body.append(section);
-    const undefinedGroups=groups.filter(g=>g.occurrences.some(m=>m.kind.startsWith('get')&&isInjected(m.id))&&!g.occurrences.some(m=>m.kind.startsWith('set')&&isInjected(m.id)));
-    if(undefinedGroups.length){const section=node('section','pcm-variable-section');section.append(node('h4','','被引用但没有 setvar 初始化'));
-      for(const group of undefinedGroups){const row=node('div','pcm-variable-source');row.append(node('strong','',(group.scope==='global'?'全局 · ':'')+group.name),button('补写',()=>attempt(()=>{
-        requireSaved();
-        const plan=planVariableAdd(candidates(),[targetId],{kind:group.scope==='global'?'setglobalvar':'setvar',name:group.name});preview(plan,'补写 '+group.name);
-      })));section.append(row);}body.append(section);
-    }
+    raw.addEventListener('input',()=>attempt(()=>{dirty=raw.value!==original;drawPending();}));
+    drawPending();
   }
+
   function renderEditor() {
     const bar=node('div','pcm-variable-actions');
     const search=input('搜索变量或条目',searchValue);search.type='search';search.placeholder='搜索变量或条目';
@@ -149,7 +165,7 @@ export function openVariablesPanel({dialog, title, getPrompts, getPresentation, 
     };
     search.addEventListener('input',draw);draw();
   }
-  function formHeading(text) {body.replaceChildren();const bar=node('div','pcm-variable-form-heading');bar.append(node('h4','',text),button('返回编辑变量',async()=>{if(await discard()){dirty=false;render();}}));body.append(bar);message.textContent='';}
+  function formHeading(text) {resume=()=>{};body.replaceChildren();const bar=node('div','pcm-variable-form-heading');bar.append(node('h4','',text),button('返回编辑变量',async()=>{if(await discard()){dirty=false;render();}}));body.append(bar);message.textContent='';}
   function macroFields(kind='setvar',name='',value=' ') {
     const select=kindSelect(kind),nameInput=input('变量名',name),area=node('textarea');area.value=value;area.rows=5;area.setAttribute('aria-label','变量内容');
     const global=node('input');global.type='checkbox';global.checked=kind.includes('global');
@@ -167,9 +183,7 @@ export function openVariablesPanel({dialog, title, getPrompts, getPresentation, 
     formHeading('添加变量');
     const selected=new Set(),search=input('搜索预设条目');search.type='search';search.placeholder='搜索条目名称、正文或分组';
     const count=node('span','pcm-variable-count'),list=node('div','pcm-variable-picklist');body.querySelector('.pcm-variable-form-heading').insertBefore(count,body.querySelector('.pcm-variable-form-heading button'));
-    const map=new Map(candidates().map(p=>[p.identifier,p]));
-    const choices=(getPresentation?.()||candidates().map(p=>({id:p.identifier}))).filter(item=>map.has(item.id)).map(item=>({...item,prompt:map.get(item.id)}));
-    const shown=()=>choices.filter(item=>[item.prompt.name,item.prompt.content,item.groupName].join('\n').toLocaleLowerCase().includes(search.value.trim().toLocaleLowerCase()));
+    const shown=()=>{const map=new Map(candidates().map(p=>[p.identifier,p]));return (getPresentation?.()||candidates().map(p=>({id:p.identifier}))).filter(item=>map.has(item.id)).map(item=>({...item,prompt:map.get(item.id)})).filter(item=>[item.prompt.name,item.prompt.content,item.groupName].join('\n').toLocaleLowerCase().includes(search.value.trim().toLocaleLowerCase()));};
     const collapsed=new Set();
     const draw=()=>{count.textContent='已选 '+selected.size+' 个条目';list.replaceChildren();let previous=null,container=list,segment=0;for(const item of shown()){
       const p=item.prompt;
@@ -181,6 +195,7 @@ export function openVariablesPanel({dialog, title, getPrompts, getPresentation, 
     }if(!list.childElementCount)list.append(node('p','','没有匹配条目'));};
     const selectionBar=node('div','pcm-variable-actions pcm-variable-selection-bar');selectionBar.append(search,button('全选搜索结果',()=>{shown().forEach(item=>selected.add(item.id));dirty=true;draw();}),button('清空选择',()=>{selected.clear();dirty=true;draw();}));
     body.append(selectionBar,list);search.addEventListener('input',draw);draw();
+    resume=()=>{const scroll=list.scrollTop;const ids=new Set(candidates().map(p=>p.identifier));for(const id of selected)if(!ids.has(id))selected.delete(id);draw();list.scrollTop=scroll;};
     const modes=node('fieldset','pcm-variable-modes');modes.append(node('legend','','添加方式'));
     let mode='append';
     for(const [key,text] of [['append','底部添加变量宏'],['wrap','整段正文转成变量内容']]){const radio=node('input');radio.type='radio';radio.name='pcm-variable-mode';radio.value=key;radio.checked=key===mode;const label=node('label');label.append(radio,document.createTextNode(text));modes.append(label);radio.addEventListener('change',()=>{mode=key;dirty=true;update();});}
@@ -199,7 +214,12 @@ export function openVariablesPanel({dialog, title, getPrompts, getPresentation, 
       drawKinds();
     };select.addEventListener('change',update);update();
     const plan=()=>planVariableAdd(candidates(),[...selected],{kind:select.value,name:nameInput.value,value:area.value||' ',mode});
-    const actions=node('div','pcm-variable-actions pcm-variable-save-actions');actions.append(button('预览添加',()=>attempt(()=>preview(plan(),mode==='wrap'?'预览整段转换':'预览底部添加',hint.textContent))),button('保存添加',()=>attempt(()=>commit(plan()))));body.append(actions);
+    const continueAdding=()=>{
+      // 不重建条目列表，避免保存后跳回顶部；下一次保存仍读取最新正文。
+      selected.clear();list.querySelectorAll('input[type=checkbox]').forEach(check=>{check.checked=false;});
+      count.textContent='已选 0 个条目';nameInput.value='';area.value=' ';dirty=false;
+    };
+    const actions=node('div','pcm-variable-actions pcm-variable-save-actions');actions.append(button('预览添加',()=>attempt(()=>preview(plan(),mode==='wrap'?'预览整段转换':'预览底部添加',hint.textContent,continueAdding))),button('保存添加',()=>attempt(()=>commit(plan(),continueAdding))));body.append(actions);
   }
   function renderOccurrence(occurrence) {
     formHeading('修改变量 · '+occurrence.entryName);
@@ -215,5 +235,5 @@ export function openVariablesPanel({dialog, title, getPrompts, getPresentation, 
     body.append(button('预览重命名',()=>attempt(()=>preview(planVariableRename(candidates(),group.scope,group.name,name.value),'预览批量重命名'))));
   }
   render();
-  return {element:root,destroy:()=>root.remove(),refresh(){dirty=false;render();}};
+  return {element:root,hide:close,show(){root.style.display='';attempt(()=>{const current=JSON.stringify(getPrompts());if(current!==renderedPrompts){resume();renderedPrompts=current;}});},destroy:()=>root.remove(),refresh(){dirty=false;render();}};
 }

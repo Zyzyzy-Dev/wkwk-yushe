@@ -800,3 +800,26 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-preset-search{padding:10px 12px;border-bottom:1px solid var(--SmartThemeBorderColor)}
 .pcm-preset-search input{display:block;width:100%;min-width:0;box-sizing:border-box;margin:0;padding:9px 12px;font:inherit;color:var(--SmartThemeBodyColor);background:var(--SmartThemeBlurTintColor);border:1px solid var(--SmartThemeBorderColor);border-radius:8px}
 .pcm-preset-search-empty{padding:16px 8px;text-align:center;opacity:.7}
+
+/* 对比标题布局：桌面按侧放置覆盖操作，移动端关闭按钮固定在标题右上角。 */
+.pcm-compare-corner{display:flex;align-items:center;gap:8px;margin-left:auto;flex:none}
+.pcm-compare-corner .pcm-collapse{min-width:34px;width:34px;height:34px;padding:5px;font-size:18px}
+.pcm-compare-head>div:first-child{min-width:0;overflow-wrap:anywhere}
+.pcm-variable-entry-heading h4{margin-right:auto!important}
+.pcm-variable-entry-heading .pcm-desktop-migrate{display:none}
+@media(min-width:901px){
+ .pcm-compare-head>.pcm-compare-actions{display:none}
+ .pcm-variable-entry-heading .pcm-desktop-migrate{display:inline-flex}
+ .pcm-variable-entry-heading{flex-wrap:wrap}
+ .pcm-free-compare-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+ .pcm-free-compare-head>.pcm-free-new-title{margin:0;padding-right:150px;overflow-wrap:anywhere}
+ .pcm-free-compare-head>.pcm-compare-corner{position:absolute;right:0;top:10px}
+}
+@media(max-width:900px){
+ .pcm-compare-head{position:relative;padding-right:0;align-items:center}
+ .pcm-compare-head>div:first-child{flex-basis:100%;padding-right:44px;box-sizing:border-box}
+ .pcm-compare-corner{display:contents}
+ .pcm-compare-corner .pcm-collapse{position:absolute;right:0;top:6px}
+ .pcm-compare-head>.pcm-compare-actions{flex-wrap:wrap;white-space:normal}
+ .pcm-free-compare-head>.pcm-free-new-title{flex-basis:100%;margin:0 8px;overflow-wrap:anywhere}
+}

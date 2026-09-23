@@ -1,4 +1,5 @@
-// 预设更新编辑器 · 酒馆宿主桥：唯一可接触 SillyTavern 主 document/API 的模块。
+// 预设更新编辑器 · 酒馆宿主桥：与 host/ 下原生列表适配共同封装主 document/API。
+import { installNativeGroups } from './native-groups.js';
 import { clone } from '../shared/clone.js';
 import { API_BINDINGS_KEY, bindApiSnapshot, isApiProfileActive } from '../features/api/api-bindings.js';
 // 扩展菜单入口、外层 dialog/iframe 外壳、preset-manager/openai 动态读取与保存、
@@ -61,6 +62,7 @@ async function stableWorkbenchWorldRead(read) {
 }
 
 const APP_ID = 'preset-compare-migrator';
+let nativeGroupController = null;
 const APP_TITLE = '预设更新编辑器';
 // SillyTavern is the canonical host. TauriTavern integration is optional and
 // lives behind runtime detection so the standard web path has no Tauri dependency.
@@ -724,6 +726,7 @@ function baiBaiState() {
 }
 
 function snapshotGroups(env) {
+  if (nativeGroupController?.owns('preset')) return env.openai.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups || null;
   const bai = baiBaiState();
   const name = snapshotContext(env).presetName;
   if (bai?.presetPromptGroupRuntimePresetName === name && Array.isArray(bai.presetPromptGroupRuntimeState?.groups)) return bai.presetPromptGroupRuntimeState;
@@ -1128,7 +1131,7 @@ async function applySettingsSnapshot(env, snapshot, payload, automatic = false) 
   const warnings = resourceWarnings;
   if (plan.missingEntries.length) warnings.push('已跳过不存在的条目：'+plan.missingEntries.join('、'));
   if (plan.missingGroups.length) warnings.push('分组未能恢复（未安装柏宝箱或分组已变更）：'+plan.missingGroups.join('、'));
-  if (snapshot.groups.length && env.extensions.extension_settings.baiBaiToolkit?.presetGroupingEnabled === false) warnings.push('柏宝箱的预设分组功能已关闭，分组总开关暂不参与生成');
+  if (snapshot.groups.length && env.extensions.extension_settings.baiBaiToolkit?.presetGroupingEnabled === false && !nativeGroupController?.owns('preset')) warnings.push('柏宝箱的预设分组功能已关闭，分组总开关暂不参与生成');
   if (missingWorldNames.length) warnings.push('未挂载缺失世界书：'+missingWorldNames.join('、'));
   return {warnings};
 }
@@ -1718,6 +1721,7 @@ function addMenu(controller) {
 
 export function installPresetCompareHost() {
   const controller = new AppHost();
+  void installNativeGroupControls().catch(error => console.warn(`[${APP_ID}] native groups unavailable`, error));
   void installApiEntries(controller).catch(error => console.warn(`[${APP_ID}] API entries unavailable`, error));
   void installApiQuickCommand().catch(error => console.warn(`[${APP_ID}] API quick command unavailable`, error));
   void installSnapshotBindings(controller).catch(error => console.warn(`[${APP_ID}] snapshot bindings unavailable`, error));
@@ -1731,6 +1735,29 @@ export function installPresetCompareHost() {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installMenu, { once: true });
   else installMenu();
   return controller;
+}
+
+async function installNativeGroupControls() {
+  const [openai, script, extensions, regex, presetManager] = await Promise.all([
+    import('/scripts/openai.js'), import('/script.js'), import('/scripts/extensions.js'),
+    import('/scripts/extensions/regex/engine.js'), import('/scripts/preset-manager.js'),
+  ]);
+  const select = data => ({
+    preferences: data.extension_settings?.preset_compare_native_groups || null,
+    regexGroups: data.extension_settings?.baiBaiToolkit?.regexListGroups || null,
+    globalRegex: data.extension_settings?.regex || [],
+    presetGroups: data.oai_settings?.extensions?.baibaiToolkit || null,
+  });
+  const saveSettingsChecked = async () => {
+    const expected = JSON.stringify(select({ extension_settings: extensions.extension_settings, oai_settings: openai.oai_settings }));
+    await script.saveSettings();
+    const result = await readSnapshotPersistence({ script }, '/api/settings/get', {});
+    const persisted = typeof result?.settings === 'string' ? JSON.parse(result.settings) : result?.settings;
+    if (JSON.stringify(select(persisted || {})) !== expected) throw new Error('未确认分组设置已保存，请检查连接后重试');
+  };
+  const start = () => { nativeGroupController = installNativeGroups({ openai, script, extensions, regex, presetManager, serial: snapshotSerial, saveSettingsChecked }); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
 }
 
 async function installApiQuickCommand() {

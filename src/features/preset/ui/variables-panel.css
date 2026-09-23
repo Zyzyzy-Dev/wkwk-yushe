@@ -123,3 +123,12 @@
  .pcm-variable-kind-buttons legend{margin-right:4px;font-size:12px}
  .pcm-variable-modes{gap:6px;padding:8px}.pcm-variable-modes legend{float:none;line-height:1.5}.pcm-variable-modes label{font-size:12px}
 }
+
+/* 正文详情中的未引用变量选择器，长变量名在窄屏内换行。 */
+.pcm-variable-reference-options{display:flex;flex-direction:column;gap:6px}
+.pcm-variable-reference-options .menu_button{max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:left}
+
+/* 两侧固定的引用入口，与各自条目标题同排，不随公共操作栏变化。 */
+.pcm-variable-entry-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.pcm-variable-entry-heading h4{margin:0!important;min-width:0}
+.pcm-variable-entry-heading .menu_button{flex:none;white-space:nowrap;font-size:12px}

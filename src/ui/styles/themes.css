@@ -115,3 +115,9 @@
   .pcm-dialog .pcm-pane .pcm-list .pcm-row{margin:2px 0}
   .pcm-dialog .pcm-version-forms{gap:6px}.pcm-dialog .pcm-version-editor{padding:8px}.pcm-dialog .pcm-compare{margin-inline:4px}
 }
+/* 范围分组入口始终可用，包括没有任何柏宝箱分组字段的预设。 */
+.pcm-range-group-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 6px}
+.pcm-range-group-hint{font-size:12px;opacity:.8;overflow-wrap:anywhere;flex:1;min-width:120px}
+/* 搜索行中的分组入口：固定按钮宽度，搜索框承担窄屏收缩。 */
+.pcm-tools>.pcm-new-group{flex:0 0 auto;margin:0!important;min-width:0!important}
+@media(max-width:480px){.pcm-tools{gap:4px!important}.pcm-tools>select{width:64px!important;flex:0 0 64px}.pcm-tools>.pcm-new-group{padding:4px 7px!important}}

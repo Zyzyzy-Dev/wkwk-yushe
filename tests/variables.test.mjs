@@ -1,7 +1,7 @@
 // 变量编辑回归：原文保真、范围隔离、嵌套位置、批量初始化及过期预览原子拒绝。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {scanVariables, makeVariable, collectVariables, planVariableAdd, planVariableEdit, planVariableRename, planVariableInitializers, missingVariableInitializers, applyVariableChanges} from '../src/features/preset/variables.js';
+import {unreferencedVariableChoices, scanVariables, makeVariable, collectVariables, planVariableAdd, planVariableEdit, planVariableRename, planVariableInitializers, missingVariableInitializers, applyVariableChanges} from '../src/features/preset/variables.js';
 const p = (identifier, content) => ({identifier,name:identifier,content,custom:{keep:true}});
 test('扫描局部/全局 set add get，保留嵌套宏完整原文和重复出现位置', () => {
  const text='前\r\n{{setvar:: 风 ::A{{getvar::人}}B}}后{{addvar::风::雨}} {{getglobalvar::风}} {{addvar;;错误:: }}';
@@ -21,11 +21,19 @@ test('批量追加不改原文/配置，精确重复跳过，支持空正文', (
 });
 test('整段转换保留正文空白及嵌套宏，不允许 get 或未闭合正文', () => {
  const input=[p('a','\r\n内容{{getvar::角色}}\r\n')];
- assert.equal(planVariableAdd(input,['a'],{mode:'wrap',kind:'setvar',name:'文风'})[0].after,'{{setvar::文风::\r\n内容{{getvar::角色}}\r\n}}');
+ assert.equal(planVariableAdd(input,['a'],{mode:'wrap',kind:'setvar',name:'文风'})[0].after,'{{setvar::文风::\r\n\r\n\r\n内容{{getvar::角色}}\r\n}}');
  assert.throws(()=>planVariableAdd(input,['a'],{mode:'wrap',kind:'getvar',name:'风'}),/不能存放/);
  assert.throws(()=>planVariableAdd([p('a','bad}}')],['a'],{mode:'wrap',kind:'setvar',name:'风'}),/未配对/);
  assert.throws(()=>makeVariable('setvar','a::b'),/变量名/);
  assert.throws(()=>makeVariable('setvar','风','末尾}'),/边界混淆/);
+});
+test('整段转换在宏头与正文之间空一行，局部全局 set/add 均保留原正文', () => {
+ for(const kind of ['setvar','addvar','setglobalvar','addglobalvar']) {
+  const source=[p('a','## Step 本色校验\n\n正文')];
+  const result=planVariableAdd(source,['a'],{mode:'wrap',kind,name:'本色校验'})[0].after;
+  assert.equal(result,'{{'+kind+'::本色校验::\n\n## Step 本色校验\n\n正文}}');
+  assert.equal(source[0].content,'## Step 本色校验\n\n正文');
+ }
 });
 test('只编辑同名多次出现中的指定位置，其他文本不变', () => {
  const input=[p('a','{{addvar::风::一}}\r\n{{addvar::风::二}}')];
@@ -54,4 +62,12 @@ test('过期预览、重复目标及系统占位条目均原子拒绝，不部�
  assert.throws(()=>applyVariableChanges(input,plan),/预览后/);assert.equal(input[0].content,'A');
  assert.throws(()=>planVariableAdd([{...p('m',''),marker:true}],['m'],{kind:'getvar',name:'风'}),/占位/);
  assert.throws(()=>applyVariableChanges([p('a','A')],[plan[0],plan[0]]),/预览后/);
+});
+
+test('引用候选与初始化条目一致，按作用域去重并忽略未注入条目的读取', () => {
+ const prompts=[p('init','{{setvar::爱意:: }}{{setvar::爱意:: }}{{setglobalvar::爱意:: }}{{setvar::已用:: }}'),p('a','{{getvar::已用}}'),p('hidden','{{getvar::爱意}}'),p('other','{{setvar::不在初始化中::x}}')];
+ assert.deepEqual(unreferencedVariableChoices(prompts,id=>id!=='hidden').map(v=>v.macro),['{{getvar::爱意}}','{{getglobalvar::爱意}}']);
+ prompts[1].content+='{{getvar::爱意}}';
+ assert.deepEqual(unreferencedVariableChoices(prompts,id=>id!=='hidden').map(v=>v.macro),['{{getglobalvar::爱意}}']);
+ assert.deepEqual(unreferencedVariableChoices([p('empty','正文')]),[]);
 });
