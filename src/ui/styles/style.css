@@ -823,3 +823,7 @@ dialog{font-family:var(--mainFontFamily)}
  .pcm-compare-head>.pcm-compare-actions{flex-wrap:wrap;white-space:normal}
  .pcm-free-compare-head>.pcm-free-new-title{flex-basis:100%;margin:0 8px;overflow-wrap:anywhere}
 }
+
+/* 多选删除位于各侧统计行右端，窄屏统计文字可换行。 */
+.pcm-summary{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.pcm-summary .pcm-multi-delete{margin-left:auto;flex:none;font-size:11px;padding:4px 8px}
