@@ -93,7 +93,8 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     }
     for (const snapshot of data.snapshots) {
       const card = node('article', 'pcm-snapshot-card'); card.dataset.snapshotId = snapshot.id;
-      const top = node('div', 'pcm-snapshot-card-title'); top.append(node('h3', '', snapshot.name),iconButton('编辑快照详情','rename',()=>openEditor(snapshot.id)),iconButton('删除','delete',()=>execute('delete',snapshot)));top.lastElementChild.classList.add('pcm-snapshot-delete');
+      const overwrite=button('覆',()=>execute('update',snapshot));overwrite.title='用当前设置覆盖快照';overwrite.setAttribute('aria-label',overwrite.title);
+      const top = node('div', 'pcm-snapshot-card-title'); top.append(node('h3', '', snapshot.name),overwrite,iconButton('编辑快照详情','rename',()=>openEditor(snapshot.id)),iconButton('删除','delete',()=>execute('delete',snapshot)));top.lastElementChild.classList.add('pcm-snapshot-delete');
       if (snapshot.id === c.chatBindingId || snapshot.id === c.characterBindingId) top.append(node('span', 'pcm-snapshot-badge', [snapshot.id === c.chatBindingId ? '此聊天' : '', snapshot.id === c.characterBindingId ? '此角色' : ''].filter(Boolean).join(' / ')));
       const books = snapshot.resources?.worlds?.global || snapshot.worldNames || [];
       const included=snapshotScope(snapshot);
@@ -168,8 +169,9 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
         result = await host.request(action === 'save' ? 'snapshot-save' : 'snapshot-rename', {id: action === 'rename' ? snapshot.id : undefined, name, contextKey,scope:action==='save'?{...saveScope}:undefined});
         message = action === 'save' ? '快照已保存' : '名称已更新';
       } else if (action === 'update') {
-        if (!(await confirm('用酒馆当前的开关和全局世界书更新「'+snapshot.name+'」？绑定这份快照的聊天和角色会使用更新后的设置。')) || disposed) return;
-        result = await host.request('snapshot-save', {id: snapshot.id, name: snapshot.name, contextKey}); message = '快照已更新';
+        const scope=snapshotScope(snapshot),range=Object.keys(snapshotScopeLabels).filter(key=>scope[key]).map(key=>snapshotScopeLabels[key]).join('、');
+        if (!(await confirm('用酒馆当前设置覆盖「'+snapshot.name+'」？\n覆盖范围：'+range+'。\n保留方案名称和绑定关系；绑定此方案的聊天和角色以后会使用覆盖后的设置。')) || disposed) return;
+        result = await host.request('snapshot-save', {id: snapshot.id, name: snapshot.name, contextKey,scope}); message = '快照已覆盖';
       } else if (action === 'delete') {
         if (!(await confirm('删除「'+snapshot.name+'」？它的聊天绑定将失效，角色绑定将解除。')) || disposed) return;
         result = await host.request('snapshot-delete', {id: snapshot.id}); message = '快照已删除';
