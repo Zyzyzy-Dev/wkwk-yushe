@@ -43,7 +43,7 @@
 .pcm-api-manager .pcm-api-profile{padding:10px 14px}
 .pcm-api-connection-line{margin:8px 0 0;padding:4px 7px;border:1px solid var(--snap-border);border-radius:5px;font-size:12px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--snap-bg)}
 @media(max-width:650px){
-.pcm-api-manager{padding:12px 8px 24px}
+.pcm-api-manager{padding:max(12px,var(--pcm-safe-top)) max(8px,var(--pcm-safe-right)) calc(24px + var(--pcm-safe-bottom)) max(8px,var(--pcm-safe-left))}
 .pcm-api-manager .pcm-snapshot-header{gap:4px}
 .pcm-api-manager .pcm-snapshot-header h2{font-size:15px;white-space:nowrap}
 .pcm-api-manager .pcm-snapshot-heading{gap:3px}
@@ -108,3 +108,6 @@
 .pcm-api-manager>.pcm-snapshot-header{position:sticky;top:0;z-index:10;padding:10px 0;background:var(--snap-bg);backdrop-filter:blur(24px)}
 .pcm-snapshot-manager>.pcm-snapshot-context>summary{display:flex;align-items:center;gap:8px}
 .pcm-snapshot-manager>.pcm-snapshot-context>summary>.pcm-snapshot-primary{margin-left:auto;padding:4px 9px;min-height:28px;font-size:12px;white-space:nowrap}
+
+/* 快切与管理页共用安全区；吸顶位置也须避开 iOS 状态栏。 */
+@media(max-width:900px){.pcm-api-quick{padding:max(16px,var(--pcm-safe-top)) max(16px,var(--pcm-safe-right)) max(16px,var(--pcm-safe-bottom)) max(16px,var(--pcm-safe-left))}.pcm-api-manager>.pcm-snapshot-header{top:var(--pcm-safe-top)}}
