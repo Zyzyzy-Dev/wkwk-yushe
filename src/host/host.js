@@ -1748,12 +1748,17 @@ async function installNativeGroupControls() {
     globalRegex: data.extension_settings?.regex || [],
     presetGroups: data.oai_settings?.extensions?.baibaiToolkit || null,
   });
+  // JSON 对象键序不是保存内容；后端重排键后仍应通过，数组顺序和字段值继续严格核验。
+  const fingerprint = data => JSON.stringify(select(data), (_key, value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]]));
+  });
   const saveSettingsChecked = async () => {
-    const expected = JSON.stringify(select({ extension_settings: extensions.extension_settings, oai_settings: openai.oai_settings }));
+    const expected = fingerprint({ extension_settings: extensions.extension_settings, oai_settings: openai.oai_settings });
     await script.saveSettings();
     const result = await readSnapshotPersistence({ script }, '/api/settings/get', {});
     const persisted = typeof result?.settings === 'string' ? JSON.parse(result.settings) : result?.settings;
-    if (JSON.stringify(select(persisted || {})) !== expected) throw new Error('未确认分组设置已保存，请检查连接后重试');
+    if (fingerprint(persisted || {}) !== expected) throw new Error('未确认分组设置已保存，请检查连接后重试');
   };
   const start = () => { nativeGroupController = installNativeGroups({ openai, script, extensions, regex, presetManager, serial: snapshotSerial, saveSettingsChecked }); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
