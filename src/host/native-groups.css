@@ -1,6 +1,7 @@
 /* 酒馆盒子原生分组：仅作用于盒子控件，使用宿主主题变量。 */
 .pcm-ng-toolbar,.pcm-ng-header,.pcm-ng-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;box-sizing:border-box}
 .pcm-ng-toolbar{margin:6px 0;font-size:12px}
+.pcm-ng-toolbar-actions{display:contents}
 .pcm-ng-toolbar small{opacity:.75;flex-basis:100%}
 .pcm-ng-button{font:inherit;color:var(--SmartThemeBodyColor,inherit);background:var(--SmartThemeBlurTintColor,#333);border:1px solid var(--SmartThemeBorderColor,#888);border-radius:5px;padding:4px 7px;cursor:pointer;min-height:28px}
 .pcm-ng-button:disabled{opacity:.5;cursor:wait}

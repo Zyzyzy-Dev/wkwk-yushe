@@ -72,6 +72,7 @@ export function installNativeGroups(env) {
     const settings = extensions.extension_settings;
     let busy = false, scheduled = 0, observer, fast = null;
     const signatures = new WeakMap();
+    const toolbarSignatures = new WeakMap();
     const prefs = () => settings[PREF] || {};
     const baiOwns = kind => Boolean(globalThis.__baiBaiToolkitExtensionInstalled) && settings.baiBaiToolkit?.[kind === 'preset' ? 'presetGroupingEnabled' : 'regexQuickOperationOptimizationEnabled'] !== false;
     const owns = kind => prefs()[kind] !== false && !baiOwns(kind) && (kind !== 'preset'
@@ -239,27 +240,43 @@ export function installNativeGroups(env) {
     function render(context) {
         if (context.kind === 'preset' && fast?.key === context.key) context = { ...context, value: clone(fast.value) };
         const { list, kind } = context;
-        let toolbar = list.previousElementSibling;
-        if (!toolbar?.classList.contains('pcm-ng-toolbar')) { toolbar = node('div', 'pcm-ng-toolbar'); list.before(toolbar); }
+        // Other extensions can insert controls next to the list. Adjacency is not ownership.
+        let toolbar = [...(list.parentElement?.children || [])].find(el => el.classList.contains('pcm-ng-toolbar') && el.dataset.pcmNgList === list.id);
+        if (!toolbar) {
+            toolbar = node('div', 'pcm-ng-toolbar'); toolbar.dataset.pcmNgList = list.id; list.before(toolbar);
+            const label = node('label', 'pcm-ng-choice'), toggle = node('input'); toggle.type = 'checkbox';
+            toggle.addEventListener('change', () => {
+                const checked = toggle.checked;
+                run(async () => {
+                    const before = clone(settings[PREF]); settings[PREF] = { ...prefs(), [kind]: checked };
+                    try { await saveSettingsChecked(); } catch (error) { settings[PREF] = before; throw error; }
+                });
+            });
+            label.append(toggle, document.createTextNode('酒馆盒子分组')); toolbar.append(label, node('span', 'pcm-ng-toolbar-actions'));
+        }
         const owner = baiOwns(kind), enabled = owns(kind);
+        const toggle = toolbar.querySelector('input');
+        toggle.checked = prefs()[kind] !== false; toggle.disabled = busy || Boolean(fast);
+        const toolbarSignature = JSON.stringify([context.key, context.value, context.entries, owner, enabled]);
+        const actions = toolbar.querySelector('.pcm-ng-toolbar-actions');
+        if (toolbarSignatures.get(toolbar) !== toolbarSignature) {
+            toolbarSignatures.set(toolbar, toolbarSignature); actions.replaceChildren();
+            if (owner) actions.append(node('small', '', '由柏宝箱管理；关闭其对应分组功能后可使用盒子分组'));
+            else if (enabled) {
+                if (kind === 'preset') actions.append(node('small', '', '在酒馆盒子「预设编辑」中选取首尾条目分组，保存后在此查看'));
+                else actions.append(button('＋新建组', '创建分组', async () => { const name = await askName('新建分组'); if (name) act(context, { type: 'create', name }); }),
+                    button('批量归组', '选择条目并调整所属组', () => { void batch(context).catch(fail); }));
+            }
+        }
+        for (const control of actions.querySelectorAll('button')) control.disabled = busy || Boolean(fast);
         const signature = JSON.stringify([context.key, context.value, context.entries, owner, enabled, busy, Boolean(fast)]);
         const rows = [...list.children].filter(el => kind === 'preset' ? el.hasAttribute('data-pm-identifier') : el.classList.contains('regex-script-label'));
         const old = signatures.get(list);
         if (old?.toolbar === toolbar && old.signature === signature && old.rows.length === rows.length && old.rows.every((r, i) => r === rows[i])) return;
-        signatures.set(list, { signature, rows, toolbar }); clean(list); toolbar.replaceChildren();
-        const label = node('label', 'pcm-ng-choice'), toggle = node('input'); toggle.type = 'checkbox'; toggle.checked = prefs()[kind] !== false; toggle.disabled = busy || owner;
-        toggle.addEventListener('change', () => run(async () => {
-            const before = clone(settings[PREF]); settings[PREF] = { ...prefs(), [kind]: toggle.checked };
-            try { await saveSettingsChecked(); } catch (error) { settings[PREF] = before; throw error; }
-        }));
-        label.append(toggle, document.createTextNode('酒馆盒子分组')); toolbar.append(label);
-        if (owner) { toolbar.append(node('small', '', '由柏宝箱管理；关闭其对应分组功能后可使用盒子分组')); return; }
+        signatures.set(list, { signature, rows, toolbar }); clean(list);
         if (!enabled) return;
         const model = groupModel(context.value, kind);
         list.classList.add(ROOT);
-        if(kind === 'preset') toolbar.append(node('small', '', '在酒馆盒子「预设编辑」中选取首尾条目分组，保存后在此查看'));
-        else toolbar.append(button('＋新建组', '创建分组', async () => { const name = await askName('新建分组'); if (name) act(context, { type: 'create', name }); }),
-            button('批量归组', '选择条目并调整所属组', () => { void batch(context).catch(fail); }));
         const groups = new Map(model.groups.map(g => [g.id, g])), displayed = new Set(); let last = null;
         const makeHeader = (groupId, continuation = false) => {
             const g = groups.get(groupId), header = node(kind === 'preset' ? 'li' : 'div', 'pcm-ng-header'); header.dataset.pcmNg = 'header';
@@ -317,7 +334,12 @@ export function installNativeGroups(env) {
             for (const [scope, id] of [['GLOBAL', 'saved_regex_scripts'], ['PRESET', 'saved_preset_scripts'], ['SCOPED', 'saved_scoped_scripts']]) {
                 const list = document.getElementById(id); if (!list) continue;
                 const context = regexContext(scope, list);
-                if (context) render(context); else { clean(list); if (list.previousElementSibling?.classList.contains('pcm-ng-toolbar')) list.previousElementSibling.remove(); }
+                if (context) render(context); else {
+                    clean(list);
+                    for (const el of [...(list.parentElement?.children || [])]) {
+                        if (el.classList.contains('pcm-ng-toolbar') && el.dataset.pcmNgList === list.id) el.remove();
+                    }
+                }
             }
         } catch (error) { console.warn('[原生分组] 当前列表暂不可用', error); }
         finally { observer.observe(document.body, { childList: true, subtree: true }); }
