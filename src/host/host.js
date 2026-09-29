@@ -792,28 +792,48 @@ async function readSnapshotPersistence(env, url, body, {timeoutMs = 8000, label}
     if (!response.ok) throw new Error(label ? label+'读取失败（HTTP '+response.status+'），请检查酒馆服务后重试' : '保存后读取失败，请检查服务器连接');
     return await response.json();
   } catch (error) {
-    if (label && abort.signal.aborted) throw new Error(label+'读取超时（'+timeoutMs/1000+' 秒），请保持酒馆在前台后重试，或导入世界书 JSON');
-    if (label && error.name === 'AbortError') throw new Error(label+'读取被中断，请保持酒馆在前台后重试，或导入世界书 JSON');
+    const importHint = label?.startsWith('世界书') ? '，或导入世界书 JSON' : '';
+    if (label && abort.signal.aborted) throw new Error(label+'读取超时（'+Math.ceil(timeoutMs/1000)+' 秒），请保持酒馆在前台后重试'+importHint);
+    if (label && error.name === 'AbortError') throw new Error(label+'读取被中断，请保持酒馆在前台后重试'+importHint);
     throw error;
   } finally {clearTimeout(timer);}
 }
 
 async function saveSnapshotSettings(env, verifySwitches = false) {
-  const expectedStore = JSON.stringify(snapshotStore(env));
+  // JSON object key order is not persisted content; array order and values remain significant.
+  const fingerprint = data => JSON.stringify(data, (_key, value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]]));
+  });
+  const expectedStore = fingerprint(snapshotStore(env));
   const settings = env.openai.oai_settings;
-  const expectedOrder = verifySwitches ? JSON.stringify(settings.prompt_order) : null;
-  const expectedGroups = verifySwitches ? JSON.stringify(settings.extensions?.baibaiToolkit?.presetPromptGroups || null) : null;
-  const expectedWorlds = verifySwitches ? JSON.stringify(selectedSnapshotWorlds(env)) : null;
-  const expectedResources = verifySwitches ? JSON.stringify({global:env.extensions.extension_settings.regex || [],preset:settings.extensions?.regex_scripts || [],charLore:snapshotWorldSettings(env)?.charLore || []}) : null;
+  const expectedOrder = verifySwitches ? fingerprint(settings.prompt_order) : null;
+  const expectedGroups = verifySwitches ? fingerprint(settings.extensions?.baibaiToolkit?.presetPromptGroups || null) : null;
+  const expectedWorlds = verifySwitches ? fingerprint(selectedSnapshotWorlds(env)) : null;
+  const expectedResources = verifySwitches ? fingerprint({global:env.extensions.extension_settings.regex || [],preset:settings.extensions?.regex_scripts || [],charLore:snapshotWorldSettings(env)?.charLore || []}) : null;
   await env.script.saveSettings();
-  // 原生 saveSettings 会吞掉网络异常，必须读取已保存值，不能把正常返回当作成功。
-  const result = await readSnapshotPersistence(env, '/api/settings/get', {});
-  const persisted = typeof result?.settings === 'string' ? JSON.parse(result.settings) : result?.settings;
-  if (JSON.stringify(persisted?.extension_settings?.[SNAPSHOT_KEY]) !== expectedStore) throw new Error('未确认快照保存成功，请检查服务器连接后重试');
-  if (verifySwitches && (JSON.stringify(persisted?.oai_settings?.prompt_order) !== expectedOrder
-    || JSON.stringify(persisted?.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups || null) !== expectedGroups
-    || JSON.stringify(persisted?.world_info_settings?.world_info?.globalSelect || []) !== expectedWorlds)) throw new Error('未确认开关和世界书保存成功，请检查当前设置后重试');
-  if (verifySwitches && JSON.stringify({global:persisted?.extension_settings?.regex || [],preset:persisted?.oai_settings?.extensions?.regex_scripts || [],charLore:persisted?.world_info_settings?.world_info?.charLore || []}) !== expectedResources) throw new Error('未确认正则和角色附加世界书保存成功');
+  // Native saveSettings can return before a debounced save, or swallow a write failure.
+  // Wait by reading only: never retry a write that could overwrite another editor's changes.
+  const deadline = Date.now() + 8000;
+  let mismatch = '未确认快照保存成功：回读内容与本次快照不一致。请等待酒馆完成保存后重试；若持续出现，请刷新后核对快照是否存在';
+  for (const delay of [0, 250, 750, 1500, 1500]) {
+    if (Date.now() + delay >= deadline) break;
+    if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    const result = await readSnapshotPersistence(env, '/api/settings/get', {}, {timeoutMs: remaining, label: '快照保存核验'});
+    const persisted = typeof result?.settings === 'string' ? JSON.parse(result.settings) : result?.settings;
+    if (fingerprint(persisted?.extension_settings?.[SNAPSHOT_KEY]) !== expectedStore) {
+      mismatch = '未确认快照保存成功：回读内容与本次快照不一致。请等待酒馆完成保存后重试；若持续出现，请刷新后核对快照是否存在';
+    } else if (verifySwitches && (fingerprint(persisted?.oai_settings?.prompt_order) !== expectedOrder
+      || fingerprint(persisted?.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups || null) !== expectedGroups
+      || fingerprint(persisted?.world_info_settings?.world_info?.globalSelect || []) !== expectedWorlds)) {
+      mismatch = '未确认开关和世界书保存成功，请检查当前设置后重试';
+    } else if (verifySwitches && fingerprint({global:persisted?.extension_settings?.regex || [],preset:persisted?.oai_settings?.extensions?.regex_scripts || [],charLore:persisted?.world_info_settings?.world_info?.charLore || []}) !== expectedResources) {
+      mismatch = '未确认正则和角色附加世界书保存成功';
+    } else return;
+  }
+  throw new Error(mismatch);
 }
 
 async function saveSnapshotMetadata(env, context, metadata, verifyWorld = false) {
