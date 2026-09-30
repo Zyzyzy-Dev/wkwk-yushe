@@ -5,7 +5,7 @@
   "optional": [],
   "js": "index.js",
   "author": "Codex",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "auto_update": true,
   "hooks": {
     "update": "reloadAfterUpdate"

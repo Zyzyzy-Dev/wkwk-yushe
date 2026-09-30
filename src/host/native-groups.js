@@ -240,10 +240,17 @@ export function installNativeGroups(env) {
     function render(context) {
         if (context.kind === 'preset' && fast?.key === context.key) context = { ...context, value: clone(fast.value) };
         const { list, kind } = context;
-        // Other extensions can insert controls next to the list. Adjacency is not ownership.
-        let toolbar = [...(list.parentElement?.children || [])].find(el => el.classList.contains('pcm-ng-toolbar') && el.dataset.pcmNgList === list.id);
+        // Vue owns the whole toolkit mount, not just the list's rows. Keep our controls
+        // outside that boundary so a remount cannot remove them between observer ticks.
+        const toolkitHost = kind === 'preset' ? globalThis.__baiBaiToolkitExtensionInstalled?.__baiBaiToolkitPresetVueListManager?.host : null;
+        const anchor = kind === 'preset'
+            ? (toolkitHost?.isConnected && toolkitHost.contains?.(list) ? toolkitHost : list.closest('.bai-bai-preset-vue-list-host')) || list
+            : list;
+        const toolbars = [...document.querySelectorAll('.pcm-ng-toolbar')].filter(el => el.dataset.pcmNgList === list.id);
+        let toolbar = toolbars[0];
+        for (const duplicate of toolbars.slice(1)) duplicate.remove();
         if (!toolbar) {
-            toolbar = node('div', 'pcm-ng-toolbar'); toolbar.dataset.pcmNgList = list.id; list.before(toolbar);
+            toolbar = node('div', 'pcm-ng-toolbar'); toolbar.dataset.pcmNgList = list.id; anchor.before(toolbar);
             const label = node('label', 'pcm-ng-choice'), toggle = node('input'); toggle.type = 'checkbox';
             toggle.addEventListener('change', () => {
                 const checked = toggle.checked;
@@ -254,6 +261,9 @@ export function installNativeGroups(env) {
             });
             label.append(toggle, document.createTextNode('酒馆盒子分组')); toolbar.append(label, node('span', 'pcm-ng-toolbar-actions'));
         }
+        // Reuse the same checkbox when ownership moves between native and Vue lists.
+        // Do not force adjacency: another extension may insert its own sibling control.
+        if (toolbar.parentElement !== anchor.parentElement) anchor.before(toolbar);
         const owner = baiOwns(kind), enabled = owns(kind);
         const toggle = toolbar.querySelector('input');
         toggle.checked = prefs()[kind] !== false; toggle.disabled = busy || Boolean(fast);

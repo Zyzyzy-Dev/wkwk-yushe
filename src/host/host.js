@@ -1671,7 +1671,12 @@ async function installApiEntries(controller) {
   const { extension_settings } = await import('/scripts/extensions.js');
   let preferences = extension_settings.preset_compare_api_entries || {};
   const qrId = APP_ID + '-api-qr', ballId = APP_ID + '-api-ball', railId = APP_ID + '-api-rail';
+  const positionKey = APP_ID + '.api-ball-position';
   let position = null, drag = null, moved = false;
+  try {
+    const saved = JSON.parse(localStorage.getItem(positionKey));
+    if (Number.isFinite(saved?.x) && Number.isFinite(saved?.y)) position = {x:saved.x, y:saved.y};
+  } catch { /* 存储不可用或旧值损坏时仍可使用默认位置。 */ }
   const make = (id, text) => {
     const button = document.createElement('button'); button.id = id; button.type = 'button'; button.textContent = text;
     button.title = '打开 API 快切'; button.setAttribute('aria-label', '打开 API 快切');
@@ -1723,7 +1728,7 @@ async function installApiEntries(controller) {
         rail.append(make(qrId, 'API快切')); form.prepend(rail);
       }
     }
-    if (!preferences.floating) { document.getElementById(ballId)?.remove(); position = null; }
+    if (!preferences.floating) { document.getElementById(ballId)?.remove(); }
     else if (!document.getElementById(ballId)) {
       const button = make(ballId, 'API');
       applyImportantStyles(button, {position:'fixed', width:'48px', height:'48px', 'border-radius':'50%', 'z-index':'29999',
@@ -1739,8 +1744,18 @@ async function installApiEntries(controller) {
         if (Math.hypot(dx,dy)>5) moved = true;
         if (moved) { position = {x:drag.left+dx,y:drag.top+dy}; placeBall(); }
       });
-      button.addEventListener('pointerup', () => {drag=null;});
-      button.addEventListener('pointercancel', () => {drag=null;moved=false;});
+      const finishDrag = () => {
+        if (drag && moved) {
+          const rect = button.getBoundingClientRect();
+          position = {x:rect.left, y:rect.top};
+          try { localStorage.setItem(positionKey, JSON.stringify(position)); }
+          catch { /* 隐私模式禁用存储时保留本轮位置，不阻断入口。 */ }
+        }
+        drag = null;
+      };
+      button.addEventListener('pointerup', finishDrag);
+      button.addEventListener('lostpointercapture', finishDrag);
+      button.addEventListener('pointercancel', () => {finishDrag();moved=false;});
       document.body.append(button); placeBall();
     }
   };
