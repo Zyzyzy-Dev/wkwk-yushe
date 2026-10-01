@@ -75,7 +75,9 @@
 .pcm-snapshot-binding>.pcm-snapshot-badge{margin-left:auto;background:var(--snap-soft);color:var(--snap-muted);border:0}
 .pcm-snapshot-context small{margin:0;font-size:11px;color:var(--snap-muted);opacity:1}
 .pcm-snapshot-context .pcm-snapshot-actions{margin:0}
-.pcm-snapshot-context .pcm-snapshot-primary{width:100%;min-height:38px;border-radius:11px}
+.pcm-snapshot-context .pcm-snapshot-primary{width:auto;flex:none;margin-left:auto;min-height:32px;padding:5px 10px;border-radius:9px;font-size:12px;white-space:nowrap}
+.pcm-snapshot-context-label{flex:none;white-space:nowrap}
+.pcm-snapshot-context>summary::before{flex:none}
 .pcm-snapshot-toolbar{margin-top:13px}
 .pcm-snapshots .pcm-snapshot-create{min-width:160px;background:color-mix(in srgb,#d79e7b 22%,var(--snap-card));border-color:color-mix(in srgb,#d79e7b 42%,var(--snap-card));font-size:13px;font-weight:600}
 .pcm-snapshots .pcm-snapshot-primary{background:color-mix(in srgb,var(--snap-accent) 20%,var(--snap-card));border-color:color-mix(in srgb,var(--snap-accent) 65%,var(--snap-card))}

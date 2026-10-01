@@ -824,6 +824,19 @@ dialog{font-family:var(--mainFontFamily)}
  .pcm-free-compare-head>.pcm-free-new-title{flex-basis:100%;margin:0 8px;overflow-wrap:anywhere}
 }
 
-/* 多选删除位于各侧统计行右端，窄屏统计文字可换行。 */
+/* 多选操作位于各侧统计行右端，清空只取消本侧选择。 */
 .pcm-summary{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
-.pcm-summary .pcm-multi-delete{margin-left:auto;flex:none;font-size:11px;padding:4px 8px}
+.pcm-summary .pcm-multi-actions{display:flex;align-items:center;gap:6px;margin-left:auto;flex:none}
+.pcm-summary .pcm-multi-clear,.pcm-summary .pcm-multi-delete{flex:none;font-size:11px;padding:4px 8px}
+/* 紧凑筛选工具条：为后续按钮保留真实空位，两侧按钮统一尺寸。 */
+.pcm-dialog .pcm-tools{gap:4px!important}
+.pcm-dialog .pcm-tools input{flex:1 1 0!important;min-width:0!important;width:0!important}
+.pcm-dialog .pcm-tools :is(input,button){box-sizing:border-box!important;height:26px!important;min-height:26px!important;margin:0!important;font-size:11px!important;padding:3px 6px!important;line-height:18px!important}
+.pcm-dialog .pcm-tools .pcm-preset-filter{flex:0 0 70px!important;width:70px!important;min-width:0!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;border:1px solid var(--SmartThemeBorderColor);border-radius:8px;color:inherit;background:var(--SmartThemeBlurTintColor)}
+.pcm-dialog .pcm-tool-reserved{flex:0 0 30px}
+.pcm-dialog .pcm-tools :is([data-action=new-group],[data-action=manage-worldbook]){flex:none!important;padding:3px 5px!important;min-width:0!important;white-space:nowrap!important}
+.pcm-dialog>.pcm-wb-select-menu{position:fixed;z-index:100;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:4px;border:1px solid var(--SmartThemeBorderColor);border-radius:9px;background:var(--SmartThemeBlurTintColor);color:var(--SmartThemeBodyColor);box-shadow:0 6px 20px #0005}
+.pcm-dialog.pcm-theme-day>.pcm-wb-select-menu{background:#fffdf5;color:#594735}
+.pcm-dialog.pcm-theme-night>.pcm-wb-select-menu{background:#32302f;color:#ebdbb2}
+.pcm-dialog>.pcm-wb-select-menu button{display:block;width:100%;min-height:32px;text-align:left;padding:6px 9px;border:0;border-radius:5px;background:transparent;color:inherit;font-size:12px}
+.pcm-dialog>.pcm-wb-select-menu button:is([aria-selected=true],:hover,:focus-visible){background:color-mix(in srgb,currentColor 16%,transparent);outline:none}

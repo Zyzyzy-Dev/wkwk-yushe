@@ -75,12 +75,12 @@ export function createApiPanel({ host, onBack, onClose, onCycleTheme, themeIcon,
       const top = node('div', 'pcm-api-profile-head'); top.append(node('h3', '', profile.name), actions);
       if(data.activeIds?.includes(profile.id)) top.querySelector('h3').append(node('span','pcm-api-active-badge','已启用'));
       if(data.links?.some(link=>link.apiId===profile.id)) card.title='已绑定设置快照';
-      const cut = button('切', () => run(async () => { let result = await host.request('api-manager-apply', {id:profile.id,mode:'both'}); if(result.needsConfirmation){if(!await confirm('绑定快照缺少世界书：'+result.missingWorldNames.join('、')+'。继续应用其余部分？'))return;result=await host.request('api-manager-apply',{id:profile.id,mode:'both',allowMissingWorlds:true});} await refresh(); message('已切换至：'+profile.name+'。'+result.connection.message+(result.warnings?.length?'；'+result.warnings.join('；'):''), !result.connection.ok); })); cut.title='切换至此方案';
+      const cut = button('切', () => run(async () => { let result = await host.request('api-manager-apply', {id:profile.id,mode:'both'}); if(result.needsConfirmation){if(!await confirm('绑定快照缺少世界书：'+result.missingWorldNames.join('、')+'。继续应用其余部分？'))return;result=await host.request('api-manager-apply',{id:profile.id,mode:'both',allowMissingWorlds:true});} await refresh(); message('已切换至：'+profile.name+'。'+result.connection.message+(result.warnings?.length?'；'+result.warnings.join('；'):''), !result.connection.ok); })); cut.title='切换至此方案';cut.classList.add('pcm-api-cut');
       const overwrite = button('覆', () => run(async () => {
         if(!await confirm('用当前 URL、密钥和模型覆盖“'+profile.name+'”？')) return;
         await host.request('api-manager-save',{capture:true,id:profile.id,name:profile.name}); await refresh(); message('已覆盖方案');
       })); overwrite.title='用当前设置覆盖此方案';
-      actions.append(cut, button('绑',()=>run(async()=>{await chooseApiSnapshotBinding({host,parent:element,apiId:profile.id});await refresh();})), overwrite, iconButton('编辑方案', 'm14 5 5 5M4 20l4-1L20 7a2 2 0 0 0-3-3L5 16l-1 4Z',()=>edit(profile)),iconButton('删除方案','M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7',()=>run(async()=>{if(!await confirm('删除方案“'+profile.name+'”？'))return;await host.request('api-manager-delete',{id:profile.id});await refresh();})));
+      actions.append(button('绑',()=>run(async()=>{await chooseApiSnapshotBinding({host,parent:element,apiId:profile.id});await refresh();})), overwrite, iconButton('编辑方案', 'm14 5 5 5M4 20l4-1L20 7a2 2 0 0 0-3-3L5 16l-1 4Z',()=>edit(profile)),iconButton('删除方案','M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7',()=>run(async()=>{if(!await confirm('删除方案“'+profile.name+'”？'))return;await host.request('api-manager-delete',{id:profile.id});await refresh();})),cut);
       card.append(top, connectionLine(profile)); list.append(card);
 
     }

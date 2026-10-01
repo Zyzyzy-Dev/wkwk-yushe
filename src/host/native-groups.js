@@ -340,7 +340,7 @@ export function installNativeGroups(env) {
             const ready = owns('preset')
                 ? installGroupGate(pm, () => fast?.key === presetContext()?.key ? fast.value : openai.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups, () => owns('preset'))
                 : typeof pm?.getPromptCollection === 'function';
-            const preset = ready ? presetContext() : null; if (preset) render(preset);
+            const preset = ready ? presetContext() : null; if (preset?.list?.isConnected) render(preset);
             for (const [scope, id] of [['GLOBAL', 'saved_regex_scripts'], ['PRESET', 'saved_preset_scripts'], ['SCOPED', 'saved_scoped_scripts']]) {
                 const list = document.getElementById(id); if (!list) continue;
                 const context = regexContext(scope, list);
@@ -356,6 +356,14 @@ export function installNativeGroups(env) {
     }
     function schedule() { if (!scheduled) scheduled = setTimeout(refresh, 100); }
     observer = new MutationObserver(records => {
+        // 原生 render(false) 会重建容器/条目（包括鸡尾酒后台统计的第二次 render）。
+        // 结构变更在 MutationObserver 微任务内补回分组，不能再等待 100ms 后绘制。
+        // 文本统计等非结构更新仍合并；refresh 内断开观察，避免观察自身插入。
+        const nativeStructureChanged = records.some(r => !r.target.closest?.('.pcm-ng-dialog') && (
+            r.target.matches?.('[id$="prompt_manager"],[id$="prompt_manager_list"]')
+            || [...r.addedNodes].some(n => n.nodeType === 1 && (n.matches?.('[id$="prompt_manager"],[id$="prompt_manager_list"]') || n.querySelector?.('[id$="prompt_manager_list"]')))
+        ));
+        if (nativeStructureChanged) { refresh(); return; }
         if (records.some(r => !r.target.closest?.('.pcm-ng-dialog') && (r.target.closest?.('#regex_container,[id$="prompt_manager"]')
             || [...r.addedNodes].some(n => n.nodeType === 1 && (n.matches?.('#regex_container,[id$="prompt_manager"],[id$="prompt_manager_list"]') || n.querySelector?.('#regex_container,[id$="prompt_manager_list"]')))))) schedule();
     });

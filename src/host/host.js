@@ -43,7 +43,7 @@ function installWorkbenchWorldWriteGuard() {
 }
 
 async function awaitWorkbenchWorldWrites() {
-  if (globalThis.fetch !== workbenchWorldWrites.fetch) throw new Error('世界书保存请求追踪已被其他扩展替换，请刷新酒馆后重试');
+  if (globalThis.fetch !== workbenchWorldWrites.fetch) throw new Error('世界书保存请求追踪链发生变化，无法确认是否有未完成的写入；请刷新酒馆后重试。若仍出现，请排查网络请求相关扩展');
   await withSnapshotTimeout((async () => {
     while (workbenchWorldWrites.pending.size) await Promise.all([...workbenchWorldWrites.pending]);
   })(), '原生世界书仍在保存，尚未覆盖写入；请等待完成后重试');
@@ -492,17 +492,21 @@ async function handleWorkbenchWorldbook(method, payload) {
   const env = {script, world};
   // Android local servers may need longer to enumerate settings/presets and read large books.
   // Keep disk existence checks: the native get endpoint returns an empty book for missing files.
-  const reading = method === 'workbench-read-worldbook';
-  const names = await workbenchDiskNames(env, reading ? {timeoutMs:45000, label:'世界书列表'} : undefined);
   if (method === 'workbench-read-worldbook') {
-    if (!names.includes(name)) throw new Error('该世界书不存在，请重新读取列表');
+    // 官方 /get 只在文件缺失时返回空 entries。非空有效正文即为文件存在的证据，
+    // 不为读取一本书额外下载所有预设/设置；空书仍查磁盘目录，区分空文件与缺失。
     const book = await readSnapshotPersistence(env, '/api/worldinfo/get', {name}, {timeoutMs:45000, label:'世界书正文'});
+    if (!book?.entries || typeof book.entries !== 'object' || !Object.keys(book.entries).length) {
+      const names = await workbenchDiskNames(env, {timeoutMs:45000, label:'世界书列表'});
+      if (!names.includes(name)) throw new Error('该世界书不存在，请重新读取列表');
+    }
     normalizeWorkbenchBook(book);
     assertWorkbenchCache(world, name, book);
     world.worldInfoCache.set(name, clone(book));
     // The raw disk object is the CAS baseline; normalization must not change it.
     return {name, book: clone(book)};
   }
+  const names = await workbenchDiskNames(env);
   if (typeof payload.create !== 'boolean') throw new Error('请明确选择覆盖保存或另存世界书');
   const create = payload.create, book = normalizeWorkbenchBook(payload.book), base = payload.base;
   const exists = list => list.some(value => value.toLocaleLowerCase() === name.toLocaleLowerCase());

@@ -60,7 +60,7 @@
 .pcm-wb-row-actions{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:4px}
 .pcm-wb-workbench .pcm-wb-row-actions button{font-size:10px;min-height:22px;padding:2px 6px}
 .pcm-wb-empty{padding:28px 12px;text-align:center;font-size:12px;opacity:.65}
-.pcm-wb-drop-marker{height:3px;background:#7999b3;pointer-events:none;border-radius:3px}
+.pcm-wb-drop-marker{position:absolute;left:0;right:0;z-index:2;height:3px;background:#7999b3;pointer-events:none;border-radius:3px}
 .pcm-wb-workbench.is-dragging{user-select:none;cursor:grabbing}
 .pcm-wb-workbench input.pcm-native-switch{appearance:none!important;-webkit-appearance:none!important;position:relative;display:inline-block;width:22px!important;height:12px!important;min-width:22px!important;max-width:22px!important;min-height:12px!important;padding:0!important;margin:0!important;flex:0 0 auto;align-self:center;max-height:12px!important;border:0!important;border-radius:8px!important;background:#b8b8b8!important;box-shadow:inset 0 1px 2px #0002!important;cursor:pointer}
 .pcm-wb-workbench input.pcm-native-switch::before{content:'';position:absolute;left:2px;top:2px;width:8px;height:8px;border-radius:50%;background:#fff}
@@ -254,3 +254,74 @@
 .pcm-dialog .pcm-wb-workbench .pcm-wb-compare-modal textarea.pcm-wb-compare-input{background:transparent!important;border:0!important;color:var(--wb-fg)!important;-webkit-text-fill-color:var(--wb-fg)!important;caret-color:var(--wb-fg)!important}
 .pcm-wb-workbench button.pcm-wb-compare-toggle[aria-pressed=true]{background:var(--wb-soft);border-color:#7999b3;box-shadow:inset 0 0 0 1px #7999b3;font-weight:700}
 .pcm-wb-workbench button.pcm-wb-compare-toggle[aria-pressed=false]{background:var(--wb-card);border-color:var(--wb-line);box-shadow:none;font-weight:400}
+
+/* 导入进度沿用正文配色，不把读取过程显示成错误。 */
+.pcm-wb-progress{font-size:12px;margin:6px 0}.pcm-wb-progress:empty{display:none}
+/* 固定可见顶栏、主题化就地选择菜单。 */
+.pcm-wb-header{position:sticky;top:0;z-index:20;background:var(--wb-bg);padding:10px 0;border-bottom:1px solid var(--wb-line);box-shadow:0 5px 10px color-mix(in srgb,var(--wb-bg) 85%,transparent)}
+@media(max-width:900px){.pcm-wb-header{top:var(--pcm-safe-top,0px)}}
+.pcm-wb-workbench button.pcm-wb-select{height:28px;min-height:0;min-width:0;padding:3px 6px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:5px;background:var(--wb-bg);font-size:12px}
+.pcm-wb-workbench .pcm-wb-select-menu{position:fixed;z-index:100;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:5px;border:1px solid var(--wb-line);border-radius:12px;background:var(--wb-bg);color:var(--wb-fg);box-shadow:0 8px 28px #0004;scrollbar-width:thin}
+.pcm-wb-workbench .pcm-wb-select-menu button{display:block;width:100%;min-height:40px;text-align:left;padding:9px 12px;border:0;border-radius:7px;background:transparent;color:inherit;font-size:13px;line-height:1.5}
+.pcm-wb-workbench .pcm-wb-select-menu button[aria-selected=true]{background:var(--wb-soft);font-weight:650}
+.pcm-wb-workbench .pcm-wb-select-menu button[aria-selected=true]::after{content:'✓';float:right;margin-left:12px}
+.pcm-wb-workbench .pcm-wb-select-menu button:hover,.pcm-wb-workbench .pcm-wb-select-menu button:focus-visible{background:var(--wb-soft);outline:1px solid var(--wb-line);outline-offset:-1px}
+@media(max-width:900px){.pcm-wb-workbench button.pcm-wb-select{width:100%;height:27px;padding:2px 1px;font-size:10px}}
+/* 多选批量操作与一行紧凑顶栏，选择框不占用条目配置行。 */
+.pcm-wb-workbench .pcm-wb-header{flex-wrap:nowrap;gap:5px}
+.pcm-wb-workbench .pcm-wb-header h2{white-space:nowrap;flex:0 0 auto;font-size:17px}
+.pcm-wb-workbench .pcm-wb-header>button{height:28px;min-height:28px;padding:3px 6px;font-size:11px;flex:0 0 auto}
+.pcm-wb-workbench .pcm-wb-header>:is(.pcm-wb-icon,.pcm-wb-header-icon,[data-theme-toggle]){width:28px;padding:5px}
+.pcm-wb-workbench .pcm-wb-header svg{width:16px;height:16px;display:block}
+.pcm-wb-header-space{flex:1 1 auto;min-width:0;margin:0}
+.pcm-wb-multi-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:3px 0 6px;font-size:11px}
+.pcm-wb-multi-count{margin-right:auto}
+.pcm-wb-workbench .pcm-wb-multi-actions button{font-size:10px;min-height:24px;padding:3px 6px}
+.pcm-wb-workbench .pcm-wb-multi-delete{color:#a33f37;border-color:#b77768}
+.pcm-theme-night .pcm-wb-workbench .pcm-wb-multi-delete{color:#f4aa98}
+@media(max-width:900px){
+  .pcm-wb-workbench .pcm-wb-header{gap:4px}
+  .pcm-wb-workbench .pcm-wb-header h2{font-size:14px}
+  .pcm-wb-workbench .pcm-wb-header>button{height:25px;min-height:25px;padding:3px 5px;font-size:10px}
+  .pcm-wb-workbench .pcm-wb-header>:is(.pcm-wb-icon,.pcm-wb-header-icon,[data-theme-toggle]){width:25px;padding:4px}
+}
+@media(max-width:360px){
+  .pcm-wb-workbench .pcm-wb-header{gap:3px}
+  .pcm-wb-workbench .pcm-wb-header h2{font-size:13px}
+  .pcm-wb-workbench .pcm-wb-header>button{padding-inline:4px}
+  .pcm-wb-workbench .pcm-wb-header>:is(.pcm-wb-icon,.pcm-wb-header-icon,[data-theme-toggle]){width:23px;padding:3px}
+}
+/* 搜索与批量动作同排，移动卡片压缩高度并保持表头单行。 */
+.pcm-wb-workbench .pcm-wb-search{align-items:center;gap:4px;flex-wrap:nowrap}
+.pcm-wb-workbench .pcm-wb-search :is(input,select,button){box-sizing:border-box;height:25px;min-height:25px;margin:0;padding:2px 4px;font-size:10px;line-height:18px}
+.pcm-wb-workbench .pcm-wb-search input[type=search]{min-width:0;flex:1 1 0;width:0}
+.pcm-wb-workbench .pcm-wb-search select{flex:0 0 54px;width:54px;min-width:0}
+.pcm-wb-workbench .pcm-wb-search>.pcm-wb-actions{flex:none;gap:3px;overflow:visible}
+.pcm-wb-workbench .pcm-wb-search .pcm-wb-actions button{padding:2px 4px}
+.pcm-wb-workbench .pcm-wb-multi-actions{flex:none;display:flex;gap:3px;margin:0;padding:0;border:0}
+.pcm-wb-workbench .pcm-wb-multi-actions[hidden]{display:none!important}
+.pcm-wb-workbench .pcm-wb-multi-delete{width:25px;padding:4px}
+@media(max-width:900px){
+.pcm-wb-workbench .pcm-wb-entry{padding:3px 5px;gap:2px 3px;margin:3px 0}
+.pcm-wb-workbench .pcm-wb-entry-actions .pcm-wb-row-icon{width:20px;height:20px;min-height:20px;padding:3px}
+.pcm-wb-workbench .pcm-wb-entry-actions .pcm-wb-row-icon svg{width:13px;height:13px}
+.pcm-wb-workbench .pcm-wb-entry-header .pcm-wb-header-config,.pcm-wb-workbench .pcm-wb-entry .pcm-wb-entry-config{grid-template-columns:32px minmax(20px,1fr) 23px 25px 32px}
+.pcm-wb-workbench .pcm-wb-entry-header .pcm-wb-header-config .pcm-wb-col-setting{white-space:nowrap;overflow-wrap:normal;letter-spacing:-.5px;font-size:8px}
+.pcm-wb-workbench .pcm-wb-entry .pcm-wb-entry-name,.pcm-wb-workbench .pcm-wb-entry-config :is(input,select,button){height:24px;min-height:24px}
+}
+
+/* 设置控件使用紧凑列宽，配置区末尾保留空白以便抓取条目拖拽。 */
+.pcm-wb-workbench .pcm-wb-entry-config>:is(button,input){box-sizing:border-box;width:100%;max-width:100%;min-width:0}
+.pcm-wb-workbench .pcm-wb-entry-config .pcm-wb-entry-trigger{text-align:center;padding-inline:0}
+@media(min-width:901px){
+ .pcm-wb-workbench .pcm-wb-entry-header,.pcm-wb-workbench .pcm-wb-entry{grid-template-columns:12px 18px minmax(65px,210px) minmax(336px,1fr) 81px}
+ .pcm-wb-workbench .pcm-wb-entry-header .pcm-wb-header-config,.pcm-wb-workbench .pcm-wb-entry .pcm-wb-entry-config{grid-template-columns:44px 84px 30px 34px 44px 32px!important}
+ .pcm-wb-workbench .pcm-wb-entry-header .pcm-wb-header-config>*{width:100%;min-width:0;box-sizing:border-box}
+ .pcm-wb-workbench .pcm-wb-entry-actions,.pcm-wb-workbench .pcm-wb-header-actions{width:81px}
+ .pcm-wb-workbench .pcm-wb-entry-config .pcm-wb-badge{box-sizing:border-box;width:100%;min-width:0}
+}
+@media(min-width:901px) and (max-width:1280px){
+ .pcm-wb-workbench .pcm-wb-entry-header,.pcm-wb-workbench .pcm-wb-entry{grid-template-columns:12px 18px minmax(65px,1fr) 81px}
+ .pcm-wb-workbench .pcm-wb-entry .pcm-wb-entry-config,.pcm-wb-workbench .pcm-wb-entry-header .pcm-wb-header-config{grid-row:2;grid-column:1/-1}
+ .pcm-wb-workbench .pcm-wb-entry-actions,.pcm-wb-workbench .pcm-wb-header-actions{grid-row:1;grid-column:4}
+}

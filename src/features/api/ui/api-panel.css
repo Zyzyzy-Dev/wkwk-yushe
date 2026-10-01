@@ -111,3 +111,7 @@
 
 /* 快切与管理页共用安全区；吸顶位置也须避开 iOS 状态栏。 */
 @media(max-width:900px){.pcm-api-quick{padding:max(16px,var(--pcm-safe-top)) max(16px,var(--pcm-safe-right)) max(16px,var(--pcm-safe-bottom)) max(16px,var(--pcm-safe-left))}.pcm-api-manager>.pcm-snapshot-header{top:var(--pcm-safe-top)}}
+/* 切换是主要动作：位于删除右侧，与普通操作保持可辨识的主题色。 */
+.pcm-api-manager .pcm-api-profile-actions .pcm-api-cut{background:linear-gradient(180deg,#789978,#557753);border-color:#648663;color:#fff;font-weight:700}
+.pcm-theme-night .pcm-api-manager .pcm-api-profile-actions .pcm-api-cut{background:#597753;border-color:#91ad85;color:#fff}
+.pcm-api-manager .pcm-api-profile-actions .pcm-api-cut:hover{background:#496e47}

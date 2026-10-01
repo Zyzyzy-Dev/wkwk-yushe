@@ -1,0 +1,81 @@
+/* 单预设：PC 左列表右详情，手机列表与详情切换；不改双栏默认布局。 */
+.pcm-app.pcm-single .pcm-single-hidden{display:none!important}
+.pcm-app.pcm-single .pcm-pane-resizer,.pcm-app.pcm-single .pcm-desktop-undo{display:none!important}
+.pcm-app.pcm-single .pcm-header-toggles label:has(:is([data-free-select],[data-show-similarity],[data-sync-scroll],[data-ignore-whitespace])){display:none!important}
+.pcm-app.pcm-single .pcm-row>.pcm-badge{display:none}
+.pcm-app.pcm-single .pcm-version-forms{display:block!important}
+.pcm-app.pcm-single .pcm-version-editor{width:100%!important;min-width:0!important;box-sizing:border-box}
+.pcm-app.pcm-single .pcm-version-editor h4{font-size:0}
+.pcm-app.pcm-single .pcm-version-editor h4 button{font-size:11px}
+.pcm-app.pcm-single .pcm-live-area{min-height:280px}
+.pcm-app.pcm-single .pcm-editwrap .pcm-diff-backdrop{display:none}
+.pcm-app.pcm-single .pcm-editwrap textarea{color:var(--SmartThemeBodyColor)!important;-webkit-text-fill-color:currentColor!important}
+.pcm-single-resizer{display:none}
+@media(min-width:901px){
+.pcm-app.pcm-single{display:grid!important;grid-template-columns:minmax(340px,var(--pcm-single-width,38%)) 8px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);height:100%!important;min-height:0!important;overflow:hidden!important}
+.pcm-app.pcm-single>.pcm-header{grid-column:1/-1;grid-row:1}
+.pcm-app.pcm-single>.pcm-lists{grid-column:1;grid-row:2;display:block!important;min-width:0!important;overflow:hidden!important}
+.pcm-app.pcm-single .pcm-pane:not(.pcm-single-hidden){width:100%!important;height:100%!important;min-width:0!important;display:flex!important;flex-direction:column!important;border-right:0!important}
+.pcm-app.pcm-single .pcm-list{flex:1;min-height:0;max-height:none!important;overflow:auto!important}
+.pcm-app.pcm-single>[data-compare]{grid-column:3;grid-row:2;min-width:0;max-height:none!important;overflow:auto!important;margin:0!important}
+.pcm-app.pcm-single>.pcm-single-resizer{display:block;grid-column:2;grid-row:2;cursor:col-resize;touch-action:none;border:0;border-left:1px solid var(--SmartThemeBorderColor);padding:0;background:transparent}
+.pcm-app.pcm-single .pcm-pane-head{flex-wrap:wrap;min-width:0}
+.pcm-app.pcm-single .pcm-actions{flex-wrap:wrap}
+}
+@media(max-width:900px){
+.pcm-app.pcm-single>.pcm-lists{display:block!important}
+.pcm-app.pcm-single .pcm-pane:not(.pcm-single-hidden){height:calc(100dvh - 105px)!important;min-height:260px!important}
+.pcm-app.pcm-single.pcm-single-detail>.pcm-lists{display:none!important}
+.pcm-app.pcm-single>[data-compare]{max-height:none!important;min-height:calc(100dvh - 105px)}
+.pcm-app.pcm-single .pcm-version-forms{padding:4px!important}
+}
+/* 正则原生风格编辑与显式多选。 */
+.pcm-regex-panel [hidden]{display:none!important}
+.pcm-regex-row-top{grid-template-columns:auto minmax(0,1fr) auto}
+.pcm-regex-row-top:has(.pcm-regex-select:not([hidden])){grid-template-columns:auto auto minmax(0,1fr) auto}
+.pcm-regex-single .pcm-regex-body{grid-template-columns:minmax(0,1fr)!important}
+.pcm-regex-single .pcm-regex-row-top{grid-template-columns:auto minmax(0,1fr)}
+.pcm-regex-single .pcm-regex-row-top:has(.pcm-regex-select:not([hidden])){grid-template-columns:auto auto minmax(0,1fr)}
+.pcm-regex-column-head,.pcm-regex-selection-tools{flex-wrap:wrap}
+.pcm-regex-edit-form{display:grid;gap:10px;min-width:0;padding:8px}
+.pcm-regex-edit-field{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:11px}
+.pcm-regex-edit-field>span{display:flex;align-items:center;justify-content:space-between}
+.pcm-regex-edit-field input,.pcm-regex-edit-field textarea,.pcm-regex-options select{box-sizing:border-box;width:100%;min-width:0;background:var(--SmartThemeBlurTintColor);color:var(--SmartThemeBodyColor);border:1px solid var(--SmartThemeBorderColor);border-radius:9px;padding:7px;font:inherit}
+.pcm-regex-edit-field textarea{resize:vertical;overflow:auto;min-height:32px;white-space:pre-wrap}
+.pcm-regex-findRegex textarea{height:38px}
+.pcm-regex-replaceString textarea{height:130px}
+.pcm-regex-options textarea{height:65px}
+.pcm-regex-edit-field textarea[readonly]{cursor:default;opacity:.85}
+.pcm-regex-edit-field textarea:not([readonly]):focus{outline:2px solid #83a598}
+.pcm-regex-options-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.pcm-regex-options-grid fieldset{display:flex;flex-direction:column;gap:8px;min-width:0;border:0;padding:0}
+.pcm-regex-options-grid fieldset>label{display:flex;gap:5px;align-items:center;font-size:11px}
+.pcm-regex-options-grid fieldset>label.pcm-regex-edit-field{align-items:stretch}
+.pcm-regex-edit-form>button{justify-self:end}
+.pcm-regex-group-head button{font-size:10px;padding:3px 6px}
+.pcm-regex-group-head strong{margin-right:auto}
+@media(max-width:520px){.pcm-regex-edit-form{padding:5px}.pcm-regex-column-head{align-items:flex-start}.pcm-regex-selection-tools{gap:4px}.pcm-regex-options-grid{gap:7px}}
+.pcm-regex-single .pcm-regex-body{grid-template-rows:minmax(0,1fr)!important}
+.pcm-app.pcm-single .pcm-pane-undo{display:inline-flex!important}
+.pcm-app.pcm-single .pcm-inline-form :is(input,select,textarea){background:var(--SmartThemeBlurTintColor);color:var(--SmartThemeBodyColor);border:1px solid var(--SmartThemeBorderColor)}
+.pcm-app.pcm-single .pcm-live-area{background:var(--SmartThemeBlurTintColor)!important;color:var(--SmartThemeBodyColor)!important}
+.pcm-dialog.pcm-theme-day .pcm-app.pcm-single .pcm-inline-form :is(input,select,textarea){background:#fffdf5!important;color:#594735!important}
+.pcm-dialog.pcm-theme-night .pcm-app.pcm-single .pcm-inline-form :is(input,select,textarea){background:#32302f!important;color:#ebdbb2!important}
+
+.pcm-dialog .pcm-app.pcm-single.pcm-view-hidden{display:none!important}
+/* 单栏编辑任意一侧时，撤回入口始终在顶栏可达。 */
+.pcm-app.pcm-single .pcm-header .pcm-project-bar .pcm-desktop-undo{display:inline-flex!important}
+.pcm-app.pcm-single .pcm-pane-undo{display:none!important}
+
+/* 覆盖旧对比表单的固定文字填充色，保持主题下可读。 */
+.pcm-dialog .pcm-app.pcm-single .pcm-inline-form :is(input,select,textarea){-webkit-text-fill-color:currentColor!important;caret-color:currentColor!important}
+.pcm-dialog.pcm-theme-night .pcm-app.pcm-single .pcm-inline-form button{color:#ebdbb2!important}
+.pcm-dialog.pcm-theme-day .pcm-app.pcm-single .pcm-inline-form button{color:#594735!important}
+
+/* 整组拖拽落点只显示在容器外缘，折叠与展开使用相同边界。 */
+.pcm-group[data-group-id]>.pcm-group-head,.pcm-group[data-group-id]>.pcm-group-head .pcm-group-toggle{cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.pcm-whole-drag-active{cursor:grabbing;user-select:none;-webkit-user-select:none}
+.pcm-whole-dragging{opacity:.55}
+.pcm-whole-before{box-shadow:0 -3px 0 0 #83a598!important}
+.pcm-whole-after{box-shadow:0 3px 0 0 #83a598!important}
+.pcm-whole-end{box-shadow:inset 0 -3px 0 #83a598!important}

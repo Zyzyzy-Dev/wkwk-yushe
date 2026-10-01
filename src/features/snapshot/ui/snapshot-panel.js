@@ -21,8 +21,8 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
   if(!quick)header.append(back);header.append(heading,preferences,theme,close);
   const tabs=node('div','pcm-header-switch');if(onApi)tabs.append(button('API 管理',onApi));heading.append(tabs);
   if(quick)element.classList.add('pcm-api-quick');
-  const context = node('details', 'pcm-snapshot-context');context.open=true;
-  const contextTitle=node('summary','','当前设置'),contextBody=node('div','pcm-snapshot-context-body');context.append(contextTitle,contextBody);
+  const context = node('details', 'pcm-snapshot-context');
+  const contextTitle=node('summary',''),contextBody=node('div','pcm-snapshot-context-body');contextTitle.append(node('span','pcm-snapshot-context-label','当前设置'));context.append(contextTitle,contextBody);
   const toolbar = node('div', 'pcm-snapshot-toolbar');
   const save = button('＋ 保存当前设置', () => execute('save')); save.classList.add('pcm-snapshot-primary');
   save.addEventListener('click',event=>event.preventDefault());
