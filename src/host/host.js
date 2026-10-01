@@ -17,8 +17,11 @@ const workbenchWorldWrites = installWorkbenchWorldWriteGuard();
 
 function installWorkbenchWorldWriteGuard() {
   const original = globalThis.fetch;
-  const state = {pending: new Set(), uncertain: false, fetch: null, version: 0};
+  const state = {pending: new Set(), uncertain: false, fetch: null, accepted: null, version: 0};
+  const probes = new WeakMap();
   function guardedFetch(...args) {
+    const probe = args[0] && typeof args[0] === 'object' && probes.get(args[0]);
+    if (probe) {probe.seen = true; return Promise.resolve(new Response('{}'));}
     let tracked = false;
     try {
       const input = args[0], url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url, location.href);
@@ -38,12 +41,28 @@ function installWorkbenchWorldWriteGuard() {
     return request;
   }
   state.fetch = guardedFetch;
+  state.accepted = guardedFetch;
+  state.verify = async () => {
+    const candidate = globalThis.fetch;
+    if (candidate === state.accepted) return;
+    // Verify delegation without contacting or writing to the server. A wrapper that
+    // bypasses this guard cannot prove tracking continuity and remains blocked.
+    const request = new Request('data:application/json,{}'), probe = {seen:false};
+    probes.set(request, probe);
+    try {
+      await withSnapshotTimeout(Promise.resolve().then(() => Reflect.apply(candidate, globalThis, [request])), '请求链检查超时', 2000);
+      if (!probe.seen || globalThis.fetch !== candidate) throw new Error('Untracked fetch');
+      state.accepted = candidate;
+    } catch {
+      throw new Error('世界书保存请求追踪链发生变化，无法确认是否有未完成的写入；请刷新酒馆后重试。若仍出现，请排查网络请求相关扩展');
+    } finally {probes.delete(request);}
+  };
   globalThis.fetch = guardedFetch;
   return state;
 }
 
 async function awaitWorkbenchWorldWrites() {
-  if (globalThis.fetch !== workbenchWorldWrites.fetch) throw new Error('世界书保存请求追踪链发生变化，无法确认是否有未完成的写入；请刷新酒馆后重试。若仍出现，请排查网络请求相关扩展');
+  await workbenchWorldWrites.verify();
   await withSnapshotTimeout((async () => {
     while (workbenchWorldWrites.pending.size) await Promise.all([...workbenchWorldWrites.pending]);
   })(), '原生世界书仍在保存，尚未覆盖写入；请等待完成后重试');
@@ -56,7 +75,7 @@ async function stableWorkbenchWorldRead(read) {
     const version = workbenchWorldWrites.version;
     const value = await read();
     // A native POST can start while the GET is in flight. Drain it and repeat the GET before trusting it.
-    if (version === workbenchWorldWrites.version && globalThis.fetch === workbenchWorldWrites.fetch && !workbenchWorldWrites.uncertain) return value;
+    if (version === workbenchWorldWrites.version && globalThis.fetch === workbenchWorldWrites.accepted && !workbenchWorldWrites.uncertain) return value;
   }
   throw new Error('原生世界书持续发生写入，无法取得稳定数据；请稍后重试');
 }
@@ -1217,6 +1236,12 @@ async function applyLinkedSnapshot(env, snapshot, payload, automatic = false) {
 }
 
 async function handleSnapshotRequest(method, payload) {
+  // User recovery actions invalidate queued automatic work before joining the queue.
+  if (method === 'snapshot-delete' || method === 'snapshot-apply' || (method === 'snapshot-bind' && payload.id === null)) {
+    snapshotAutoPending = false;
+    snapshotAutoToken++;
+    clearTimeout(snapshotAutoTimer);
+  }
   if (method === 'snapshot-list') {await snapshotQueue; return snapshotList(await snapshotEnvironment());}
   if (['snapshot-editor','snapshot-draft-preset','snapshot-draft-worlds'].includes(method)) {await snapshotQueue;return readSnapshotEditor(await snapshotEnvironment(),payload);}
   return snapshotSerial(async () => {
@@ -1323,8 +1348,23 @@ async function installSnapshotBindings(controller) {
       if (snapshotPresetLoads === 0) {for (const resolve of snapshotPresetWaiters) resolve(); snapshotPresetWaiters.clear();}
     });
   }
+  const identity = () => {
+    const ctx = globalThis.SillyTavern?.getContext?.() || {};
+    const group = ctx.groupId;
+    const character = !group ? (script.characters || ctx.characters || [])[script.this_chid ?? ctx.characterId] : null;
+    return JSON.stringify([group || '', character?.avatar || '', script.getCurrentChatId?.() ?? ctx.chatId ?? '']);
+  };
+  let lastIdentity = identity();
+  let attemptedToken = null;
   const schedule = (newContext = false) => {
-    if (newContext) {snapshotEpoch++; snapshotAutoToken++; snapshotAutoPending = true; snapshotNotify();}
+    if (newContext) {
+      const next = identity();
+      // CHAT_CHANGED is also emitted for refreshes by extensions. Reapplying on
+      // every such event can make our own save/refresh recursively apply again.
+      if (next === lastIdentity) return;
+      lastIdentity = next;
+      snapshotEpoch++; snapshotAutoToken++; snapshotAutoPending = true; snapshotNotify();
+    }
     clearTimeout(snapshotAutoTimer);
     snapshotAutoTimer = setTimeout(run, 100);
   };
@@ -1344,16 +1384,22 @@ async function installSnapshotBindings(controller) {
         const latestContext = snapshotContext(env);
         const latest = resolveSnapshotBinding(snapshotStore(env), latestContext.chatBindingId, latestContext.characterKey);
         if (!latest) return;
+        attemptedToken = token;
         const result = await applyLinkedSnapshot(env, latest.snapshot, {contextKey: latestContext.key}, true);
+        if (token !== snapshotAutoToken) return;
         if (result.warnings.length) globalThis.toastr?.warning?.(result.warnings.join('\n'), '设置快照');
         else globalThis.toastr?.success?.('已应用「'+latest.snapshot.name+'」', '设置快照');
       });
     } catch (error) {
       if (error.name === 'SnapshotGenerationActive' && token === snapshotAutoToken) {snapshotAutoPending = true; schedule();}
-      else if (error.name !== 'SnapshotContextChanged') globalThis.toastr?.warning?.(error.message, '设置快照未应用');
+      else if (token === snapshotAutoToken && error.name !== 'SnapshotContextChanged') globalThis.toastr?.warning?.(error.message, '设置快照未应用');
     }
   };
-  for (const name of ['CHAT_CHANGED', 'APP_READY']) if (script.event_types?.[name]) script.eventSource.on(script.event_types[name], () => schedule(true));
+  if (script.event_types?.CHAT_CHANGED) script.eventSource.on(script.event_types.CHAT_CHANGED, () => schedule(true));
+  if (script.event_types?.APP_READY) script.eventSource.on(script.event_types.APP_READY, () => {
+    if (identity() !== lastIdentity) schedule(true);
+    else if (attemptedToken !== snapshotAutoToken) {snapshotAutoPending = true; schedule();}
+  });
   for (const name of ['GENERATION_ENDED', 'GENERATION_STOPPED']) if (script.event_types?.[name]) script.eventSource.on(script.event_types[name], () => {if (snapshotAutoPending) schedule();});
   snapshotAutoPending = true;
   schedule();
