@@ -1,6 +1,7 @@
 // 预设更新编辑器 · iframe 通信桥：校验同源父窗口并接收一次性 MessagePort，
 // 以 request/notify/on 三个接口与宿主进行 RPC 请求、通知和事件订阅。
 const APP_ID = 'preset-compare-migrator';
+import {stitchTimeoutMs} from '../../features/preset/ai-stitch/timeout.js';
 const CONNECT_MESSAGE = `${APP_ID}:connect`;
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -58,7 +59,7 @@ async function request(method, payload) {
   const id = ++requestId;
   // 多本世界书需要逐本保存与读回核验，不能沿用单次编辑操作的短超时。
   // Workbench import has two sequential disk reads (up to 45s each), plus the shared queue.
-  const timeoutMs = method.startsWith('snapshot-') || method.startsWith('api-manager-') || method === 'workbench-read-worldbook' ? 180_000 : REQUEST_TIMEOUT_MS;
+  const timeoutMs = method === 'ai-stitch-generate' ? stitchTimeoutMs(payload?.timeoutMinutes)+30000 : method === 'ai-stitch-create' || method === 'ai-stitch-verify' || method.startsWith('snapshot-') || method.startsWith('api-manager-') || method === 'workbench-read-worldbook' ? 180_000 : REQUEST_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);

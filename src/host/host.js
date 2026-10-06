@@ -1,5 +1,6 @@
 // 预设更新编辑器 · 酒馆宿主桥：与 host/ 下原生列表适配共同封装主 document/API。
 import { installNativeGroups } from './native-groups.js';
+import { handleAiStitch } from './ai-stitch.js';
 import { clone } from '../shared/clone.js';
 import { API_BINDINGS_KEY, bindApiSnapshot, isApiProfileActive } from '../features/api/api-bindings.js';
 // 扩展菜单入口、外层 dialog/iframe 外壳、preset-manager/openai 动态读取与保存、
@@ -126,6 +127,7 @@ async function listTavernPresets() {
 }
 
 async function handleRequest(method, payload) {
+  if (method.startsWith('ai-stitch-')) return method === 'ai-stitch-create' || method === 'ai-stitch-verify' ? snapshotSerial(() => handleAiStitch(method,payload)) : handleAiStitch(method,payload);
   if (method === 'api-manager-apply' && payload?.mode === 'both') return snapshotSerial(async () => {
     const {extension_settings} = await import('/scripts/extensions.js');
     const link = (extension_settings[API_BINDINGS_KEY] || []).find(item => item.apiId === payload.id);

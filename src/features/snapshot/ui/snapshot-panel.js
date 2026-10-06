@@ -3,6 +3,8 @@ import { chooseApiSnapshotBinding } from '../../api/ui/api-snapshot-bind.js';
 import { createSnapshotEditor } from './snapshot-editor.js';
 import { snapshotScope } from '../snapshot.js';
 import { createSnapshotScopePicker, snapshotScopeLabels } from './snapshot-scope.js';
+// 搜索仅筛选展示，不修改快照或绑定。
+export function searchSnapshotNames(snapshots,text){const query=String(text||'').trim().toLocaleLowerCase();return snapshots.filter(s=>String(s.name||'').toLocaleLowerCase().includes(query));}
 export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeIcon, prompt, confirm, toast, quick=false, onApi}) {
   const node = (tag, cls, text) => {const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n;};
   const element = node('main', 'pcm-snapshots pcm-api-manager pcm-snapshot-manager');
@@ -30,10 +32,11 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
   const saveScope={preset:true,worlds:true,regex:true};
   const scopePicker=createSnapshotScopePicker(saveScope);
   const create=button('＋ 创建快照',()=>openEditor());create.classList.add('pcm-snapshot-create');toolbar.append(create);
+  const filters=node('div','pcm-snapshot-filters'),search=node('input','pcm-snapshot-search');search.type='search';search.placeholder='搜索快照名称';search.setAttribute('aria-label','搜索快照名称');search.addEventListener('input',()=>render());const clearSearch=button('清空搜索',()=>{search.value='';render();search.focus();});filters.append(search,clearSearch);
   const notice = node('p', 'pcm-snapshot-notice', '快照可分别保存预设、全局世界书和正则设置。聊天绑定优先于角色绑定。');
   const status = node('p', 'pcm-snapshot-status'); status.setAttribute('role', 'status');
   const list = node('section', 'pcm-snapshot-list'); list.setAttribute('aria-label', '已保存快照');
-  element.append(header, context, toolbar, notice, status, list);
+  element.append(header, context, toolbar, filters, notice, status, list);
   let data = null, busy = false, disposed = false, revision = 0, refreshPending = false, editor = null;
   const unsubscribe = host.on('snapshots-changed', () => {if (busy || editor) refreshPending = true; else void refresh();});
 
@@ -91,7 +94,9 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
       empty.append(node('strong', '', '把常用设置存成一份快照'), node('p', '', '保存当前设置，或点击「创建快照」自由搭配。'));
       list.append(empty);
     }
-    for (const snapshot of data.snapshots) {
+    const visibleSnapshots=searchSnapshotNames(data.snapshots,search.value);
+    if(data.snapshots.length&&!visibleSnapshots.length)list.append(node('p','pcm-snapshot-empty','没有匹配的快照，请修改名称关键词或清空搜索。'));
+    for (const snapshot of visibleSnapshots) {
       const card = node('article', 'pcm-snapshot-card'); card.dataset.snapshotId = snapshot.id;
       const overwrite=button('覆',()=>execute('update',snapshot));overwrite.title='用当前设置覆盖快照';overwrite.setAttribute('aria-label',overwrite.title);
       const top = node('div', 'pcm-snapshot-card-title'); top.append(node('h3', '', snapshot.name),overwrite,iconButton('编辑快照详情','rename',()=>openEditor(snapshot.id)),iconButton('删除','delete',()=>execute('delete',snapshot)));top.lastElementChild.classList.add('pcm-snapshot-delete');
@@ -135,7 +140,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
 
   function closeEditor(result) {
     editor?.destroy();editor=null;
-    for(const part of [context,toolbar,notice,status,list])part.hidden=false;
+    for(const part of [context,toolbar,filters,notice,status,list])part.hidden=false;
     title.textContent='设置快照';back.innerHTML=iconButton('首页','home',()=>{}).innerHTML;
     reload.hidden=false;
     if(result?.snapshots){data=result;refreshPending=false;render();showStatus('快照已保存');}
@@ -149,7 +154,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
       const model=await host.request('snapshot-editor',{id,contextKey:data.context.key});
       if(disposed)return;
       editor=createSnapshotEditor({host,model,existingId:id,onCancel:()=>closeEditor(),onSaved:closeEditor,toast});
-      for(const part of [context,toolbar,notice,status,list])part.hidden=true;
+      for(const part of [context,toolbar,filters,notice,status,list])part.hidden=true;
       title.textContent=id?'快照详情':'创建快照';reload.hidden=true;back.innerHTML='←';element.append(editor.element);element.closest('dialog')?.scrollTo(0,0);
     }catch(error){if(!disposed){showStatus(error.message,true);toast.error(error.message);}}
     finally{if(!disposed)setBusy(false);}

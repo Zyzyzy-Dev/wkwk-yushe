@@ -95,3 +95,12 @@
 .pcm-snapshot-card .pcm-snapshot-manage{grid-template-columns:minmax(0,1fr);margin-top:6px}
 .pcm-snapshot-manage button{color:var(--snap-muted);background:transparent}
 @media(max-width:650px){.pcm-snapshot-header{gap:6px}.pcm-snapshot-heading{gap:5px}.pcm-snapshot-header h2{font-size:17px}.pcm-snapshot-context,.pcm-snapshot-card{padding:11px}.pcm-snapshot-setting{grid-template-columns:108px minmax(0,1fr);font-size:11px}.pcm-snapshot-setting>span{padding:5px 7px}.pcm-snapshot-list{gap:10px;margin-top:12px}.pcm-snapshot-card-title h3{font-size:15px}.pcm-snapshot-card .pcm-snapshot-actions button{font-size:11px}.pcm-snapshot-current-regex{padding:9px}.pcm-snapshot-context-body{gap:9px}.pcm-snapshot-toolbar .pcm-snapshot-create{width:100%}.pcm-snapshot-heading h2{white-space:nowrap}.pcm-snapshots .pcm-snapshot-refresh{width:24px;height:24px;min-height:24px;padding:4px}}
+
+/* 名称搜索仅筛选显示，沿用快照主题。 */
+.pcm-snapshot-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.pcm-snapshot-search{flex:1;min-width:100px;max-width:100%;box-sizing:border-box;border:1px solid var(--snap-border);border-radius:8px;padding:8px;color:var(--snap-fg);background:var(--snap-card);font:inherit}
+
+/* 搜索与快照卡片同一内容列，桌面限制输入宽度。 */
+.pcm-snapshot-filters{max-width:1000px;margin:12px auto;width:100%;box-sizing:border-box}
+.pcm-snapshot-search{flex:0 1 360px;width:360px}
+@media(max-width:650px){.pcm-snapshot-search{flex:1;width:0}}

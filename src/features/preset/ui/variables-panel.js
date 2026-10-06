@@ -235,5 +235,5 @@ export function openVariablesPanel({dialog, title, getPrompts, getPresentation, 
     body.append(button('预览重命名',()=>attempt(()=>preview(planVariableRename(candidates(),group.scope,group.name,name.value),'预览批量重命名'))));
   }
   render();
-  return {element:root,hide:close,show(){root.style.display='';attempt(()=>{const current=JSON.stringify(getPrompts());if(current!==renderedPrompts){resume();renderedPrompts=current;}});},destroy:()=>root.remove(),refresh(){dirty=false;render();}};
+  return {element:root,hasDraft:()=>dirty,hide:close,show(){root.style.display='';attempt(()=>{const current=JSON.stringify(getPrompts());if(current!==renderedPrompts){resume();renderedPrompts=current;}});},destroy:()=>root.remove(),refresh(){dirty=false;render();}};
 }
