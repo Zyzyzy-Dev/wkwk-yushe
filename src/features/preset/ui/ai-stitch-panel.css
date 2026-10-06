@@ -99,3 +99,27 @@
 /* 双保存入口同排；名称仅在点击相应操作时询问。 */
 .pcm-ai-save-actions{display:flex;gap:8px;flex-wrap:wrap}.pcm-ai-save-actions>button{flex:1;min-width:120px}
 .pcm-ai-stitch .pcm-ai-rename{padding:3px 7px;min-width:26px;flex-shrink:0}
+
+/* 手机正文输入沿用操作栏字号；等待时间保留紧凑数值和可见单位。 */
+.pcm-ai-plan summary>.pcm-ai-approve{flex:0 0 auto;margin-left:auto}
+@media(min-width:601px) and (max-width:900px){
+ .pcm-ai-stitch input:not([type=checkbox]),.pcm-ai-stitch textarea,.pcm-ai-stitch select,.pcm-ai-tabs button{font-size:12px!important}
+}
+@media(max-width:600px){
+ .pcm-ai-stitch input:not([type=checkbox]),.pcm-ai-stitch textarea,.pcm-ai-stitch select{font-size:10px!important;line-height:1.45}
+ .pcm-ai-api-row{grid-template-columns:24px repeat(3,minmax(0,1fr)) 64px 42px}
+ .pcm-ai-api-row>label:last-child{flex-wrap:nowrap}
+ .pcm-ai-api-row>label:last-child input{width:36px;min-width:0;flex:0 1 36px}
+ .pcm-ai-api-row>label:last-child span{display:inline;font-size:10px;white-space:nowrap}
+}
+
+/* 核对状态与操作留在标题栏，不随方案正文折叠。 */
+.pcm-ai-stitch article summary .pcm-ai-review-badge{flex:0 0 auto;font-size:11px;padding:2px 5px;border:1px solid var(--pcm-border,#8886);border-radius:5px;white-space:nowrap}
+.pcm-ai-stitch .pcm-ai-confirm{flex:0 0 auto;padding:4px 7px;font-size:12px;white-space:nowrap}
+.pcm-ai-stitch .pcm-ai-confirm[aria-pressed=true]{background:var(--pcm-accent,#727b48);color:var(--pcm-accent-text,#fff)}
+@media(max-width:600px){.pcm-ai-stitch article summary .pcm-ai-review-badge{font-size:9px;padding:2px 3px}.pcm-ai-stitch .pcm-ai-confirm{font-size:10px;padding:4px}.pcm-ai-stitch article summary>span{flex:1 1 0}}
+/* 折叠标题不显示浏览器触摸色块或文本选中，保留键盘焦点可见性。 */
+.pcm-ai-stitch article summary{-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.pcm-ai-stitch article summary:focus:not(:focus-visible){outline:none}
+.pcm-ai-stitch article summary:focus-visible{outline:2px solid var(--pcm-accent,var(--SmartThemeBodyColor));outline-offset:2px}
+.pcm-ai-stitch .pcm-ai-confirm{-webkit-tap-highlight-color:transparent}

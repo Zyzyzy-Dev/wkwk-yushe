@@ -23,9 +23,9 @@ test('不信任AI声称仅格式，删改重排及空白变化均需确认',()=>
   const {input,item}=fixture();item.adaptedContent=text;item.adaptation='保证只改格式';assert.equal(reviewStitchItem(input,item).needsApproval,true);
  }
 });
-test('完全一致和仅加可证明的Markdown标记无需正文确认',()=>{
- const {input,item,plan}=fixture();item.adaptedContent=input.sources[0].content;assert.equal(reviewStitchItem(input,item).kind,'unchanged');assembleStitch(input,plan);
- item.adaptedContent='## 动机\r\n- 保留{{user}}的目标😀';assert.equal(reviewStitchItem(input,item).kind,'structure');assembleStitch(input,plan);
+test('完全一致和Markdown结构仍分类保留，但方案均需人工确认',()=>{
+ const {input,item,plan}=fixture();item.adaptedContent=input.sources[0].content;assert.equal(reviewStitchItem(input,item).kind,'unchanged');assert.throws(()=>assembleStitch(input,plan),/确认/);assembleStitch(input,plan,new Set(),{approvals:new Map([['s',reviewStitchItem(input,item).token]])});
+ item.adaptedContent='## 动机\r\n- 保留{{user}}的目标😀';assert.equal(reviewStitchItem(input,item).kind,'structure');assert.throws(()=>assembleStitch(input,plan),/确认/);assembleStitch(input,plan,new Set(),{approvals:new Map([['s',reviewStitchItem(input,item).token]])});
 });
 test('确认绑定原文/整个方案/会话修订，任一变更后不能沿用',()=>{
  for(const change of [x=>x.item.adaptedContent+='改',x=>x.item.anchorId='b',x=>x.item.placement='before',x=>x.input.sources[0].content+='改',x=>{x.input.revision++;x.plan.revision++;},x=>{x.input.sessionId='new';x.plan.sessionId='new';}]){

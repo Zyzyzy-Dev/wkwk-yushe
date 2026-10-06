@@ -39,7 +39,7 @@ async function openAiStitch(){
     if(JSON.stringify(state[side])!==baseline||state.tavernSource[side]!==s.source)throw Error('主预设已改变，未加入草稿，请重新生成');
     for(const {panel} of variablePanels.values())if(panel.hasDraft?.())throw Error('变量面板有未提交草稿，请先处理');
     const before=state[side],next=result.preset,byOld=new Map(before.prompts.map(p=>[p.identifier,p]));
-    for(const change of result.changes)if(inlineDrafts.has(byOld.get(change.id)))throw Error('读取宏目标条目有未提交表单，请先保存该表单再缝合');
+    for(const change of result.changes)if(inlineDrafts.has(byOld.get(change.id)))throw Error('变量初始化／读取目标条目有未提交表单，请先保存该表单再缝合');
     // 不变的条目保留对象身份，避免WeakMap中的正文表单草稿脱落。
     next.prompts=next.prompts.map(p=>equalValues(p,byOld.get(p.identifier))?byOld.get(p.identifier):p);
     const oldRegex=getRegexScripts(before),newRegex=getRegexScripts(next);oldRegex.forEach((p,i)=>{if(regexDrafts.has(p)&&newRegex[i])regexDrafts.set(newRegex[i],clone(regexDrafts.get(p)));});

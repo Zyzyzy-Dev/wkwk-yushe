@@ -34,5 +34,5 @@ export function reviewStitchItem(input,item){
   const a=original.split('\n'),b=adapted.split('\n');
   if(a.length===b.length&&a.every((line,i)=>line===b[i]||(line.trim()&&/^(?:#{1,6} |[-*+] |> )/.test(b[i])&&b[i].replace(/^(?:#{1,6} |[-*+] |> )/,'')===line)))kind='structure';
  }
- return {sourceId:source.id,kind,needsApproval:kind==='changed',token:JSON.stringify([input.sessionId,input.revision,source,item]),label:kind==='unchanged'?'材料正文逐字一致':kind==='structure'?'仅添加 Markdown 标记，正文未改动':'存在正文变化或无法确认为纯格式，需要核对'};
+ return {sourceId:source.id,kind,needsApproval:true,token:JSON.stringify([input.sessionId,input.revision,source,item]),label:item.mode==='assign'?'将重新赋值已有变量，请核对最终内容和读取位置':kind==='unchanged'?'材料正文逐字一致':kind==='structure'?'仅添加 Markdown 标记，正文未改动':'存在正文变化或无法确认为纯格式，需要核对'};
 }

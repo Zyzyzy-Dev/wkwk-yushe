@@ -45,8 +45,8 @@ test('禁用定义或读取不能充当有效依赖，备用名字仍参与新�
  for(const id of ['a','b']){const i=input();i.baseline.prompt_order[0].order.find(p=>p.identifier===id).enabled=false;assert.throws(()=>assembleStitch(i,plan(i,{anchorId:id==='a'?'b':'a',mode:'append',scope:'local',variable:'tone'})));}
  const i=input();i.baseline.prompts.push({identifier:'unused',name:'备用',content:'{{setvar::new_tone::}}'});assert.throws(()=>assembleStitch(i,plan(i,{mode:'define',scope:'local',variable:'new_tone',readId:'b'})),/变量名冲突/);
 });
-test('实际执行的条件和聊天位置依赖仍阻止保存，并指明变量和条目',()=>{
- for(const [settings,reason] of [[{injection_trigger:['normal']},'触发条件'],[{injection_position:1,injection_depth:4,injection_order:100},'聊天中']]){
+test('实际执行的条件和未知注入位置依赖仍阻止保存，并指明变量和条目',()=>{
+ for(const [settings,reason] of [[{injection_trigger:['normal']},'触发条件'],[{injection_position:7,injection_depth:4,injection_order:100},'聊天中']]){
   const i=input();Object.assign(i.baseline.prompts[1],settings);
   assert.throws(()=>assembleStitch(i,plan(i,{mode:'append',scope:'local',variable:'tone'})),e=>e.message.includes('local tone')&&e.message.includes('getvar')&&e.message.includes('读取')&&e.message.includes(reason));
  }
