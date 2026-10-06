@@ -31,7 +31,9 @@ async function openAiStitch(){
   const form=document.querySelector('.pcm-inline-form');
   if(form&&inlineDrafts.has(byId(side).get(form.dataset.id))){if(!(await pcmConfirm('当前条目表单尚未保存。先保存到编辑器草稿，再以该草稿开始缝合？取消可返回继续编辑。')))return;applyInlineForm(form);}
   const baseline=JSON.stringify(state[side]),key=side+':'+state[side+'Name']+':'+baseline;
-  let session=stitchSessions.get(key);if(!session){session=createStitchSession({side,name:state[side+'Name']||'预设',baseline:state[side],dirty:state.dirty[side],source:state.tavernSource[side]});stitchSessions.set(key,session);}
+  let session=stitchSessions.get(key);if(!session){session=createStitchSession({side,name:state[side+'Name']||'预设',baseline:state[side],dirty:state.dirty[side],source:state.tavernSource[side]});stitchSessions.set(key,session);
+   for(const [k,s] of [...stitchSessions])if(s!==session&&!s.sources.length&&!s.guidance&&!s.saveId&&s.status!=='generating')stitchSessions.delete(k);
+   for(const [k,s] of [...stitchSessions]){if(stitchSessions.size<=8)break;if(s!==session&&!s.saveId&&s.status!=='generating')stitchSessions.delete(k);}}
   stitchPanel?.dispose();state.activeId=null;state.activeSide=null;
   const detail=document.querySelector('[data-compare]');detail._pcmDisposeHighlight?.();detail.replaceChildren();detail.classList.remove('pcm-hidden');detail.closest('.pcm-app').classList.add('pcm-single-detail');
   stitchPanel=createAiStitchPanel({session,host,isCurrent:()=>JSON.stringify(state[side])===baseline&&state.tavernSource[side]===session.source,onBack:()=>hideCompare(),
@@ -52,7 +54,7 @@ async function openAiStitch(){
     pcmToastr.success('已按方案位置和分组加入主预设草稿，可一次撤回；点击保存后才会写回酒馆。');
    },onSave:async(result,s)=>{
     // Archive again after the HTTP await: the user may have edited either pane while it was in flight.
-    await archiveStitchDrafts();
+    try{await archiveStitchDrafts();}catch(error){const e=Error('新预设「'+result.name+'」已写入并核验通过，但切换双栏前备份当前草稿失败：'+(error.message||String(error))+'。处理后点击“只读复查保存状态”即可完成切换，不会重复写入。');e.name='StitchHandoffPending';throw e;}
     closeVariablesPanel();closeRegexPanel();
     if(singleSide)setSingleSide(singleSide);
     state.old=clone(s.baseline);state.new=clone(result.preset);state.oldName=s.originalName+'.json';state.newName=result.name+'.json';

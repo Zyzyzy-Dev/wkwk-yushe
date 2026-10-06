@@ -22,7 +22,7 @@ test('赋值不能在读取之后、后续重置之前、无已有变量时或�
 });
 test('聊天深度普通宏也允许追加；未知注入类型仍拒绝',()=>{
  const f=fixture();f.item.mode='append';assert.equal(assembleStitch(f.input,f.plan,new Set(),{preview:true}).added[0].content,'{{addvar::header::'+f.item.adaptedContent+'}}');
- f.input.baseline.prompts[1].injection_position=7;assert.throws(()=>assembleStitch(f.input,f.plan));
+ f.input.baseline.prompts[1].injection_position=7;assert.throws(()=>assembleStitch(f.input,f.plan,new Set(),{preview:true}),/聊天中/);
 });
 test('已有赋值不能被旧add改变，自身读取不能伪装完整替代',()=>{
  const f=fixture();f.input.baseline.prompts[2].content='{{addvar::header::old extra}}{{getvar::header}}';assert.throws(()=>assembleStitch(f.input,f.plan,new Set(),{preview:true}),/旧追加/);

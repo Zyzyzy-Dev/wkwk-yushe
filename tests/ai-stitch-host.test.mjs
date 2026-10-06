@@ -57,3 +57,14 @@ test('临时URL和密钥仅覆盖custom请求，原请求不变且输入需合�
  assert.throws(()=>applyStitchOverrides({chat_completion_source:'openai'},{key:'x'}),/仅支持custom/);
  assert.deepEqual(applyStitchOverrides(original),original);
 });
+test('附加参数非字符串报结构无效，空值与纯空白跳过',()=>{
+ const make=value=>buildIndependentRequest({source:'custom',model:'m',secretId:'a',connection:{custom_url:'https://e.test'},additional:{custom_include_body:value}},[]);
+ for(const v of [false,{},[],1])assert.throws(()=>make(v),/附加参数结构无效/);
+ for(const v of [null,undefined,'','  '])assert.equal('custom_include_body' in make(v),false);
+});
+test('新建成功后只保留一份预设副本，重复提交与核验返回值不变',async()=>{
+ const preset={prompts:[{content:'新'}]};let disk=[];const store=createOnlyStore({read:async()=>disk,write:async(n,p)=>{disk=[[n,p]];},sync:()=>{}});
+ const first=await store.create({id:'j',name:'n',originalName:'m',preset});assert.deepEqual(first,{name:'n',preset});
+ const again=await store.create({id:'j',name:'n',originalName:'m',preset});assert.deepEqual(again,first);assert.notEqual(again.preset,first.preset);
+ assert.deepEqual(await store.verify('j'),first);
+});

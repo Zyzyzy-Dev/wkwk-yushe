@@ -19,7 +19,9 @@ export function buildIndependentRequest(config, messages, parseYaml=JSON.parse) 
  const body={chat_completion_source:source,model,secret_id:secretId,messages:clone(messages),stream:false,max_tokens:6000,temperature:0.2};
  if(source==='custom')body.custom_url=config.connection.custom_url;
  for(const [key,value] of Object.entries(config.additional||{})) {
-  if(!value?.trim())continue;
+  if(value===null||value===undefined||value==='')continue;
+  if(typeof value!=='string')throw Error('附加参数结构无效');
+  if(!value.trim())continue;
   let parsed;try{parsed=parseYaml(value);}catch{throw Error('附加参数无法解析，请检查 YAML');}
   const forbidden=new Set(['messages','model','stream','max_tokens','max_completion_tokens','prompt','tools','tool_choice','functions','function_call','n','secret_id','chat_completion_source','custom_url','reverse_proxy','proxy_password','__proto__','constructor','prototype']);
   const fields=key==='custom_exclude_body'?parsed:Object.keys(parsed||{});
@@ -39,10 +41,10 @@ export function createOnlyStore({read,write,sync}) {
   if(!entry)throw Error('保存状态待核验：磁盘列表尚未找到新预设'+(job.writeError?'；写入请求报告：'+job.writeError:'')+'。请只读复查，勿换名称重复保存。');
   if(!equalValues(entry[1],job.preset))throw Error('保存状态待核验：已找到新预设，但读回内容与提交内容不一致；未覆盖文件。');
   try{await sync(job.name,clone(entry[1]));}catch(error){throw Error('新预设已写入且内容核验通过，但同步原生列表失败（'+(error.message||error.name||'未知同步错误')+'）；只读复查可重试同步，不会再次写入。');}
-  job.result={name:job.name,preset:clone(entry[1])};return clone(job.result);
+  job.result={name:job.name};return {name:job.name,preset:clone(job.preset)};
  }
  async function run(args) {
-  const existing=jobs.get(args.id);if(existing){if(existing.name!==args.name||!equalValues(existing.preset,args.preset))throw Error('保存事务已固定，必须先核验原事务');return existing.result?clone(existing.result):verify(args.id);}
+  const existing=jobs.get(args.id);if(existing){if(existing.name!==args.name||!equalValues(existing.preset,args.preset))throw Error('保存事务已固定，必须先核验原事务');return existing.result?{name:existing.name,preset:clone(existing.preset)}:verify(args.id);}
   try{const disk=await read();validateNewName(args.name,args.originalName,disk.map(([n])=>n));}catch(error){error.name='StitchNotWritten';throw error;}
   jobs.set(args.id,{name:args.name,preset:clone(args.preset)});
   try{await write(args.name,clone(args.preset));}catch(error){jobs.get(args.id).writeError=error.message||error.name||'未知写入错误';/* May have committed. Never blindly retry a write. */}

@@ -7,24 +7,24 @@ const plan=(i,extra={})=>({schemaVersion:1,sessionId:i.sessionId,revision:i.revi
 test('锚点阻止原因区分禁用、分组、聊天位置和触发器，发送同一诊断',()=>{
  for(const [edit,pattern] of [[i=>i.baseline.prompts[0].enabled=false,/条目已禁用/],[i=>i.baseline.extensions.baibaiToolkit.presetPromptGroups.groups[0].enabled=false,/分组已禁用/],[i=>i.baseline.prompts[0].injection_position=1,/聊天中/],[i=>i.baseline.prompts[0].injection_trigger=['normal'],/触发条件.*normal/]]){const i=input();edit(i);assert.match(stitchAnchorIssue(i.baseline,'a'),pattern);assert.match(stitchContext(i).baseline.prompts[0].anchorIssue,pattern);assert.throws(()=>assembleStitch(i,plan(i)),pattern);}
 });
-test('单项包裹可展示但不绕过整套方案顺序校验',()=>{const i=input(),p=plan(i,{mode:'append',scope:'local',variable:'tone',anchorId:'b'});assert.equal(previewStitchSource(i.sources[0],p.items[0]),'{{addvar::tone::'+i.sources[0].content+'}}');assert.throws(()=>assembleStitch(i,p));});
+test('单项包裹可展示但不绕过整套方案顺序校验',()=>{const i=input(),p=plan(i,{mode:'append',scope:'local',variable:'tone',anchorId:'b'});assert.equal(previewStitchSource(i.sources[0],p.items[0]),'{{addvar::tone::'+i.sources[0].content+'}}');assert.throws(()=>assembleStitch(i,p),/变量追加必须在定义后/);});
 test('超过20万字符仍完整保留，不静默截断',()=>{const content='中文😀\r\n '.repeat(40000);const i=input(content);assert.equal(i.sources[0].content,content);const r=assembleStitch(i,plan(i));assert.equal(r.added[0].content,content);});
 test('多种 Unicode/CRLF/嵌套宏原文与非目标字段逐字保留',()=>{const i=input(),before=structuredClone(i);const r=assembleStitch(i,plan(i));assert.equal(r.preset.prompts.find(p=>!['a','b'].includes(p.identifier)).content,i.sources[0].content);assert.deepEqual(r.preset.prompts.filter(p=>['a','b'].includes(p.identifier)),i.baseline.prompts);assert.deepEqual(r.preset.unknown,{keep:1});assert.deepEqual(r.preset.extensions.regex_scripts,[{x:1}]);assert.deepEqual(i,before);});
-test('模型不能提供正文、未知ID、重复或遗漏材料、任意补丁',()=>{const i=input();for(const mutate of [p=>p.items[0].content='改写',p=>p.items[0].anchorId='fake',p=>p.items.push({...p.items[0]}),p=>p.items=[],p=>p.patch={}]){const p=plan(i);mutate(p);assert.throws(()=>assembleStitch(i,p));}});
+test('模型不能提供正文、未知ID、重复或遗漏材料、任意补丁',()=>{const i=input();for(const mutate of [p=>p.items[0].content='改写',p=>p.items[0].anchorId='fake',p=>p.items.push({...p.items[0]}),p=>p.items=[],p=>p.patch={}]){const p=plan(i);mutate(p);assert.throws(()=>assembleStitch(i,p),/越权或未知字段|目标条目已不存在|遗漏、重复或包含未知材料/);}});
 test('addvar使用本地原文包裹且已有正文不变',()=>{const i=input();const r=assembleStitch(i,plan(i,{mode:'append',variable:'tone',scope:'local'}));assert.equal(r.preset.prompts[1].content,'{{addvar::tone::'+i.sources[0].content+'}}');assert.deepEqual(r.preset.prompts[2],i.baseline.prompts[1]);});
-test('变量读前定义、禁用组、边界混淆、同名定义被拒绝',()=>{let i=input();assert.throws(()=>assembleStitch(i,plan(i,{mode:'append',variable:'tone',scope:'local',anchorId:'b'})));i=input('unbalanced }}');assert.throws(()=>assembleStitch(i,plan(i,{mode:'append',variable:'tone',scope:'local'})));i=input();i.baseline.extensions.baibaiToolkit.presetPromptGroups.groups[0].enabled=false;assert.throws(()=>assembleStitch(i,plan(i)));i=input();assert.throws(()=>assembleStitch(i,plan(i,{mode:'define',variable:'tone',scope:'local',readId:'b'})));});
+test('变量读前定义、禁用组、边界混淆、同名定义被拒绝',()=>{let i=input();assert.throws(()=>assembleStitch(i,plan(i,{mode:'append',variable:'tone',scope:'local',anchorId:'b'})),/变量追加必须在定义后/);i=input('unbalanced }}');assert.throws(()=>assembleStitch(i,plan(i,{mode:'append',variable:'tone',scope:'local'})),/未配对的 \}\}/);i=input();i.baseline.extensions.baibaiToolkit.presetPromptGroups.groups[0].enabled=false;assert.throws(()=>assembleStitch(i,plan(i)),/分组已禁用/);i=input();assert.throws(()=>assembleStitch(i,plan(i,{mode:'define',variable:'tone',scope:'local',readId:'b'})),/变量名冲突/);});
 test('定义新变量仅追加白名单读取宏，已有字串保持前缀完全一致',()=>{const i=input();const r=assembleStitch(i,plan(i,{mode:'define',variable:'new_tone',scope:'local',readId:'b'}));assert.equal(r.preset.prompts[2].content,i.baseline.prompts[1].content+'\r\n{{getvar::new_tone}}');assert.equal(r.changes.length,1);});
-test('来源变量缺依赖不可默默修复，来源 set 不覆盖现有变量',()=>{for(const content of ['{{getvar::missing}}','{{setvar::tone::overwrite}}']){const i=input(content);assert.throws(()=>assembleStitch(i,plan(i)));}});
+test('来源变量缺依赖不可默默修复，来源 set 不覆盖现有变量',()=>{for(const content of ['{{getvar::missing}}','{{setvar::tone::overwrite}}']){const i=input(content);assert.throws(()=>assembleStitch(i,plan(i)),/变量在定义前读取|来源变量定义与主预设或其他材料冲突/);}});
 test('多个同锚点材料保持输入顺序且ID唯一，取消材料不保存',()=>{const i=input();i.sources.push({id:'s2',name:'重名',content:'第二'});const p=plan(i);p.items.push({...p.items[0],sourceId:'s2'});let r=assembleStitch(i,p);assert.deepEqual(r.preset.prompts.slice(1,3).map(x=>x.content),[i.sources[0].content,'第二']);assert.equal(new Set(r.preset.prompts.map(x=>x.identifier)).size,4);r=assembleStitch(i,p,new Set(['s2']));assert.equal(r.preset.prompts.length,3);});
-test('会话修订不匹配和待处理项阻止保存',()=>{const i=input();assert.throws(()=>assembleStitch(i,{...plan(i),revision:2}));assert.throws(()=>assembleStitch(i,plan(i,{mode:'pending',reason:'无合适位置'})));});
+test('会话修订不匹配和待处理项阻止保存',()=>{const i=input();assert.throws(()=>assembleStitch(i,{...plan(i),revision:2}),/已过期/);assert.throws(()=>assembleStitch(i,plan(i,{mode:'pending',reason:'无合适位置'})),/待处理/);});
 test('追加后被重新定义覆盖、条件依赖、嵌套变量定义均拒绝',()=>{
- let i=input();i.baseline.prompts[1].content='{{setvar::tone::reset}}{{getvar::tone}}';assert.throws(()=>assembleStitch(i,plan(i,{mode:'append',scope:'local',variable:'tone'})));
- i=input('{{getvar::tone}}');i.baseline.prompts[0].injection_trigger=['normal'];assert.throws(()=>assembleStitch(i,plan(i,{anchorId:'b',placement:'before'})));
- i=input('{{getvar::tone}}');i.baseline.prompts[0].content='{{if::x::{{setvar::tone::x}}}}';assert.throws(()=>assembleStitch(i,plan(i)));
+ let i=input();i.baseline.prompts[1].content='{{setvar::tone::reset}}{{getvar::tone}}';assert.throws(()=>assembleStitch(i,plan(i,{mode:'append',scope:'local',variable:'tone'})),/被后续定义覆盖/);
+ i=input('{{getvar::tone}}');i.baseline.prompts[0].injection_trigger=['normal'];assert.throws(()=>assembleStitch(i,plan(i,{anchorId:'b',placement:'before'})),/依赖不可验证.*触发条件/);
+ i=input('{{getvar::tone}}');i.baseline.prompts[0].content='{{if::x::{{setvar::tone::x}}}}';assert.throws(()=>assembleStitch(i,plan(i)),/包含嵌套宏/);
 });
 test('来源条件写入和定义自身读取不被当作无条件初始化',()=>{
- for(const content of ['{{if::false::{{setvar::fresh::x}}}}{{getvar::fresh}}','<% if(false){ %>{{setvar::fresh::x}}<% } %>{{getvar::fresh}}']){const i=input(content);assert.throws(()=>assembleStitch(i,plan(i)));}
- const i=input('{{getvar::fresh}}');assert.throws(()=>assembleStitch(i,plan(i,{mode:'define',variable:'fresh',scope:'local',readId:'b'})));
+ for(const content of ['{{if::false::{{setvar::fresh::x}}}}{{getvar::fresh}}','<% if(false){ %>{{setvar::fresh::x}}<% } %>{{getvar::fresh}}']){const i=input(content);assert.throws(()=>assembleStitch(i,plan(i)),/嵌套或脚本条件/);}
+ const i=input('{{getvar::fresh}}');assert.throws(()=>assembleStitch(i,plan(i,{mode:'define',variable:'fresh',scope:'local',readId:'b'})),/不能读取自身/);
 });
 
 test('未执行的备用变量条目不阻断追加，原对象和开关全部保留',()=>{
@@ -42,7 +42,7 @@ test('未执行的备用变量条目不阻断追加，原对象和开关全部�
  }
 });
 test('禁用定义或读取不能充当有效依赖，备用名字仍参与新变量冲突检查',()=>{
- for(const id of ['a','b']){const i=input();i.baseline.prompt_order[0].order.find(p=>p.identifier===id).enabled=false;assert.throws(()=>assembleStitch(i,plan(i,{anchorId:id==='a'?'b':'a',mode:'append',scope:'local',variable:'tone'})));}
+ for(const id of ['a','b']){const i=input();i.baseline.prompt_order[0].order.find(p=>p.identifier===id).enabled=false;assert.throws(()=>assembleStitch(i,plan(i,{anchorId:id==='a'?'b':'a',mode:'append',scope:'local',variable:'tone'})),/没有可验证的对应变量体系|缺少已启用的定义或读取位置/);}
  const i=input();i.baseline.prompts.push({identifier:'unused',name:'备用',content:'{{setvar::new_tone::}}'});assert.throws(()=>assembleStitch(i,plan(i,{mode:'define',scope:'local',variable:'new_tone',readId:'b'})),/变量名冲突/);
 });
 test('实际执行的条件和未知注入位置依赖仍阻止保存，并指明变量和条目',()=>{
@@ -69,9 +69,9 @@ test('Phase/Step格式与变量可组合，材料字符和CRLF不改写，预览
 });
 test('格式方案不能改写、越界、重复包装或臆造目标模板',()=>{
  for(const format of [{content:'篡改'},{lines:[{line:0,style:'heading2'}]},{lines:[{line:1,style:'phase'}]},{lines:[{line:1,style:'heading2'},{line:1,style:'heading3'}]},{lines:[{line:1,style:'rewrite'}]},{tag:'script'},{lines:[{line:1,style:'heading2',text:'改写'}]}]){
-  const i=input('标题');assert.throws(()=>assembleStitch(i,plan(i,{format})));
+  const i=input('标题');assert.throws(()=>assembleStitch(i,plan(i,{format})),/越权或未知字段|格式行号无效或重复|没有可验证的格式模板|格式行方案无效|目标标签不存在/);
  }
- for(const content of ['## 已有标题','{{user}}','<tag>','```js','  ']){const i=input(content);assert.throws(()=>assembleStitch(i,plan(i,{format:{lines:[{line:1,style:'heading2'}]}})));}
+ for(const content of ['## 已有标题','{{user}}','<tag>','```js','  ']){const i=input(content);assert.throws(()=>assembleStitch(i,plan(i,{format:{lines:[{line:1,style:'heading2'}]}})),/不能重复包装/);}
 });
 test('标签只复制目标中已有配对结构，不执行模板，改锚点后重新校验',()=>{
  const i=input('正文\r\n{{user}}');i.baseline.prompts[0].content+='\n<思考>示例</思考>';
