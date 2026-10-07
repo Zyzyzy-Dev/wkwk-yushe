@@ -31,9 +31,8 @@ async function openAiStitch(){
   const form=document.querySelector('.pcm-inline-form');
   if(form&&inlineDrafts.has(byId(side).get(form.dataset.id))){if(!(await pcmConfirm('当前条目表单尚未保存。先保存到编辑器草稿，再以该草稿开始缝合？取消可返回继续编辑。')))return;applyInlineForm(form);}
   const baseline=JSON.stringify(state[side]),key=side+':'+state[side+'Name']+':'+baseline;
-  let session=stitchSessions.get(key);if(!session){session=createStitchSession({side,name:state[side+'Name']||'预设',baseline:state[side],dirty:state.dirty[side],source:state.tavernSource[side]});stitchSessions.set(key,session);
-   for(const [k,s] of [...stitchSessions])if(s!==session&&!s.sources.length&&!s.guidance&&!s.saveId&&s.status!=='generating')stitchSessions.delete(k);
-   for(const [k,s] of [...stitchSessions]){if(stitchSessions.size<=8)break;if(s!==session&&!s.saveId&&s.status!=='generating')stitchSessions.delete(k);}}
+  // 会话包含未添加的输入、已选材料和确认状态；切换基线不能静默淘汰用户草稿。
+  let session=stitchSessions.get(key);if(!session){session=createStitchSession({side,name:state[side+'Name']||'预设',baseline:state[side],dirty:state.dirty[side],source:state.tavernSource[side]});stitchSessions.set(key,session);}
   stitchPanel?.dispose();state.activeId=null;state.activeSide=null;
   const detail=document.querySelector('[data-compare]');detail._pcmDisposeHighlight?.();detail.replaceChildren();detail.classList.remove('pcm-hidden');detail.closest('.pcm-app').classList.add('pcm-single-detail');
   stitchPanel=createAiStitchPanel({session,host,isCurrent:()=>JSON.stringify(state[side])===baseline&&state.tavernSource[side]===session.source,onBack:()=>hideCompare(),
