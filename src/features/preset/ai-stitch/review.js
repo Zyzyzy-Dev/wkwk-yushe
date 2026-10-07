@@ -8,18 +8,26 @@ export function validateAdaptedContent(source,item,baseline){
  if(!Array.isArray(item.referenceIds)||!item.referenceIds.length||new Set(item.referenceIds).size!==item.referenceIds.length||item.referenceIds.some(id=>!baseline.prompts.some(p=>p.identifier===id&&!p.marker)))throw Error('格式参考条目缺失或已失效');
  const text=item.adaptedContent;
  if(/<%|<script\b/i.test(text))throw Error('适配正文含脚本模板，无法静态验证；请重新生成非脚本方案');
- const spans=[],stack=[];
+ const adapted=scanMacroSpans(text),original=scanMacroSpans(source.content);
+ if(adapted.stray>original.stray||adapted.unclosed>original.unclosed)throw Error('适配正文宏括号未配对');
+ const variables=scanVariables(text),allowed=new Map();
+ for(const raw of original.spans)allowed.set(raw,(allowed.get(raw)||0)+1);
+ for(const raw of adapted.spans){
+  if(variables.some(v=>v.raw===raw)||/^\{\{(?:user|char)\}\}$/i.test(raw))continue;
+  const left=allowed.get(raw)||0;
+  if(left>0){allowed.set(raw,left-1);continue;}
+  throw Error('适配正文新增了无法验证的宏，请使用正文格式及已支持的变量宏');
+ }
+}
+// 不抛错的括号扫描：源材料自带的JSON "}}" 等孤立括号只计数，由调用方与适配正文比较。
+function scanMacroSpans(text){
+ const spans=[],stack=[];let stray=0;
  for(let i=0;i<text.length-1;i++){
   const pair=text.slice(i,i+2);
   if(pair==='{{'){stack.push(i);i++;}
-  else if(pair==='}}'){if(!stack.length)throw Error('适配正文宏括号未配对');spans.push(text.slice(stack.pop(),i+2));i++;}
+  else if(pair==='}}'){if(!stack.length)stray++;else spans.push(text.slice(stack.pop(),i+2));i++;}
  }
- if(stack.length)throw Error('适配正文宏括号未配对');
- const variables=scanVariables(text);
- for(const raw of spans){
-  if(variables.some(v=>v.raw===raw)||/^\{\{(?:user|char)\}\}$/i.test(raw)||text===source.content)continue;
-  throw Error('适配正文新增了无法验证的宏，请使用正文格式及已支持的变量宏');
- }
+ return {spans,stray,unclosed:stack.length};
 }
 
 export function reviewStitchItem(input,item){

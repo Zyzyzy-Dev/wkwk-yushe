@@ -3,6 +3,7 @@ export function stitchTimeoutMs(minutes=15){
  if(typeof minutes!=='number'||!Number.isFinite(minutes)||minutes<1||minutes>60)throw Error('生成等待时间须为1–60分钟');
  return Math.round(minutes*60000);
 }
+export function stitchRpcTimeoutMs(minutes){return stitchTimeoutMs(minutes)+30000;}
 export function createStitchDeadline(minutes){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(new DOMException('生成等待超时','TimeoutError')),stitchTimeoutMs(minutes));

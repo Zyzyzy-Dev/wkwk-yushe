@@ -55,7 +55,7 @@ test('完整正文超过旧10万字符可解析；非法/旧协议回包仍拒�
 });
 test('取消或失败恢复上次方案及确认；成功新方案和输入修改清除旧确认',()=>{
  const s=createStitchSession({side:'old',name:'主',baseline:{}});s.plan={items:['旧']};s.approvals.set('s','old');s.excluded.add('x');s.begin();s.cancel();assert.deepEqual(s.plan,{items:['旧']});assert.equal(s.approvals.get('s'),'old');assert(s.excluded.has('x'));
- const token=s.begin();s.accept(token,{items:['新']});assert.equal(s.approvals.size,0);s.approvals.set('s','new');s.touch();assert.equal(s.approvals.size,0);assert.equal(s.plan,null);
+ const token=s.begin();s.approvals.set('s','stale');s.accept(token,{items:['新']});assert.equal(s.approvals.size,0);s.approvals.set('s','new');s.touch();assert.equal(s.approvals.size,0);assert.equal(s.plan,null);
 });
 test('新条目改名参与确认且不改来源名称、正文或已有条目',()=>{
  const x=fixture(),before=structuredClone(x.input),approval=reviewStitchItem(x.input,x.item).token;
@@ -63,4 +63,13 @@ test('新条目改名参与确认且不改来源名称、正文或已有条目',
  const r=assembleStitch(x.input,x.plan,new Set(),{approvals:new Map([['s',reviewStitchItem(x.input,x.item).token]])});
  assert.equal(r.preset.prompts[1].name,'自定义名称');assert.equal(r.preset.prompts[1].content,x.item.adaptedContent);assert.deepEqual(x.input,before);
  x.item.name=' ';assert.throws(()=>assembleStitch(x.input,x.plan,new Set(),{preview:true}),/名称不能为空/);
+});
+test('源材料自带的}}与源材料已有的宏不被误判，但不能增加或改动',()=>{
+ for(const content of ['例 {"a":{"b":1}}','抽 {{random::a::b}}']){
+  const x=fixture();x.input.sources[0].content=content;x.item.adaptedContent=content;assert.doesNotThrow(()=>reviewStitchItem(x.input,x.item));
+ }
+ const x=fixture();x.input.sources[0].content='抽 {{random::a::b}}';x.item.adaptedContent='# 抽 {{random::a::b}}';assert.doesNotThrow(()=>reviewStitchItem(x.input,x.item));
+ x.item.adaptedContent='# 抽 {{random::a::b}}{{random::a::b}}';assert.throws(()=>reviewStitchItem(x.input,x.item),/新增了无法验证的宏/);
+ x.item.adaptedContent='抽 {{random::a::c}}';assert.throws(()=>reviewStitchItem(x.input,x.item),/新增了无法验证的宏/);
+ x.input.sources[0].content='例 {"a":{"b":1}}';x.item.adaptedContent='例 {"a":{"b":1}}}}';assert.throws(()=>reviewStitchItem(x.input,x.item),/未配对/);
 });

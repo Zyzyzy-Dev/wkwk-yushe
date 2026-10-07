@@ -46,7 +46,7 @@ async function persistence(e){
 }
 export async function handleAiStitch(method,payload={}){
  if(method==='ai-stitch-cancel'){tasks.get(payload.id)?.abort();return true;}
- const e=await env();
+ const e=await env().catch(error=>{if(method==='ai-stitch-create')error.name='StitchNotWritten';throw error;});
  if(method==='ai-stitch-presets')return Array.isArray(e.openai.openai_setting_names)?[...e.openai.openai_setting_names]:Object.keys(e.openai.openai_setting_names||{});
  if(method==='ai-stitch-connections')return [{id:'',name:'酒馆当前连接'},...(e.extensions.extension_settings[API_STORE_KEY]?.profiles||[]).map(p=>{profileVersions.set(p.id,JSON.stringify(p));return {id:p.id,name:p.name};})];
  if(method==='ai-stitch-connection'||method==='ai-stitch-models'){
@@ -60,9 +60,14 @@ export async function handleAiStitch(method,payload={}){
  }
  if(method==='ai-stitch-verify')return (await persistence(e)).verify(payload.id);
  if(method==='ai-stitch-create'){
-  const input=makeStitchInput(payload.input.baseline,payload.input.sources,payload.input.guidance,payload.input.sessionId,payload.input.revision);
-  const result=assembleStitch(input,payload.plan,new Set(payload.excluded||[]),{approvals:new Map(payload.approvals||[])});
-  return (await persistence(e)).create({id:payload.id,name:payload.name,originalName:payload.originalName,preset:result.preset});
+  let s,result;
+  // 写入前的失败明确标记为未写入，面板据此清除保存事务ID。
+  try{
+   const input=makeStitchInput(payload.input.baseline,payload.input.sources,payload.input.guidance,payload.input.sessionId,payload.input.revision);
+   result=assembleStitch(input,payload.plan,new Set(payload.excluded||[]),{approvals:new Map(payload.approvals||[])});
+   s=await persistence(e);
+  }catch(error){error.name='StitchNotWritten';throw error;}
+  return s.create({id:payload.id,name:payload.name,originalName:payload.originalName,preset:result.preset});
  }
  if(method==='ai-stitch-generate'){
   if(tasks.has(payload.id))throw Error('生成任务已存在');

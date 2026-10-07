@@ -31,3 +31,19 @@ test('组装两材料到同一读取容器，排除材料不留宏，确认绑�
  const single=assembleStitch(input,plan,new Set(['二']),{approvals});assert.ok(!single.preset.prompts.find(p=>p.identifier==='b').content.includes('{{getvar::二}}'));assert.deepEqual(input.baseline,baseline);
  delete plan.items[0].readTag;assert.throws(()=>assembleStitch(input,plan,new Set(),{approvals}),/确认/);
 });
+test('readTag为null或空串视为未指定；纯空白仍拒绝',()=>{
+ for(const tag of [null,''])assert.equal(insertStitchRead('原文','{{getvar::x}}','local',tag).after,'原文\n{{getvar::x}}');
+ assert.throws(()=>insertStitchRead('<A>{{getvar::a}}</A>','{{getvar::x}}','local',' '),/容器名称无效/);
+});
+test('HTML空元素不参与标签配对',()=>{
+ const r=insertStitchRead('<a>{{getvar::x}}<br></a>','{{getvar::y}}','local');assert.equal(r.after,'<a>{{getvar::x}}\n{{getvar::y}}<br></a>');assert.equal(r.container,'a');
+ assert.throws(()=>insertStitchRead('<a>{{getvar::x}}<b></a>','{{getvar::y}}','local'),/标签不配对/);
+});
+test('读取全在容器外时追加到最后一个顶层读取后；混合读取仍要求readTag',()=>{
+ const r=insertStitchRead('<rules>规则</rules>\n{{getvar::x}}\n尾','{{getvar::y}}','local');
+ assert.equal(r.after,'<rules>规则</rules>\n{{getvar::x}}\n{{getvar::y}}\n尾');assert.equal(r.container,null);assert.equal(r.after.slice(0,r.offset)+r.after.slice(r.offset+r.inserted.length),'<rules>规则</rules>\n{{getvar::x}}\n尾');
+ assert.throws(()=>insertStitchRead('<A>{{getvar::a}}</A>{{getvar::b}}','{{getvar::y}}','local'),/readTag/);
+});
+test('指定容器必须含直属读取宏',()=>{
+ assert.throws(()=>insertStitchRead('<外><内>{{getvar::a}}</内></外>','{{getvar::x}}','local','外'),/直属|没有/);
+});
