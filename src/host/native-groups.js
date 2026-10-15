@@ -338,7 +338,7 @@ export function installNativeGroups(env) {
         try {
             const pm = openai.promptManager;
             const ready = owns('preset')
-                ? installGroupGate(pm, () => fast?.key === presetContext()?.key ? fast.value : openai.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups, () => owns('preset'))
+                ? installGroupGate(pm, () => fast && fast.key === presetContext()?.key ? fast.value : openai.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups, () => owns('preset'))
                 : typeof pm?.getPromptCollection === 'function';
             const preset = ready ? presetContext() : null; if (preset?.list?.isConnected) render(preset);
             for (const [scope, id] of [['GLOBAL', 'saved_regex_scripts'], ['PRESET', 'saved_preset_scripts'], ['SCOPED', 'saved_scoped_scripts']]) {
