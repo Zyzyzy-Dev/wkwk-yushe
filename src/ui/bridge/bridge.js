@@ -59,7 +59,8 @@ async function request(method, payload) {
   const id = ++requestId;
   // 多本世界书需要逐本保存与读回核验，不能沿用单次编辑操作的短超时。
   // Workbench import has two sequential disk reads (up to 45s each), plus the shared queue.
-  const timeoutMs = method === 'ai-stitch-generate' ? stitchRpcTimeoutMs(payload?.timeoutMinutes) : method === 'ai-stitch-create' || method === 'ai-stitch-verify' || method.startsWith('snapshot-') || method.startsWith('api-manager-') || method === 'workbench-read-worldbook' ? 180_000 : REQUEST_TIMEOUT_MS;
+  // 宿主导出可能等待系统保存/分享窗口；超时仅报告未知状态，不自动再次下载。
+  const timeoutMs = method === 'ai-stitch-generate' ? stitchRpcTimeoutMs(payload?.timeoutMinutes) : method === 'ai-stitch-create' || method === 'ai-stitch-verify' || method === 'export-preset' || method.startsWith('snapshot-') || method.startsWith('api-manager-') || method === 'workbench-read-worldbook' ? 180_000 : REQUEST_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);

@@ -1,6 +1,7 @@
 // 预设更新编辑器 · 酒馆宿主桥：与 host/ 下原生列表适配共同封装主 document/API。
 import { installNativeGroups } from './native-groups.js';
 import { handleAiStitch } from './ai-stitch.js';
+import { exportPresetFile } from './preset-export.js';
 import { clone } from '../shared/clone.js';
 import { API_BINDINGS_KEY, bindApiSnapshot, isApiProfileActive } from '../features/api/api-bindings.js';
 // 扩展菜单入口、外层 dialog/iframe 外壳、preset-manager/openai 动态读取与保存、
@@ -127,6 +128,11 @@ async function listTavernPresets() {
 }
 
 async function handleRequest(method, payload) {
+  if (method === 'export-preset') {
+    // 下载必须在主窗口调用酒馆接口，由 ST/TT 选择各自的下载实现。
+    const {download} = await import('/scripts/utils.js');
+    return exportPresetFile(payload, download);
+  }
   if (method.startsWith('ai-stitch-')) return method === 'ai-stitch-create' || method === 'ai-stitch-verify' ? snapshotSerial(() => handleAiStitch(method,payload)) : handleAiStitch(method,payload);
   if (method === 'api-manager-apply' && payload?.mode === 'both') return snapshotSerial(async () => {
     const {extension_settings} = await import('/scripts/extensions.js');
