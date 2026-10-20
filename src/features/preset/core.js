@@ -501,10 +501,33 @@ export function transferRegexScripts(sourcePreset, targetPreset, sourceSide, sou
   }
   const extension = regexGroupExtension(draft);
   if (extension) {
-    const ids = new Set(), counters = new Map(), metadata = { ...extension.scripts };
-    // 无 ID 条目按数组下标回退排序；同组有这类条目时其他成员必须使用相同坐标。
+    const groupsById = new Map(), sharedIds = new Set(), counters = new Map(), metadata = { ...extension.scripts };
+    const previousByGroup = new Map(), missingIdGroups = new Set();
+    // 分组以 scripts[id] 关联，同 ID 同组可共用组信息；跨组无法表达，仍须拒绝而不能覆盖。
+    // 不自动改 ID：否则下一次迁移可能把原先重复的 ID 当作唯一对应项，覆盖错误的正则。
+    for (const entry of result) {
+      const id = String(entry.script?.id || ''), groupId = entry.groupId || REGEX_UNGROUPED_ID;
+      const previous = previousByGroup.get(groupId);
+      previousByGroup.set(groupId, id);
+      if (!id) {missingIdGroups.add(groupId);continue;}
+      if (groupsById.has(id)) {
+        if (groupsById.get(id) !== groupId) {
+          throw new Error('同一 ID 的正则将进入不同分组，无法安全更新；请将这些正则放入同一分组，或先修正重复 ID。本次修改未保存。');
+        }
+        if (previous !== id) {
+          throw new Error('同一 ID 的正则被其他条目隔开，分组无法保留这个顺序；请将同 ID 条目一起移动，或先修正重复 ID。本次修改未保存。');
+        }
+        sharedIds.add(id);
+      } else groupsById.set(id, groupId);
+    }
+    // 柏宝箱归一化会跳过无 ID 条目，再把其余 order 压缩成组内序号；混合结构不能可靠保序。
+    if ([...sharedIds].some(id => missingIdGroups.has(groupsById.get(id)))) {
+      throw new Error('同组同时有重复 ID 和无 ID 的正则，无法可靠保留顺序；请先修正这些 ID。本次修改未保存。');
+    }
+    // 无 ID 或共享 ID 不能用一个 order 表达多个位置；统一按实际数组下标保存整组顺序。
     const indexOrderedGroups = new Set(result.filter(entry => !String(entry.script?.id || ''))
       .map(entry => entry.groupId || REGEX_UNGROUPED_ID));
+    for (const id of sharedIds) indexOrderedGroups.add(groupsById.get(id));
     if (indexOrderedGroups.size && metadata['']) {
       metadata[''] = { ...metadata[''] };
       delete metadata[''].order;
@@ -517,11 +540,11 @@ export function transferRegexScripts(sourcePreset, targetPreset, sourceSide, sou
     for (const [index, entry] of result.entries()) {
       const id = String(entry.script?.id || '');
       if (!id) continue;
-      if (ids.has(id)) throw new Error('分组正则包含重复 ID，无法安全更新分组，请先修正 ID。');
-      ids.add(id);
       const groupId = entry.groupId || REGEX_UNGROUPED_ID, order = counters.get(groupId) || 0;
       counters.set(groupId, order + 1);
-      metadata[id] = { ...entry.metadata, groupId, order: indexOrderedGroups.has(groupId) ? index : order };
+      metadata[id] = { ...(sharedIds.has(id) ? metadata[id] : {}), ...entry.metadata,
+        groupId, order: indexOrderedGroups.has(groupId) ? index : order };
+      if (sharedIds.has(id)) delete metadata[id].order;
     }
     extension.scripts = metadata;
   }

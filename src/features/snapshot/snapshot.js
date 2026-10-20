@@ -2,6 +2,11 @@
 import { createIdentifier, findPromptOrderEntry } from '../preset/core.js';
 import { validateSnapshotResources } from './snapshot-resources.js';
 
+// 收藏只改变列表展示顺序，不重排存储；取消收藏后沿用原来的快照顺序。
+export function sortSnapshotFavorites(snapshots) {
+  return [...snapshots.filter(snapshot=>snapshot.favorite===true),...snapshots.filter(snapshot=>snapshot.favorite!==true)];
+}
+
 export function snapshotScope(snapshot) {
   // 存储损坏时恢复流程的第一个入口就会走到这里，先给出可读提示。
   if (!snapshot || typeof snapshot !== 'object') throw new Error('快照数据无效，请重新保存');

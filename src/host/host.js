@@ -2,6 +2,7 @@
 import { installNativeGroups } from './native-groups.js';
 import { handleAiStitch } from './ai-stitch.js';
 import { exportPresetFile } from './preset-export.js';
+import { readHostDiagnostics } from '../shared/diagnostics.js';
 import { clone } from '../shared/clone.js';
 import { API_BINDINGS_KEY, bindApiSnapshot, isApiProfileActive } from '../features/api/api-bindings.js';
 // 扩展菜单入口、外层 dialog/iframe 外壳、preset-manager/openai 动态读取与保存、
@@ -128,6 +129,10 @@ async function listTavernPresets() {
 }
 
 async function handleRequest(method, payload) {
+  if (method === 'diagnostics-context') return readHostDiagnostics({
+    tauri: Boolean(globalThis.__TAURITAVERN__),
+    versionText: document.getElementById('version_display')?.textContent || document.getElementById('version_display_welcome')?.textContent || '',
+  });
   if (method === 'export-preset') {
     // 下载必须在主窗口调用酒馆接口，由 ST/TT 选择各自的下载实现。
     const {download} = await import('/scripts/utils.js');
@@ -1086,17 +1091,80 @@ async function selectSnapshotPreset(env, name, scope) {
   }
 }
 
-function setSnapshotWorlds(env, names) {
+function snapshotWorldSelection(env, names) {
+  const catalog = env.world.world_names;
+  if (!Array.isArray(catalog)) throw new Error('全局世界书列表尚未就绪');
+  if (!Array.isArray(names) || names.some(name => !catalog.includes(name))) throw new Error('要挂载的世界书已不存在，请刷新快照列表后重试');
+  selectedSnapshotWorlds(env);
+  if (!snapshotWorldSettings(env)) throw new Error('无法读取全局世界书设置');
   const select = document.getElementById('world_info');
-  if (!select || typeof env.world.onWorldInfoChange !== 'function') throw new Error('酒馆全局世界书选择器尚未就绪');
-  const values = names.map(name => String(env.world.world_names.indexOf(name)));
-  const options = [...select.options];
-  if (values.some(value => !options.some(option => option.value === value))) throw new Error('世界书列表尚未刷新，请稍后重试');
-  for (const option of options) option.selected = values.includes(option.value);
-  env.world.onWorldInfoChange('__notSlashCommand__');
-  // 原生世界书模块延迟把选中列表写回 world_info；本次一起保存，避免核验或刷新读到旧挂载。
-  const worldSettings = env.world.world_info || env.world.getWorldInfoSettings?.().world_info;
-  if (worldSettings) worldSettings.globalSelect = selectedSnapshotWorlds(env);
+  const options = [...(select?.options || [])], available = new Set(options.map(option => option.value));
+  const ready = !!select && catalog.every((_, index) => available.has(String(index)));
+  const native = !ready || typeof env.world.onWorldInfoChange !== 'function';
+  if (native && typeof env.world.updateWorldInfoSettings !== 'function') throw new Error('酒馆全局世界书选择器尚未就绪');
+  return {select, options, native, values:new Set(names.map(name => String(catalog.indexOf(name))))};
+}
+
+function sameSnapshotWorlds(actual, expected) {
+  return actual.length === expected.length && actual.every(name => expected.includes(name));
+}
+
+// TT 可暂时卸载关闭的世界书面板。仅等该面板恢复后同步一次外观，不监听整页或重新应用快照。
+let snapshotWorldUiWatch = null;
+function syncSnapshotWorldSelector(env) {
+  snapshotWorldUiWatch?.disconnect();
+  snapshotWorldUiWatch = null;
+  const sync = () => {
+    const select = document.getElementById('world_info'), catalog = env.world.world_names;
+    if (!select || !Array.isArray(catalog)) return false;
+    const options = [...select.options], available = new Set(options.map(option => option.value));
+    if (!catalog.every((_, index) => available.has(String(index)))) return false;
+    const names = selectedSnapshotWorlds(env);
+    for (const option of options) option.selected = names.includes(catalog[Number(option.value)]);
+    globalThis.jQuery?.(select)?.trigger?.('change.select2');
+    return true;
+  };
+  if (sync()) return;
+  const root = document.getElementById('WorldInfo') || document.getElementById('world_info');
+  if (!root || typeof MutationObserver === 'undefined') return;
+  const observer = new MutationObserver(() => {
+    try {
+      if (!sync()) return;
+    } catch (error) {
+      console.warn(`[${APP_ID}] world selector refresh unavailable`, error);
+    }
+    observer.disconnect();
+    if (snapshotWorldUiWatch === observer) snapshotWorldUiWatch = null;
+  });
+  snapshotWorldUiWatch = observer;
+  observer.observe(root, {childList:true, subtree:true});
+}
+
+function setSnapshotWorlds(env, names) {
+  const {select, options, native, values} = snapshotWorldSelection(env, names);
+  if (native) {
+    // 原生数据接口不依赖面板 DOM；不传其他设置，也不直接修改导出的 live binding。
+    env.world.updateWorldInfoSettings({}, [...names]);
+  } else {
+    for (const option of options) option.selected = values.has(option.value);
+    env.world.onWorldInfoChange('__notSlashCommand__');
+  }
+  if (!sameSnapshotWorlds(selectedSnapshotWorlds(env), names)) throw new Error('未确认全局世界书挂载已切换');
+  // 取消原生挂载的延迟同步，再由现有事务保存并读盘核验；角色附加书等字段保留。
+  env.world.flushPendingWorldInfoSettings?.();
+  snapshotWorldSettings(env).globalSelect = selectedSnapshotWorlds(env);
+  if (native) {
+    syncSnapshotWorldSelector(env);
+    const type = env.script?.event_types?.WORLDINFO_SETTINGS_UPDATED;
+    if (type) {
+      // 与原生选择框相同，仅发设置变更通知；监听器失败不代表挂载或持久化失败。
+      try {Promise.resolve(env.script.eventSource?.emit(type)).catch(error => console.warn(`[${APP_ID}] world settings notification failed`, error));}
+      catch (error) {console.warn(`[${APP_ID}] world settings notification failed`, error);}
+    }
+    return;
+  }
+  snapshotWorldUiWatch?.disconnect();
+  snapshotWorldUiWatch = null;
   // 仅通知 Select2 更新选择外观，避免重复触发酒馆挂载处理。
   globalThis.jQuery?.(select)?.trigger?.('change.select2');
 }
@@ -1174,6 +1242,7 @@ async function applySettingsSnapshot(env, snapshot, payload, automatic = false) 
   const targetName = included.preset ? snapshot.presetName : context.presetName;
   const targetPreset = included.preset ? readPresetByName(env.manager, targetName) : current.settings;
   if (included.preset && !targetPreset) throw new Error('找不到预设「'+snapshot.presetName+'」，请更新快照');
+  if (included.worlds && !Array.isArray(env.world.world_names)) throw new Error('全局世界书列表尚未就绪');
   // 先在当前/目标数据上验证节点，不能先切换预设再发现这份快照不可恢复。
   planSnapshotRestore(snapshot, {settings: context.presetName === snapshot.presetName ? current.settings : targetPreset, orderCharacterId: current.orderCharacterId, groupState: null, worldNames: env.world.world_names});
   const allWorldNames=snapshot.resources ? [...new Set(Object.values(snapshot.resources.worlds).flat())] : snapshot.worldNames;
@@ -1182,7 +1251,7 @@ async function applySettingsSnapshot(env, snapshot, payload, automatic = false) 
     if (automatic) throw new Error('快照「'+snapshot.name+'」缺少世界书：'+missingWorldNames.join('、')+'；已保留当前设置');
     return {warnings: [], needsConfirmation: true, missingWorldNames};
   }
-  if (included.worlds && !document.getElementById('world_info')) throw new Error('全局世界书列表尚未就绪');
+  if (included.worlds) snapshotWorldSelection(env, snapshot.worldNames.filter(name => env.world.world_names.includes(name)));
   const prepared=await prepareSnapshotResources(env,snapshot,context,payload.allowMissingWorlds);
   await settleBaiBai(env, context);
   await selectSnapshotPreset(env, targetName, context.scope);
@@ -1200,7 +1269,7 @@ async function applySettingsSnapshot(env, snapshot, payload, automatic = false) 
   try {
     resourceWarnings=await applySnapshotResources(env,prepared,target,journal);
     assertSnapshotScope(env,context.scope,targetName);
-    if (included.worlds) {setSnapshotWorlds(env, plan.worldNames);worldsApplied=true;}
+    if (included.worlds) {worldsApplied=true;setSnapshotWorlds(env, plan.worldNames);}
     await saveSnapshotSettings(env, true);
     assertSnapshotScope(env, context.scope, targetName);
     if (included.preset) await refreshSnapshotPrompts(env);
@@ -1210,7 +1279,7 @@ async function applySettingsSnapshot(env, snapshot, payload, automatic = false) 
     if (journal.length && error.name==='SnapshotContextChanged') error.name='SnapshotPartialApply';
     undo();
     try {
-      if(worldsApplied&&JSON.stringify(selectedSnapshotWorlds(env))===JSON.stringify(plan.worldNames))setSnapshotWorlds(env,worldsBefore);
+      if(worldsApplied&&sameSnapshotWorlds(selectedSnapshotWorlds(env),plan.worldNames))setSnapshotWorlds(env,worldsBefore);
       const rollbackContext=snapshotContext(env);await waitSnapshotPreset(env,rollbackContext);
       await saveSnapshotSettings(env,true);
       if(included.preset&&rollbackContext.scope===context.scope&&rollbackContext.presetName===targetName)await refreshSnapshotPrompts(env);
@@ -1299,6 +1368,7 @@ async function handleSnapshotRequest(method, payload) {
       }
       assertSnapshotContext(env,payload.contextKey);
       if (existing) snapshot.createdAt = existing.createdAt;
+      if (existing?.favorite === true) snapshot.favorite = true;
       const previous = store.snapshots;
       store.snapshots = existing ? previous.map(s => s.id === existing.id ? snapshot : s) : [...previous, snapshot];
       try {await saveSnapshotSettings(env);} catch (error) {store.snapshots = previous; throw error;}
@@ -1307,6 +1377,15 @@ async function handleSnapshotRequest(method, payload) {
       const previous = existing.name;
       existing.name = normalizeSnapshotName(payload.name);
       try {await saveSnapshotSettings(env);} catch (error) {existing.name = previous; throw error;}
+    } else if (method === 'snapshot-favorite') {
+      if (!existing) throw new Error('快照已删除，请刷新列表');
+      if (typeof payload.favorite !== 'boolean') throw new Error('收藏状态无效');
+      if ((existing.favorite === true) !== payload.favorite) {
+        const previous=store.snapshots, next={...existing};
+        if(payload.favorite)next.favorite=true;else delete next.favorite;
+        store.snapshots=previous.map(snapshot=>snapshot===existing?next:snapshot);
+        try {await saveSnapshotSettings(env);} catch (error) {store.snapshots=previous;throw error;}
+      }
     } else if (method === 'snapshot-delete') {
       if (!existing) throw new Error('快照已删除');
       const before = clone(store);

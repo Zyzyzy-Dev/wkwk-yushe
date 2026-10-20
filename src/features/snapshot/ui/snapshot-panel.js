@@ -1,7 +1,7 @@
 // 设置快照页面：保存、恢复与聊天/角色绑定，通过 iframe 通信桥调用宿主，不访问酒馆全局。
 import { chooseApiSnapshotBinding } from '../../api/ui/api-snapshot-bind.js';
 import { createSnapshotEditor } from './snapshot-editor.js';
-import { snapshotScope } from '../snapshot.js';
+import { snapshotScope, sortSnapshotFavorites } from '../snapshot.js';
 import { createSnapshotScopePicker, snapshotScopeLabels } from './snapshot-scope.js';
 // 搜索仅筛选展示，不修改快照或绑定。
 export function searchSnapshotNames(snapshots,text){const query=String(text||'').trim().toLocaleLowerCase();return snapshots.filter(s=>String(s.name||'').toLocaleLowerCase().includes(query));}
@@ -94,12 +94,13 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
       empty.append(node('strong', '', '把常用设置存成一份快照'), node('p', '', '保存当前设置，或点击「创建快照」自由搭配。'));
       list.append(empty);
     }
-    const visibleSnapshots=searchSnapshotNames(data.snapshots,search.value);
+    const visibleSnapshots=sortSnapshotFavorites(searchSnapshotNames(data.snapshots,search.value));
     if(data.snapshots.length&&!visibleSnapshots.length)list.append(node('p','pcm-snapshot-empty','没有匹配的快照，请修改名称关键词或清空搜索。'));
     for (const snapshot of visibleSnapshots) {
       const card = node('article', 'pcm-snapshot-card'); card.dataset.snapshotId = snapshot.id;
       const overwrite=button('覆',()=>execute('update',snapshot));overwrite.title='用当前设置覆盖快照';overwrite.setAttribute('aria-label',overwrite.title);
-      const top = node('div', 'pcm-snapshot-card-title'); top.append(node('h3', '', snapshot.name),overwrite,iconButton('编辑快照详情','rename',()=>openEditor(snapshot.id)),iconButton('删除','delete',()=>execute('delete',snapshot)));top.lastElementChild.classList.add('pcm-snapshot-delete');
+      const favorite=button('',()=>execute('favorite',snapshot));favorite.className='pcm-snapshot-icon pcm-snapshot-favorite';favorite.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="'+(snapshot.favorite===true?'currentColor':'none')+'"><path d="m12 3 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3L2.9 9.6l6.3-.9Z"/></svg>';favorite.title=snapshot.favorite===true?'取消收藏置顶':'收藏置顶';favorite.setAttribute('aria-label',favorite.title);favorite.setAttribute('aria-pressed',String(snapshot.favorite===true));
+      const top = node('div', 'pcm-snapshot-card-title'); top.append(node('h3', '', snapshot.name),favorite,overwrite,iconButton('编辑快照详情','rename',()=>openEditor(snapshot.id)),iconButton('删除','delete',()=>execute('delete',snapshot)));top.lastElementChild.classList.add('pcm-snapshot-delete');
       if (snapshot.id === c.chatBindingId || snapshot.id === c.characterBindingId) top.append(node('span', 'pcm-snapshot-badge', [snapshot.id === c.chatBindingId ? '此聊天' : '', snapshot.id === c.characterBindingId ? '此角色' : ''].filter(Boolean).join(' / ')));
       const books = snapshot.resources?.worlds?.global || snapshot.worldNames || [];
       const included=snapshotScope(snapshot);
@@ -177,6 +178,8 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
         const scope=snapshotScope(snapshot),range=Object.keys(snapshotScopeLabels).filter(key=>scope[key]).map(key=>snapshotScopeLabels[key]).join('、');
         if (!(await confirm('用酒馆当前设置覆盖「'+snapshot.name+'」？\n覆盖范围：'+range+'。\n保留方案名称和绑定关系；绑定此方案的聊天和角色以后会使用覆盖后的设置。')) || disposed) return;
         result = await host.request('snapshot-save', {id: snapshot.id, name: snapshot.name, contextKey,scope}); message = '快照已覆盖';
+      } else if (action === 'favorite') {
+        result = await host.request('snapshot-favorite', {id:snapshot.id,favorite:snapshot.favorite!==true});message=snapshot.favorite===true?'已取消收藏置顶':'已收藏并置顶';
       } else if (action === 'delete') {
         if (!(await confirm('删除「'+snapshot.name+'」？它的聊天绑定将失效，角色绑定将解除。')) || disposed) return;
         result = await host.request('snapshot-delete', {id: snapshot.id}); message = '快照已删除';

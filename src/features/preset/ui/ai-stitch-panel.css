@@ -123,3 +123,12 @@
 .pcm-ai-stitch article summary:focus:not(:focus-visible){outline:none}
 .pcm-ai-stitch article summary:focus-visible{outline:2px solid var(--pcm-accent,var(--SmartThemeBodyColor));outline-offset:2px}
 .pcm-ai-stitch .pcm-ai-confirm{-webkit-tap-highlight-color:transparent}
+
+/* 草稿目录仅按需打开；沿用当前主题，长名称与列表在手机上独立滚动。 */
+.pcm-ai-drafts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.pcm-ai-drafts>button{font-size:11px;padding:4px 8px}.pcm-ai-drafts>small{font-size:10px}
+.pcm-stitch-draft-dialog{color:var(--pcm-text,inherit);background:var(--pcm-panel,var(--SmartThemeBlurTintColor,#292929));border:1px solid var(--pcm-border,#888);border-radius:12px;padding:16px;width:min(560px,90vw);max-height:80dvh;overflow:auto;box-sizing:border-box}
+.pcm-stitch-draft-dialog::backdrop{background:#0006}.pcm-stitch-draft-dialog>header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.pcm-stitch-draft-dialog small{display:block;font-size:11px;opacity:.8;overflow-wrap:anywhere}.pcm-stitch-draft-dialog article{padding:10px 0;border-bottom:1px solid var(--pcm-border,#8886);overflow-wrap:anywhere}.pcm-stitch-draft-dialog article>div{display:flex;gap:8px;margin-top:6px}
+.pcm-stitch-draft-dialog .menu_button{font-size:12px}
+.pcm-ai-stitch>.pcm-ai-diagnostics{align-self:flex-start;font-size:11px;padding:4px 8px}

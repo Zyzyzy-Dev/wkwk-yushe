@@ -115,10 +115,25 @@ export function createSnapshotEditor({host, model, existingId, onCancel, onSaved
       for(const item of members){
         const meta=records.get(String(item[idKey])),text=item.name||String(item[idKey]);
         const checkbox=makeSwitch(text,item.enabled,unavailable);
-        const row=switchRow(text,checkbox);row.dataset.entryId=String(item[idKey]);
+        const row=batch?switchRow(text,checkbox):node('div','pcm-snapshot-check pcm-snapshot-editor-switch-row');row.dataset.entryId=String(item[idKey]);
+        const wrapper=batch?row:node('div','pcm-snapshot-preset-entry');
+        if(!batch){
+          const body=node('div','pcm-snapshot-preset-content');body.hidden=true;body.setAttribute('role','region');body.setAttribute('aria-label',text+' · 正文（只读）');
+          const title=button('',()=>{
+            body.hidden=!body.hidden;title.setAttribute('aria-expanded',String(!body.hidden));
+            // 展开时才建立正文节点，避免长预设首次打开快照页就排版全部正文。
+            if(!body.hidden&&!body.childNodes.length){
+              body.append(node('small','',meta?.missing?'宿主中已找不到此条目':'条目正文 · 只读（当前预设）'));
+              body.append(node('pre','',meta?.missing?'无法读取正文':typeof meta?.content==='string'?(meta.content||'正文为空'):'宿主未提供此条目的正文'));
+            }
+          });
+          title.className='pcm-snapshot-preset-entry-title';title.setAttribute('aria-expanded','false');title.title='展开或收起正文';
+          const caret=node('span','pcm-snapshot-entry-caret','▸');caret.setAttribute('aria-hidden','true');title.append(caret,node('span','',text));
+          row.append(checkbox,title);wrapper.append(row,body);
+        }
         if(meta?.missing){row.append(node('small','pcm-snapshot-missing','已缺失'));row.title='宿主中已找不到此条目，应用时将跳过';}
         const update=()=>{checkbox.checked=item.enabled;row.classList.toggle('is-off',!item.enabled||(!batch&&group?.enabled===false));};
-        checkbox.addEventListener('change',()=>{item.enabled=checkbox.checked;update();updateGroup();onChange();});update();refresh.push(update);container.append(row);
+        checkbox.addEventListener('change',()=>{item.enabled=checkbox.checked;update();updateGroup();onChange();});update();refresh.push(update);container.append(wrapper);
       }
       return ()=>refresh.forEach(update=>update());
     }
