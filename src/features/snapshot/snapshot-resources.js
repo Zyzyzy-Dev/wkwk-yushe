@@ -91,6 +91,42 @@ export function restoreRegexSwitches(saved, current) {
   return {scripts,missing};
 }
 
+// 新能力独立于历史 resources.regex；指纹不含开关，禁止同 ID 已换定义时套用。
+export function normalizePresetRegex(value, owner) {
+  if (!object(value) || value.version!==1) throw new Error('预设正则快照版本无效，请重新保存');
+  if (value.owner?.apiId!=='openai' || typeof value.owner.presetName!=='string' || !value.owner.presetName || (owner && (value.owner.apiId!==owner.apiId || value.owner.presetName!==owner.presetName))) throw new Error('预设正则快照归属不一致，请重新保存');
+  unique(value.switches,'id');
+  for (const item of value.switches) if(typeof item.enabled!=='boolean' || typeof item.name!=='string' || !/^v1:[0-9a-f]{16}$/.test(item.definitionFingerprint||'')) throw new Error('预设正则快照缺少有效定义指纹，请重新保存');
+  return {version:1,owner:{apiId:value.owner.apiId,presetName:value.owner.presetName},switches:value.switches.map(({id,name,enabled,definitionFingerprint})=>({id,name,enabled,definitionFingerprint}))};
+}
+export function capturePresetRegex(scripts, owner) {
+  return normalizePresetRegex({version:1,owner,switches:regexRecords(scripts).map(({id,hash,script})=>({id,name:String(script.scriptName||script.id||'未命名正则'),enabled:script.disabled!==true,definitionFingerprint:'v1:'+hash}))});
+}
+export function restorePresetRegex(saved, current, owner) {
+  saved=normalizePresetRegex(saved,owner);
+  const scripts=copy(current),records=new Map(),missing=[];
+  // Identical duplicate definitions have no persistent identity. Their occurrence
+  // order can change around other rules and change execution, so never guess.
+  const savedHashes=new Set(),currentHashes=new Set();
+  for(const item of saved.switches){
+    if(savedHashes.has(item.definitionFingerprint))throw new Error('预设正则含相同定义的重复条目，身份存在歧义，请先为条目设置不同 ID，再重新读取预设正则');
+    savedHashes.add(item.definitionFingerprint);
+  }
+  for(const record of regexRecords(scripts)){
+    if(currentHashes.has(record.hash))throw new Error('预设正则含相同定义的重复条目，身份存在歧义，请先为条目设置不同 ID，再重新读取预设正则');
+    currentHashes.add(record.hash);records.set(record.id,record);records.set(record.fallback,record);
+  }
+  const matched=new Set();
+  for(const item of saved.switches){
+    const record=records.get(item.id);
+    if(!record){missing.push(item.name||item.id);continue;}
+    if(item.definitionFingerprint!=='v1:'+record.hash)throw new Error('预设正则「'+item.name+'」定义已变化，请核对后重新保存快照');
+    if(matched.has(record))throw new Error('预设正则身份冲突，请重新保存快照');
+    matched.add(record);record.script.disabled=!item.enabled;
+  }
+  return {scripts,missing};
+}
+
 function regexGroupRecords(state) {
   const groups = [...(state?.groups || [])].filter(group=>group?.id!=='__ungrouped'&&group?.id!=='__pending_assignment').sort((a,b)=>(a.order??0)-(b.order??0)).map(group => ({id:String(group.id || ''),name:String(group.name || group.id)}));
   unique(groups,'id');

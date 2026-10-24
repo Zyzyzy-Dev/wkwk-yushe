@@ -19,8 +19,8 @@ test('excluded worlds are not mistaken for an explicit empty mount list',()=>{
  const plan=snapshots.planSnapshotRestore(saved,{worldNames:[]});assert.deepEqual(plan.missingWorldNames,[]);assert.equal(snapshots.snapshotScope(saved).worlds,false);
 });
 test('legacy scope defaults keep pre-resource regex excluded and resource snapshots complete',()=>{
- const saved=base();assert.deepEqual(snapshots.snapshotScope(saved),{preset:true,worlds:true,regex:true});
- delete saved.resources;assert.deepEqual(snapshots.snapshotScope(saved),{preset:true,worlds:true,regex:false});
+ const saved=base();assert.deepEqual(snapshots.snapshotScope(saved),{preset:true,worlds:true,regex:true,reasoning:false,presetRegex:false});
+ delete saved.resources;assert.deepEqual(snapshots.snapshotScope(saved),{preset:true,worlds:true,regex:false,reasoning:false,presetRegex:false});
 });
 test('empty or malformed explicit scope cannot silently fall back to restoring everything',()=>{
  for(const scope of [{preset:false,worlds:false,regex:false},{preset:true},null,{preset:'false',worlds:true,regex:true}])assert.throws(()=>snapshots.validateSnapshot({...base(),scope}),/范围/);

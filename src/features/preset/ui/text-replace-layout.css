@@ -1,0 +1,26 @@
+/* 查找替换沿用当前侧列表区域；紧凑工具条给手机搜索框保留可用宽度。 */
+.pcm-dialog .pcm-pane.pcm-replacing>.pcm-list{display:none!important}
+.pcm-dialog .pcm-app.pcm-replace-open>[data-compare]{display:none!important}
+.pcm-dialog .pcm-pane>.pcm-replace-panel{min-width:0;min-height:0;max-height:100%;flex:1 1 0;overflow:auto;overscroll-behavior:contain;touch-action:pan-y}
+.pcm-dialog .pcm-tools>[data-action=text-replace]{flex:none;white-space:nowrap}
+/* 面板打开时「替换」改为实心强调色并带「×」，与关闭状态的描边按钮明显区分；再次点击即收起。 */
+.pcm-dialog .pcm-tools>[data-action=text-replace][aria-expanded=true],.pcm-dialog .pcm-tools>[data-action=text-replace][aria-expanded=true]:is(:hover,:focus,:active){background:var(--SmartThemeBodyColor)!important;border-color:var(--SmartThemeBodyColor)!important;color:var(--SmartThemeBlurTintColor)!important;font-weight:600;transform:none!important;box-shadow:0 1px 6px color-mix(in srgb,var(--SmartThemeBodyColor) 30%,transparent)!important}
+.pcm-dialog.pcm-theme-day .pcm-tools>[data-action=text-replace][aria-expanded=true],.pcm-dialog.pcm-theme-day .pcm-tools>[data-action=text-replace][aria-expanded=true]:is(:hover,:focus,:active){background:linear-gradient(125deg,#737c4a,#58683c)!important;border-color:#58683c!important;color:#fffaf2!important;box-shadow:0 2px 9px #58683c40!important}
+.pcm-dialog.pcm-theme-night .pcm-tools>[data-action=text-replace][aria-expanded=true],.pcm-dialog.pcm-theme-night .pcm-tools>[data-action=text-replace][aria-expanded=true]:is(:hover,:focus,:active){background:linear-gradient(125deg,#83a598,#458588)!important;border-color:#83a598!important;color:#282828!important;box-shadow:0 2px 9px #83a59833!important}
+.pcm-dialog .pcm-tools>[data-action=text-replace][aria-expanded=true]::after{content:'×';margin-left:4px;font-size:1.15em;font-weight:400;line-height:1}
+.pcm-dialog .pcm-inline-form>.pcm-inline-replace{justify-self:start;min-width:0}
+/* 缩小所有工具按钮的横向留白，保留文字和点击高度。单栏桌面侧栏同样可能很窄。 */
+.pcm-dialog .pcm-single .pcm-tools{gap:3px!important;padding-inline:5px!important}
+.pcm-dialog .pcm-single .pcm-tools>button{font-size:10px!important;padding-inline:4px!important;min-width:0!important;white-space:nowrap!important}
+.pcm-dialog .pcm-single .pcm-tools>.pcm-preset-filter{flex:0 0 43px!important;width:43px!important;max-width:43px!important}
+@media(max-width:900px){
+  .pcm-dialog .pcm-app .pcm-tools{gap:2px!important;padding-inline:5px!important;flex-wrap:nowrap!important}
+  .pcm-dialog .pcm-app .pcm-tools>button{height:25px!important;min-height:25px!important;min-width:0!important;padding:2px 4px!important;font-size:10px!important;line-height:19px!important;flex:0 0 auto;white-space:nowrap!important;border-radius:5px!important}
+  .pcm-dialog .pcm-app .pcm-tools>input[data-search]{height:25px!important;min-height:25px!important;flex:1 1 0!important;min-width:50px!important;width:0!important;padding:2px 4px!important;font-size:10px!important}
+  .pcm-dialog .pcm-app .pcm-tools>.pcm-preset-filter{flex:0 0 43px!important;width:43px!important;max-width:43px!important;padding-inline:3px!important}
+}
+@media(max-width:350px){
+  .pcm-dialog .pcm-app .pcm-tools{gap:2px!important;padding-inline:4px!important}
+  .pcm-dialog .pcm-app .pcm-tools>button{font-size:10px!important;padding-inline:3px!important}
+  .pcm-dialog .pcm-app .pcm-tools>.pcm-preset-filter{flex-basis:38px!important;width:38px!important;max-width:38px!important}
+}

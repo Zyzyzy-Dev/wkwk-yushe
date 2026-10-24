@@ -63,5 +63,5 @@ test('缺失或损坏的快照在恢复入口给出提示，而不是崩在属�
  assert.throws(()=>snapshots.planSnapshotRestore(null,{settings:settings(),orderCharacterId:100001,groupState:groups(),worldNames:[]}),/快照数据无效/);
  assert.throws(()=>snapshots.selectSnapshotScope(null),/快照数据无效/);
  const s=capture();
- assert.deepEqual(snapshots.snapshotScope(s),{preset:true,worlds:true,regex:false});
+ assert.deepEqual(snapshots.snapshotScope(s),{preset:true,worlds:true,regex:false,reasoning:false,presetRegex:false});
 });

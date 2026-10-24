@@ -1,0 +1,19 @@
+/* random 分块编辑：正文块与随机块连成一张卡片，随机块带标题条；选中正文时浮出「转为随机」。 */
+.pcm-random-editor[hidden]{display:none!important}
+.pcm-random-editor{position:relative;min-width:0;display:flex;flex-direction:column;gap:6px;color:var(--SmartThemeBodyColor,inherit)}
+.pcm-random-hint{margin:0;font-size:11px;opacity:.7}
+.pcm-random-body{display:flex;flex-direction:column;border:1px solid var(--pcm-input-bd,var(--SmartThemeBorderColor));border-radius:8px;overflow:hidden;background:var(--pcm-input-bg,var(--SmartThemeBlurTintColor))}
+.pcm-random-block{min-width:0;margin:0}
+.pcm-random-block+.pcm-random-block{border-top:1px dashed var(--SmartThemeBorderColor)}
+.pcm-dialog .pcm-random-block textarea{display:block;box-sizing:border-box;width:100%;min-height:30px;resize:none;overflow:hidden;white-space:pre-wrap;font-family:var(--monoFontFamily,monospace);font-size:11px;line-height:1.55;color:var(--SmartThemeBodyColor)!important;-webkit-text-fill-color:currentColor!important;background:transparent!important;border:0!important;border-radius:0;padding:6px 10px;box-shadow:none!important;outline:none}
+.pcm-dialog .pcm-random-block textarea:focus{background:color-mix(in srgb,var(--pcm-accent,#888) 6%,transparent)!important}
+.pcm-random-block-random{background:color-mix(in srgb,var(--pcm-accent,#888) 9%,transparent);border-left:3px solid var(--pcm-accent,#888)}
+.pcm-random-head{display:flex;align-items:center;gap:8px;padding:4px 6px 0 10px}
+.pcm-random-label{flex:1;min-width:0;font-size:11px;font-weight:600;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcm-dialog .pcm-random-head .pcm-random-add{min-height:24px;margin:0;padding:2px 8px;font-size:11px}
+.pcm-dialog .pcm-random-float{position:absolute;z-index:6;margin:0;padding:4px 10px;min-height:28px;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.pcm-random-float[hidden]{display:none!important}
+.pcm-editwrap[hidden]{display:none!important}
+.pcm-dialog .pcm-content-undo{min-width:0;padding:5px 10px;white-space:nowrap}
+.pcm-dialog .pcm-content-undo:disabled{opacity:.45}
+.pcm-undo-slot{display:flex;align-items:center;margin-left:auto}

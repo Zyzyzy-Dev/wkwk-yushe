@@ -1,0 +1,16 @@
+/* 快照自动解析弹窗：沿用快照主题，长格式及移动端键盘下可滚动。 */
+dialog.pcm-snapshot-reasoning-dialog{box-sizing:border-box;width:520px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 32px);overflow:auto;margin:auto;padding:18px;border:1px solid var(--snap-border);border-radius:14px;background:var(--snap-card);color:var(--snap-fg);font:inherit;text-align:left}
+.pcm-snapshot-reasoning-dialog::backdrop{background:#0006}
+.pcm-snapshot-reasoning-dialog form{display:grid;gap:12px;min-width:0;margin:0}
+.pcm-snapshot-reasoning-dialog h3,.pcm-snapshot-reasoning-dialog p{margin:0}
+.pcm-snapshot-reasoning-dialog p,.pcm-snapshot-reasoning-dialog small{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.pcm-reasoning-field{display:grid;gap:5px;min-width:0;font-size:13px}
+.pcm-snapshot-reasoning-dialog select,.pcm-snapshot-reasoning-dialog textarea{box-sizing:border-box;width:100%;min-width:0;max-width:100%;padding:7px 9px;border:1px solid var(--snap-border);border-radius:7px;background:var(--snap-bg);color:var(--snap-fg);font:inherit;font-size:13px;line-height:1.5}
+.pcm-snapshot-reasoning-dialog textarea{resize:vertical;white-space:pre-wrap}
+.pcm-reasoning-check{display:flex;align-items:center;gap:8px;font-size:14px}
+.pcm-reasoning-check input{width:18px;height:18px;margin:0;accent-color:var(--snap-accent)}
+.pcm-reasoning-actions{display:flex;flex-wrap:wrap;gap:8px}
+.pcm-snapshots .pcm-reasoning-actions button{font-size:12px}
+.pcm-reasoning-status:empty{display:none}
+.pcm-snapshot-card .pcm-snapshot-manage button[aria-pressed=true]{border-color:var(--snap-accent);color:var(--snap-accent)}
+@media(max-width:650px){dialog.pcm-snapshot-reasoning-dialog{padding:14px}.pcm-reasoning-actions button{flex:1 1 100px}}

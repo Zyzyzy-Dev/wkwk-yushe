@@ -39,9 +39,9 @@
 .pcm-snapshot-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pcm-snapshot-form>p{grid-column:1/-1;margin:0}.pcm-snapshot-field{display:grid;gap:5px;min-width:0;font-size:13px}
 .pcm-snapshot-check{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;min-height:30px}.pcm-snapshot-check span{flex:1;min-width:0}.pcm-snapshot-editor .pcm-snapshot-check input{width:18px;height:18px;flex:none;margin:0;accent-color:var(--snap-accent)}
 .pcm-snapshot-mount-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.pcm-snapshot-field-group small{font-size:12px;opacity:.8;display:block;margin:8px 0}.pcm-snapshot-world-choices{max-height:200px;overflow:auto;overscroll-behavior:contain;display:grid;gap:5px}
-.pcm-snapshot-book{border-top:1px solid var(--snap-border);padding:10px 0}.pcm-snapshot-book>summary{font-size:14px;font-weight:600;cursor:pointer}.pcm-snapshot-world-entry{padding:9px 0 9px 12px;border-top:1px solid color-mix(in srgb,var(--snap-border) 50%,transparent);margin-top:8px}.pcm-snapshot-world-entry>summary{cursor:pointer;font-size:13px}.pcm-snapshot-entry-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}.pcm-snapshot-json summary{cursor:pointer;font-size:12px;margin:8px 0}.pcm-snapshot-json textarea{font-family:monospace;font-size:12px;resize:vertical}
+.pcm-snapshot-book{border-top:1px solid var(--snap-border);padding:10px 0}.pcm-snapshot-book>summary{font-size:14px;font-weight:600;cursor:pointer}.pcm-snapshot-world-entry{padding:9px 0 9px 12px;border-top:1px solid color-mix(in srgb,var(--snap-border) 50%,transparent);margin-top:8px}.pcm-snapshot-world-entry>summary{cursor:pointer;font-size:13px}
 .pcm-snapshot-editor-actions,.pcm-snapshot-save-choices{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px}.pcm-snapshot-save-choices{padding:14px;background:var(--snap-card);border:1px solid var(--snap-border);border-radius:12px}.pcm-snapshot-save-choices span{width:100%;font-size:13px;font-weight:700}
-@media(max-width:700px){.pcm-snapshot-mount-grid{grid-template-columns:minmax(0,1fr)}.pcm-snapshot-world-choices{max-height:150px}.pcm-snapshot-form{grid-template-columns:minmax(0,1fr)}.pcm-snapshot-entry-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.pcm-snapshot-form,.pcm-snapshot-field-group,.pcm-snapshot-editor-regex,.pcm-snapshot-book-configs{padding:12px}.pcm-snapshot-world-entry{padding-left:4px}}
+@media(max-width:700px){.pcm-snapshot-mount-grid{grid-template-columns:minmax(0,1fr)}.pcm-snapshot-world-choices{max-height:150px}.pcm-snapshot-form{grid-template-columns:minmax(0,1fr)}.pcm-snapshot-form,.pcm-snapshot-field-group,.pcm-snapshot-editor-regex,.pcm-snapshot-book-configs{padding:12px}.pcm-snapshot-world-entry{padding-left:4px}}
 /* 当前设置按标签/内容排版，快照卡片仅保留名称、预设、全局书和操作。 */
 .pcm-snapshots{--snap-soft:color-mix(in srgb,var(--snap-card) 94%,var(--snap-fg));--snap-muted:color-mix(in srgb,var(--snap-fg) 65%,var(--snap-card));--snap-border:color-mix(in srgb,var(--snap-fg) 22%,var(--snap-card));font-family:inherit}
 .pcm-theme-day .pcm-snapshots{--snap-bg:#fcf9f4;--snap-card:#fffcf7;--snap-fg:#55473e;--snap-accent:#789978}
@@ -90,6 +90,9 @@
 .pcm-snapshot-card-title h3{flex:1 1 90px}
 .pcm-snapshots .pcm-snapshot-favorite{font-size:21px;line-height:1;padding:2px}
 .pcm-snapshots .pcm-snapshot-favorite[aria-pressed=true]{color:var(--snap-accent);background:color-mix(in srgb,var(--snap-accent) 14%,var(--snap-card));border-color:var(--snap-accent)}
+.pcm-snapshots .pcm-snapshot-favorite[aria-busy=true]{opacity:.75;cursor:progress}
+.pcm-snapshot-favorite-status{display:block;margin:5px 0;color:var(--snap-muted);font-size:11px}
+.pcm-snapshot-favorite-status[hidden]{display:none}
 .pcm-snapshot-card-title>.pcm-snapshot-badge{margin-left:auto;max-width:85px;flex:none;text-align:center}
 .pcm-snapshots .pcm-snapshot-delete:hover{color:#b75b50;border-color:#b75b5050;background:#b75b5010}
 .pcm-snapshot-summary{opacity:1;color:var(--snap-muted);margin:9px 0 5px}
@@ -107,4 +110,7 @@
 /* 搜索与快照卡片同一内容列，桌面限制输入宽度。 */
 .pcm-snapshot-filters{max-width:1000px;margin:12px auto;width:100%;box-sizing:border-box}
 .pcm-snapshot-search{flex:0 1 360px;width:360px}
+.pcm-snapshot-preset-regex-option{width:100%;min-width:0;border-top:1px solid var(--snap-border);padding-top:6px}
+.pcm-snapshot-preset-regex-option[hidden]{display:none}
+.pcm-snapshot-preset-regex-option small{display:block;margin:4px 0;overflow-wrap:anywhere}
 @media(max-width:650px){.pcm-snapshot-search{flex:1;width:0}}

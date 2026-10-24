@@ -1,0 +1,26 @@
+/* 检查结果、条目工具与紧凑统计操作：继承现有主题，手机允许换行并保持点击区域独立。 */
+.pcm-check-panel{width:min(760px,100%);max-height:90dvh;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.pcm-check-panel .pcm-picker-head{gap:8px;flex:none}
+.pcm-check-panel h3{min-width:0;flex:1;overflow-wrap:anywhere}
+.pcm-check-controls,.pcm-check-status{padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:none}
+.pcm-check-status{font-size:13px;border-block:1px solid var(--SmartThemeBorderColor);display:block}
+.pcm-check-note{font-size:12px;opacity:.8;white-space:normal;overflow-wrap:anywhere;margin:6px 12px}
+.pcm-check-results{overflow:auto;min-height:0;padding:10px 12px;overscroll-behavior:contain}
+.pcm-check-coverage{padding:10px;border:1px dashed var(--SmartThemeBorderColor);border-radius:8px;font-size:12px;margin-bottom:10px;white-space:normal;overflow-wrap:anywhere}
+.pcm-check-issue{border:1px solid var(--SmartThemeBorderColor);border-left:3px solid var(--pcm-accent,var(--SmartThemeBodyColor));border-radius:8px;padding:10px;margin-bottom:10px;background:var(--pcm-surface,var(--SmartThemeBlurTintColor));white-space:normal}
+.pcm-check-issue strong{font-size:13px;overflow-wrap:anywhere}
+.pcm-check-error{border-left-color:#c76c50}.pcm-check-location{font-size:12px;opacity:.8;margin:5px 0}
+.pcm-check-issue pre{font-family:monospace;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;max-height:150px;overflow:auto}
+.pcm-check-actions{display:flex;gap:7px;flex-wrap:wrap}
+.pcm-check-stale .pcm-check-status{font-weight:bold}
+.pcm-entry-tools{display:flex;gap:5px;align-items:center;justify-content:flex-end;flex-wrap:wrap;min-width:0}
+.pcm-variable-entry-heading{flex-wrap:wrap}
+.pcm-dialog .pcm-entry-tools .menu_button{font-size:12px!important;padding:4px 7px!important;min-height:30px!important;white-space:nowrap;line-height:1.3}
+.pcm-dialog .pcm-entry-tools .pcm-random-active{font-weight:bold}
+.pcm-dialog .pcm-summary{align-items:center;gap:5px;min-height:32px}
+.pcm-summary-text{flex:1 1 120px;min-width:0;overflow-wrap:anywhere}
+.pcm-dialog .pcm-summary .pcm-check-launch{flex:none;font-size:11px!important;padding:2px 5px!important;min-height:28px!important;line-height:1.2!important;min-width:32px;white-space:nowrap}
+.pcm-dialog .pcm-summary .pcm-multi-actions{margin-left:0;gap:4px}
+.pcm-dialog .pcm-summary .pcm-multi-clear,.pcm-dialog .pcm-summary .pcm-multi-delete{font-size:11px!important;line-height:1.2!important;padding:2px 5px!important;min-height:28px!important;min-width:30px;white-space:nowrap}
+@media(max-width:520px){.pcm-dialog .pcm-entry-tools{gap:4px}.pcm-dialog .pcm-entry-tools .menu_button{font-size:11px!important;min-height:32px!important}.pcm-variable-entry-heading{gap:6px}.pcm-check-panel{max-height:94dvh}.pcm-check-panel .pcm-picker-head h3{font-size:14px}.pcm-summary-text{font-size:11px;flex-basis:100px}.pcm-check-results{padding:8px}}
+@media(pointer:coarse){.pcm-dialog .pcm-summary .menu_button{min-height:32px!important}.pcm-dialog .pcm-entry-tools .menu_button{min-height:36px!important}}

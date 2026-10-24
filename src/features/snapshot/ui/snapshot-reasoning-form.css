@@ -1,0 +1,34 @@
+/* 推理设置共用布局：沿用快照主题，紧凑选项行、模板图标行及双列格式输入。 */
+.pcm-snapshot-reasoning-form{display:grid;gap:9px;min-width:0;font-size:13px}
+.pcm-snapshot-reasoning-flags{display:flex;flex-wrap:wrap;align-items:center;gap:9px 16px;padding:9px 10px;border-radius:8px;background:var(--snap-soft)}
+.pcm-snapshot-reasoning-flag{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.pcm-snapshot-reasoning-flag input{margin:0;width:15px;height:15px;accent-color:var(--snap-accent)}
+.pcm-snapshot-reasoning-field{display:flex;align-items:center;gap:8px;min-width:0}
+.pcm-snapshot-reasoning-field>span{flex:none}
+.pcm-snapshot-reasoning-field>input,.pcm-snapshot-reasoning-field>select,.pcm-snapshot-reasoning-field>textarea{min-width:0;flex:1;width:100%;box-sizing:border-box;font:inherit}
+.pcm-snapshots .pcm-snapshot-reasoning-field>input,.pcm-snapshots .pcm-snapshot-reasoning-field>select,.pcm-snapshots .pcm-snapshot-reasoning-field>textarea{color:var(--snap-fg);background:var(--snap-bg);border:1px solid var(--snap-border);border-radius:8px}
+.pcm-snapshot-reasoning-form .pcm-reasoning-maximum input{width:70px;flex:0 0 70px;padding:4px 7px;min-height:30px}
+.pcm-snapshot-reasoning-format{padding:10px;border-radius:8px;background:var(--snap-soft);display:grid;gap:8px}
+.pcm-snapshot-reasoning-template{display:flex;align-items:center;gap:9px;min-width:0}
+.pcm-snapshot-reasoning-template>label{flex:1;max-width:560px}
+.pcm-snapshot-reasoning-template-actions{display:flex;flex:none;gap:5px}
+.pcm-snapshots .pcm-snapshot-reasoning-template-actions button{width:31px;height:31px;min-height:31px;padding:6px}
+.pcm-snapshot-reasoning-template-actions svg{width:17px;height:17px;display:block}
+.pcm-snapshot-reasoning-texts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;max-width:780px}
+.pcm-snapshot-reasoning-texts .pcm-reasoning-separator{grid-column:1/-1}
+.pcm-snapshot-reasoning-form textarea{resize:vertical;min-height:34px;padding:5px 8px;white-space:pre-wrap}
+.pcm-snapshot-reasoning-form :disabled{opacity:1;cursor:default}
+.pcm-snapshot-current-section{padding:11px;border:1px solid var(--snap-border);border-radius:11px}
+.pcm-snapshot-current-section>summary{cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:6px}
+.pcm-snapshot-current-section>summary::-webkit-details-marker{display:none}
+.pcm-snapshot-current-section>summary::before{content:'▸';font-size:11px}
+.pcm-snapshot-current-section[open]>summary::before{content:'▾'}
+.pcm-snapshot-current-section>.pcm-snapshot-reasoning-form{margin-top:10px}
+.pcm-snapshot-current-section>summary::after{display:none}
+.pcm-snapshot-editor .pcm-snapshot-form{grid-template-columns:minmax(0,1fr)}
+.pcm-snapshot-editor .pcm-snapshot-form>.pcm-snapshot-field:first-child{display:flex;align-items:center;gap:12px;max-width:540px}
+.pcm-snapshot-editor .pcm-snapshot-form>.pcm-snapshot-field:first-child>span{flex:none}
+.pcm-snapshot-editor .pcm-snapshot-form>.pcm-snapshot-field:first-child>input{flex:1;min-width:0}
+.pcm-snapshot-editor-reasoning{border:1px solid var(--snap-border);border-radius:12px;background:var(--snap-card);padding:16px;margin-bottom:14px;min-width:0}
+.pcm-snapshot-editor-reasoning h3{margin:0 0 10px;font-size:14px}
+@media(max-width:650px){.pcm-snapshot-reasoning-template{flex-wrap:wrap}.pcm-snapshot-reasoning-template>label{flex-basis:100%}.pcm-snapshot-reasoning-texts{grid-template-columns:minmax(0,1fr)}.pcm-snapshot-reasoning-flags{gap:8px 12px;font-size:12px}.pcm-snapshot-editor-reasoning{padding:12px}.pcm-snapshot-current-section{padding:9px}}

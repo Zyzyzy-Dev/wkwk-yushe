@@ -11,11 +11,12 @@ export function installVariableReferencePicker(detail, {getPreset, isInjected}) 
   const launch=button('插入引用变量',()=>{
     detail.querySelector('[data-variable-reference-picker]')?.remove();
     const side=area.form.dataset.side,preset=getPreset(side);
-    const original=area?.value,start=area?.selectionStart,end=area?.selectionEnd;
+    const adapter=area?._pcmContentEditor,original=adapter?adapter.getText():area?.value,selection=adapter?.getSelection();
+    const start=selection?.start??area?.selectionStart,end=selection?.end??area?.selectionEnd;
     const layer=node('section');layer.className='pcm-picker open';layer.dataset.variableReferencePicker='';layer.setAttribute('role','dialog');layer.setAttribute('aria-label','插入引用变量');
     const box=node('div');box.className='pcm-picker-panel';
     const head=node('header');head.className='pcm-picker-head';
-    const close=()=>{layer.remove();if(area?.isConnected){area.focus({preventScroll:true});}};
+    const close=()=>{layer.remove();if(area?.isConnected){if(adapter)adapter.focusRange(adapter.getSelection().start,adapter.getSelection().end);else area.focus({preventScroll:true});}};
     head.append(node('h3','插入引用变量'+(side?' · '+(side==='old'?'旧版':'新版'):'')),button('取消',close));box.append(head);
     const body=node('div');body.className='pcm-variable-body';box.append(body);layer.append(box);detail.append(layer);
     layer.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}});
@@ -34,11 +35,13 @@ export function installVariableReferencePicker(detail, {getPreset, isInjected}) 
       for(const item of visible)list.append(button(item.macro,()=>{
         if(!area.isConnected||getPreset(side)!==preset||area.value!==original){status.textContent='条目已变化，请关闭后重新选择插入位置。';return;}
         if(!unreferencedVariableChoices(livePrompts(),id=>id===area.form.dataset.id||isInjected(side,id)).some(v=>v.key===item.key)){status.textContent='变量状态已变化，请关闭后重新打开。';return;}
-        area.setRangeText(item.macro,start,end,'end');area.dispatchEvent(new Event('input',{bubbles:true}));close();
+        if(adapter)adapter.replace({before:original,start,end,replacement:item.macro,selectionStart:start+item.macro.length,selectionEnd:start+item.macro.length});
+        else {area.setRangeText(item.macro,start,end,'end');area.dispatchEvent(new Event('input',{bubbles:true}));}close();
       }));
     };
     search.addEventListener('input',draw);draw();search.focus();
   });
+  launch.dataset.variableReferenceLaunch='';
   launch.disabled=!area;
   if(!area)launch.title='此版本没有该条目';
   const heading=editor.querySelector('h4'),bar=node('div');bar.className='pcm-variable-entry-heading';
