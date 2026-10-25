@@ -5,7 +5,8 @@
   "optional": [],
   "js": "index.js",
   "author": "Codex",
-  "version": "2.0.0",
+  "version": "2.0.01",
+  "homePage": "https://github.com/Zyzyzy-Dev/wkwk-yushe",
   "auto_update": true,
   "hooks": {
     "update": "reloadAfterUpdate"
