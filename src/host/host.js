@@ -2,6 +2,7 @@
 import { installNativeGroups } from './native-groups.js';
 import { handleAiStitch } from './ai-stitch.js';
 import { exportPresetFile } from './preset-export.js';
+import {withPresetHelperBinding} from './preset-helper-binding.js';
 import { readSnapshotReasoning, snapshotReasoningEnvironment } from './snapshot-reasoning.js';
 import { manageReasoningTemplate } from './reasoning-templates.js';
 import { captureSnapshotReasoning, normalizeSnapshotReasoning, sameSnapshotReasoning } from '../features/snapshot/snapshot-reasoning.js';
@@ -111,6 +112,17 @@ function readPresetByName(manager, name) {
   return index >= 0 && index < presets.length ? presets[index] : null;
 }
 
+function readPresetWithLiveHelper(manager,name,settings){
+  const stored=readPresetByName(manager,name);
+  if(!stored)return null;
+  // 助手立即写活动设置，随后才延迟写预设列表；仅同名且设置仍属于该预设时读取。
+  const activeName=String(manager.getSelectedPresetName?.()||'');
+  if(activeName===name&&String(settings?.preset_settings_openai||name)===name&&settings?.extensions&&typeof settings.extensions==='object'){
+    return withPresetHelperBinding(stored,settings);
+  }
+  return stored;
+}
+
 async function getPresetManager() {
   const module = await import('/scripts/preset-manager.js');
   const manager = module.getPresetManager?.('openai');
@@ -138,8 +150,12 @@ async function handleRequest(method, payload) {
   });
   if (method === 'export-preset') {
     // 下载必须在主窗口调用酒馆接口，由 ST/TT 选择各自的下载实现。
-    const {download} = await import('/scripts/utils.js');
-    return exportPresetFile(payload, download);
+    const [{download}, openai] = await Promise.all([
+      import('/scripts/utils.js'), import('/scripts/openai.js'),
+    ]);
+    return exportPresetFile(payload, download, {settingsToUpdate:openai.settingsToUpdate,
+      readSourcePreset: async name => readPresetWithLiveHelper(await getPresetManager(), name,openai.oai_settings),
+    });
   }
   if (method.startsWith('ai-stitch-')) return method === 'ai-stitch-create' || method === 'ai-stitch-verify' ? snapshotSerial(() => handleAiStitch(method,payload)) : handleAiStitch(method,payload);
   if (method === 'api-manager-apply' && payload?.mode === 'both') return snapshotSerial(async () => {
@@ -178,7 +194,10 @@ async function handleRequest(method, payload) {
     const preset = payload?.preset;
     if (!name || !preset || !Array.isArray(preset.prompts)) throw new Error('预设名称或数据无效');
     const manager = await getPresetManager();
-    const saved = clone(preset);
+    const {oai_settings}=await import('/scripts/openai.js');
+    const source=readPresetWithLiveHelper(manager,name,oai_settings);
+    if(!source)throw new Error('来源预设已不存在，请重新载入后保存');
+    const saved = withPresetHelperBinding(preset,source);
     // 先看原生酒馆预设管理器当前选中的预设：同名才走 savePreset 的「重新应用刷新」路径
     // （updateList 会重选该项并触发 change → 重载生成设置并发出 PRESET_CHANGED）；
     // 不同名则用 skipUpdate 静默写盘，避免酒馆把活动预设切到被保存的预设，

@@ -68,6 +68,7 @@ test('confirmed export with unchanged editor content clears dirty and advances t
   assert.equal(env.button.disabled, true);
   assert.equal(env.requests[0].type, 'export-preset');
   assert.equal(env.requests[0].payload.name, 'new-已编辑.json');
+  assert.equal(env.requests[0].payload.tavernSource, 'new', '绑定来源跟随导出侧，不借用另一侧');
   assert.notEqual(env.requests[0].payload.preset, current);
   env.resolve({status: 'saved'});
   await pending;
@@ -152,4 +153,14 @@ test('export suppresses a duplicate request while the first request is pending',
   await pending;
   assert.equal(env.state.dirty.new, true);
   assert.equal(env.exportingPresets.size, 0);
+});
+
+test('file-imported preset export carries no tavern source even when the other pane is bound', async () => {
+  const env = harness();
+  env.state.tavernSource.new = null;
+  const pending = env.exportPreset('new');
+  assert.equal(env.requests[0].payload.tavernSource, null);
+  assert.equal(env.state.tavernSource.old, 'old');
+  env.resolve({status: 'started'});
+  await pending;
 });
