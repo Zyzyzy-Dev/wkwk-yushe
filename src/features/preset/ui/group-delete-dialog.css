@@ -1,0 +1,12 @@
+/* 删除分组三选确认：宽屏并列，窄屏完整显示长按钮文案；危险操作有独立强调。 */
+/* 覆盖浏览器 dialog 默认最大宽度，避免内层卡片更宽而裁掉右侧圆角。 */
+.pcm-group-delete-modal{box-sizing:border-box;width:min(600px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);border-radius:10px}
+.pcm-group-delete-modal .pcm-modal-box{box-sizing:border-box;width:100%;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:auto}
+.pcm-group-delete-modal .pcm-modal-msg{font-weight:600}
+.pcm-group-delete-description{font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;opacity:.85}
+.pcm-group-delete-modal .pcm-modal-row{flex-wrap:wrap}
+.pcm-group-delete-modal .menu_button{white-space:normal;overflow-wrap:anywhere;min-height:32px}
+.pcm-dialog .pcm-group-delete-modal .menu_button.pcm-group-delete-danger{border-color:#bf6757!important;color:#b14b3d!important;background:color-mix(in srgb,var(--SmartThemeBlurTintColor) 90%,#c95444)!important}
+.pcm-dialog.pcm-theme-night .pcm-group-delete-modal .menu_button.pcm-group-delete-danger{color:#ffb4a4!important}
+.pcm-group-delete-modal .menu_button:focus-visible{outline:2px solid var(--pcm-selection-edge,var(--SmartThemeBodyColor));outline-offset:2px}
+@media(max-width:600px){.pcm-group-delete-modal .pcm-modal-row{flex-direction:column;align-items:stretch}.pcm-group-delete-modal .menu_button{width:100%;min-height:36px}}

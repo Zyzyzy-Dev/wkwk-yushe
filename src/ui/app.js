@@ -19,6 +19,8 @@ import { applyReplacementPlan } from '../features/preset/text-replace.js';
 import { applyPromptDraft, isPendingPromptDraft, buildPresetDraftSnapshot } from '../features/preset/entry-drafts.js';
 import { createTextReplacePanel } from '../features/preset/ui/text-replace-panel.js';
 import { transferPresetGroup } from '../features/preset/group-transfer.js';
+import {removePresetGroup} from '../features/preset/group-delete.js';
+import {chooseGroupRemoval} from '../features/preset/ui/group-delete-dialog.js';
 import { installPresetGroupDrag } from '../features/preset/ui/group-drag.js';
 import { indexPromptOrder, indexedPromptEnabled, indexedPromptInjected } from '../features/preset/ui/list-order-index.js';
 import { createPromptRangeGroup } from '../features/preset/native-groups.js';
@@ -1059,7 +1061,26 @@ function newGroup(side){
   hideCompare();renderAll();
 }
 async function renameGroup(side,id){const groupState=getBaiBaiGroupState(state[side]),group=groupState?.groups?.find(g=>String(g.id)===String(id));if(!group)return;const name=await pcmPrompt('输入新的分组名称',group.name||'');if(!name)return;snapshotGroupChange(side);group.name=name;state.dirty[side]=true;renderList(side);}
-async function deleteGroup(side,id){const groupState=getBaiBaiGroupState(state[side]);if(!groupState||!(await pcmConfirm('删除分组？组内条目会变为未分组，不会被删除。')))return;snapshotGroupChange(side);groupState.groups=groupState.groups.filter(g=>String(g.id)!==String(id));for(const [promptId,meta] of Object.entries(groupState.prompts||{}))if(String(meta?.groupId)===String(id))delete groupState.prompts[promptId];state.dirty[side]=true;renderList(side);}
+async function deleteGroup(side,id){
+  const preset=state[side],groupState=getBaiBaiGroupState(preset),group=groupState?.groups?.find(g=>String(g.id)===String(id));
+  if(!group)return;
+  const before=JSON.stringify(preset),source=state.tavernSource[side];
+  const count=preset.prompts.filter(p=>String(groupState.prompts?.[p.identifier]?.groupId)===String(id)).length;
+  const choice=await chooseGroupRemoval({parent:document.getElementById(APP_ID+'-dialog'),groupName:group.name,count});
+  if(choice!=='ungroup'&&choice!=='delete')return;
+  if(state[side]!==preset||state.tavernSource[side]!==source||JSON.stringify(preset)!==before){pcmToastr.warning('预设或分组已变化，请重新选择后操作');return;}
+  const result=removePresetGroup(preset,id,{deleteEntries:choice==='delete'});
+  // moveSnapshot 保留原条目对象；整组撤回也能找回未提交正文草稿。
+  pushUndo(moveSnapshot(side));
+  const ids=new Set(result.removedIds),closeDetail=ids.has(state.freeSelect[side+'Id'])||result.removedIds.some(promptId=>isComparisonActive(side,promptId));
+  Object.assign(preset,result.preset);
+  for(const promptId of ids)state.multiSelect.selected[side].delete(promptId);
+  if(ids.has(state.freeSelect[side+'Id'])){state.freeSelect.oldId=null;state.freeSelect.newId=null;}
+  if(closeDetail){state.activeId=null;state.activeSide=null;hideCompare();}
+  if(state.grouping.side===side)state.grouping={side:null,groupId:null};
+  state.dirty[side]=true;rebuildCache();renderAll();
+  pcmToastr.success(choice==='delete'?'已删除分组及 '+result.removedIds.length+' 个条目，可撤回':'已解除分组，条目已保留，可撤回');
+}
 function assignPromptToGroup(sourceSide,targetSide,id,groupId,skipUndo){
   const source=state[sourceSide],target=state[targetSide],prompt=byId(sourceSide).get(id);
   if(!source||!target||!prompt)return;
