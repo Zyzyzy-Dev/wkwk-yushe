@@ -2066,12 +2066,34 @@ async function installNativeGroupControls() {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
     return Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]]));
   });
-  const saveSettingsChecked = async () => {
-    const expected = fingerprint({ extension_settings: extensions.extension_settings, oai_settings: openai.oai_settings });
+  const saveSettingsChecked = async ({ preferenceKind } = {}) => {
+    // 开关仅核验自身，柏宝箱并行更新分组缓存不应令开关保存误报失败。
+    const preferenceOnly = preferenceKind === 'preset' || preferenceKind === 'regex';
+    const signature = data => preferenceOnly
+      ? data.extension_settings?.preset_compare_native_groups?.[preferenceKind] !== false
+      : fingerprint(data);
+    const expected = signature({ extension_settings: extensions.extension_settings, oai_settings: openai.oai_settings });
     await script.saveSettings();
-    const result = await readSnapshotPersistence({ script }, '/api/settings/get', {});
-    const persisted = typeof result?.settings === 'string' ? JSON.parse(result.settings) : result?.settings;
-    if (fingerprint(persisted || {}) !== expected) throw new Error('未确认分组设置已保存，请检查连接后重试');
+    // 宿主可能延迟保存；只重读核验，不能重复写入整份设置覆盖其他扩展的新改动。
+    const deadline = Date.now() + 8000;
+    for (const delay of (preferenceOnly ? [0, 250, 750, 1500] : [0])) {
+      if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+      try {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) throw new Error('分组设置保存核验超时，请保持酒馆在前台后重试');
+        const result = await readSnapshotPersistence({ script }, '/api/settings/get', {}, { timeoutMs: remaining, label: '分组设置保存核验' });
+        const persisted = typeof result?.settings === 'string' ? JSON.parse(result.settings) : result?.settings;
+        if (result?.bootstrap?.partial || !persisted || typeof persisted !== 'object' || Array.isArray(persisted)
+          || !persisted.extension_settings || typeof persisted.extension_settings !== 'object' || Array.isArray(persisted.extension_settings)) throw new Error('保存核验返回的数据不完整');
+        if (signature(persisted) === expected) return;
+      } catch (cause) {
+        if (!preferenceOnly) throw cause;
+        const error = new Error('暂时无法确认分组开关是否已保存，当前页面保留你的选择；刷新后请核对。' + (cause.message || ''));
+        error.nativeGroupSaveUnverified = true;
+        throw error;
+      }
+    }
+    throw new Error('未确认分组设置已保存，请检查连接后重试');
   };
   const start = () => { nativeGroupController = installNativeGroups({ openai, script, extensions, regex, presetManager, serial: snapshotSerial, saveSettingsChecked }); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });

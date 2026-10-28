@@ -7,7 +7,7 @@ const host = fs.readFileSync(new URL('../src/host/host.js', import.meta.url), 'u
 const start = host.indexOf('  const select = data => ({', host.indexOf('async function installNativeGroupControls()'));
 const end = host.indexOf('  const start = () => { nativeGroupController', start);
 assert.ok(start >= 0 && end > start);
-const factory = new Function('extensions', 'openai', 'script', 'readSnapshotPersistence', host.slice(start, end) + ';return saveSettingsChecked;');
+const factory = new Function('extensions', 'openai', 'script', 'readSnapshotPersistence', 'setTimeout', host.slice(start, end) + ';return saveSettingsChecked;');
 const reorder = value => Array.isArray(value) ? value.map(reorder) : value && typeof value === 'object'
     ? Object.fromEntries(Object.keys(value).sort().map(key => [key, reorder(value[key])])) : value;
 function fixture() {
@@ -21,7 +21,7 @@ function save(data, transform = reorder, asString = true) {
     let persisted, saves = 0;
     const checked = factory({extension_settings:data.extension_settings},{oai_settings:data.oai_settings},
         {saveSettings:async()=>{saves++;persisted=transform(JSON.parse(JSON.stringify(data)));}},
-        async()=>({settings:asString?JSON.stringify(persisted):persisted}));
+        async()=>({settings:asString?JSON.stringify(persisted):persisted}),setTimeout);
     return {checked, saves:()=>saves};
 }
 for (const asString of [true,false]) test(`无柏宝箱，分组字段键序改变仍确认保存：settings ${asString?'string':'object'}`, async()=>{
@@ -44,4 +44,46 @@ for(const [name,mutate] of [
     ['预设分组缺失',d=>delete d.oai_settings.extensions.baibaiToolkit],
 ]) test(`真实差异仍拒绝：${name}`,async()=>{
     await assert.rejects(save(fixture(),d=>{mutate(d);return reorder(d)}).checked(),/未确认分组设置已保存/);
+});
+
+// 只缩短核验等待，不更改读写结果；独立计数确保重试不会重复写整份设置。
+function preferenceFixture(kind,{read,write}={}){
+    const data=fixture();data.extension_settings.preset_compare_native_groups={preset:false,regex:false};
+    let writes=0,reads=0,disk;
+    const checked=factory({extension_settings:data.extension_settings},{oai_settings:data.oai_settings},
+        {saveSettings:async()=>{writes++;if(write)await write();disk=structuredClone(data);}},
+        async(...args)=>{reads++;return read?read(structuredClone(disk),reads,args):{settings:disk};},fn=>setTimeout(fn,0));
+    return {checked:()=>checked({preferenceKind:kind}),strict:()=>checked(),data,counts:()=>({writes,reads})};
+}
+for(const kind of ['preset','regex']){
+    test(`${kind} 开关不核验柏宝箱并行变化的无关字段`,async()=>{
+        const f=preferenceFixture(kind,{read:d=>{d.oai_settings.extensions.baibaiToolkit.extra='并行缓存更新';d.extension_settings.regex=[];d.extension_settings.preset_compare_native_groups[kind==='preset'?'regex':'preset']=true;return {settings:d};}});
+        await f.checked();assert.deepEqual(f.counts(),{writes:1,reads:1});
+    });
+    test(`${kind} 延迟保存只重读，旧值不能立即触发回滚`,async()=>{
+        const f=preferenceFixture(kind,{read:(d,n)=>{if(n<3)d.extension_settings.preset_compare_native_groups[kind]=true;return {settings:d};}});
+        await f.checked();assert.deepEqual(f.counts(),{writes:1,reads:3});
+    });
+    test(`${kind} 始终未保存的自身开关仍然失败`,async()=>{
+        const f=preferenceFixture(kind,{read:d=>{delete d.extension_settings.preset_compare_native_groups;return {settings:d};}});
+        await assert.rejects(f.checked(),e=>/未确认分组设置/.test(e.message)&&!e.nativeGroupSaveUnverified);assert.deepEqual(f.counts(),{writes:1,reads:4});
+    });
+    for(const [name,read] of [
+        ['abort',()=>{throw new DOMException('signal is aborted without reason','AbortError');}],
+        ['network',()=>{throw new TypeError('Failed to fetch');}],
+        ['partial',d=>({settings:d,bootstrap:{partial:true}})],
+        ['malformed',()=>({settings:'{invalid'})],
+        ['empty',()=>({settings:{}})],
+        ['array',()=>({settings:{extension_settings:[]}})],
+    ])test(`${kind} 回读 ${name} 标记为未核验而非写入失败`,async()=>{
+        const f=preferenceFixture(kind,{read});await assert.rejects(f.checked(),e=>e.nativeGroupSaveUnverified===true&&/当前页面保留/.test(e.message));assert.deepEqual(f.counts(),{writes:1,reads:1});
+    });
+    test(`${kind} 写入拒绝不伪装成核验警告`,async()=>{
+        const error=new Error('write failed'),f=preferenceFixture(kind,{write:()=>{throw error;}});
+        await assert.rejects(f.checked(),e=>e===error&&!e.nativeGroupSaveUnverified);assert.deepEqual(f.counts(),{writes:1,reads:0});
+    });
+}
+test('普通分组操作仍严格核验，回读失败不能降级为开关警告',async()=>{
+    const error=new DOMException('aborted','AbortError'),f=preferenceFixture('regex',{read:()=>{throw error;}});
+    await assert.rejects(f.strict(),e=>e===error&&!e.nativeGroupSaveUnverified);
 });

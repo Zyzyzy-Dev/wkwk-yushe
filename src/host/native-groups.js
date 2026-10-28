@@ -255,8 +255,21 @@ export function installNativeGroups(env) {
             toggle.addEventListener('change', () => {
                 const checked = toggle.checked;
                 run(async () => {
-                    const before = clone(settings[PREF]); settings[PREF] = { ...prefs(), [kind]: checked };
-                    try { await saveSettingsChecked(); } catch (error) { settings[PREF] = before; throw error; }
+                    const before = prefs()[kind], existed = Object.hasOwn(prefs(), kind);
+                    settings[PREF] = { ...prefs(), [kind]: checked };
+                    try { await saveSettingsChecked({ preferenceKind: kind }); }
+                    catch (error) {
+                        // 写入已返回，回读失败不代表未落盘；不能用旧值反向覆盖用户选择。
+                        if (error.nativeGroupSaveUnverified) {
+                            globalThis.toastr?.warning(error.message, '分组开关保存待核对');
+                            return;
+                        }
+                        if (prefs()[kind] === checked) {
+                            if (existed) settings[PREF][kind] = before;
+                            else delete settings[PREF][kind];
+                        }
+                        throw error;
+                    }
                 });
             });
             label.append(toggle, document.createTextNode('酒馆盒子分组')); toolbar.append(label, node('span', 'pcm-ng-toolbar-actions'));
