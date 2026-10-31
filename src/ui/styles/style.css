@@ -251,10 +251,12 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-toast{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:10px}
 
 /* ---------- 滚动条：细圆角，悬停加深 ---------- */
-.pcm-list::-webkit-scrollbar,.pcm-compare::-webkit-scrollbar,.pcm-picker-panel::-webkit-scrollbar{width:10px;height:10px}
-.pcm-list::-webkit-scrollbar-thumb,.pcm-compare::-webkit-scrollbar-thumb,.pcm-picker-panel::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--SmartThemeBodyColor) 22%,transparent);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
-.pcm-list::-webkit-scrollbar-thumb:hover,.pcm-compare::-webkit-scrollbar-thumb:hover,.pcm-picker-panel::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--SmartThemeBodyColor) 38%,transparent);border:2px solid transparent;background-clip:padding-box}
-.pcm-list::-webkit-scrollbar-track,.pcm-compare::-webkit-scrollbar-track,.pcm-picker-panel::-webkit-scrollbar-track{background:transparent}
+.pcm-dialog,.pcm-dialog *{scrollbar-color:color-mix(in srgb,var(--SmartThemeBodyColor) 22%,transparent) transparent}
+.pcm-dialog::-webkit-scrollbar,.pcm-dialog *::-webkit-scrollbar{width:10px;height:10px;background:transparent}
+.pcm-dialog::-webkit-scrollbar-thumb,.pcm-dialog *::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--SmartThemeBodyColor) 22%,transparent);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
+.pcm-dialog::-webkit-scrollbar-thumb:hover,.pcm-dialog *::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--SmartThemeBodyColor) 38%,transparent);border:2px solid transparent;background-clip:padding-box}
+.pcm-dialog::-webkit-scrollbar-track,.pcm-dialog *::-webkit-scrollbar-track,.pcm-dialog::-webkit-scrollbar-corner,.pcm-dialog *::-webkit-scrollbar-corner{background:transparent}
+.pcm-dialog::-webkit-scrollbar-button,.pcm-dialog *::-webkit-scrollbar-button{display:none}
 
 /* ============================================================
    配色切换层（v1.6.0）：自适应 / 日间 / 夜间(Gruvbox Dark)。

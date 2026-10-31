@@ -1,6 +1,8 @@
-// 一键迁移窗口：折叠分组勾选、只读正文与编辑器样式预览，自动规划后一次应用到新版草稿。
+// 一键迁移窗口：固定顶栏、分组勾选、正文只读的可拖动预览，一次应用到新版草稿。
 import { analyzeMigration, planMigration } from '../migration.js';
 import { findPromptOrderEntry } from '../core.js';
+import { moveMigrationEntry } from '../migration-order.js';
+import { installMigrationDrag } from './migration-drag.js';
 
 let dialogSequence = 0;
 const nameOf = item => String(item?.name || '未命名条目');
@@ -58,6 +60,8 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
     return control;
   }
   let disposed = false, stale = false, busy = false, plan = null, analysis, freshnessTimer;
+  let quickTargets = [], quickIndex = -1;
+  let dragController, automaticPlan = null, manuallyPlaced = false;
   const selected = new Set(), rows = new Map(), groupControls = [];
   const sourcePrompts = new Map((source?.prompts || []).map(prompt => [prompt.identifier, prompt]));
   const modal = node('dialog', 'pcm-modal pcm-migration-modal');
@@ -65,9 +69,13 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
   title.id = `pcm-migration-title-${sequence}`; modal.setAttribute('aria-labelledby', title.id);
   const box = node('div', 'pcm-modal-box pcm-migration-box');
   const closeButton = button('关闭', 'close', close);
-  const heading = node('div', 'pcm-migration-heading'); heading.append(title, closeButton);
+  const quickButton = button('快捷查看', 'quick', quickView); quickButton.hidden = true;
+  const headingActions = node('div', 'pcm-migration-heading-actions'); headingActions.append(quickButton, closeButton);
+  const heading = node('div', 'pcm-migration-heading'); heading.append(title, headingActions);
   const direction = node('p', 'pcm-migration-direction', `${sourceName || '旧版预设'} → ${targetName || '新版预设'}`);
+  const header = node('header', 'pcm-migration-header'); header.append(heading, direction);
   const toolbar = node('div', 'pcm-migration-toolbar');
+  const positionNote = node('p', 'pcm-migration-position-note'); positionNote.hidden = true; positionNote.setAttribute('role','status');
   const count = node('span', 'pcm-migration-count'); count.setAttribute('role', 'status');
   toolbar.append(button('全选', 'select-all', () => selectAll(true)), button('清空', 'clear', () => selectAll(false)), count);
   const issues = node('div', 'pcm-migration-issues'); issues.setAttribute('role', 'status'); issues.setAttribute('aria-live', 'polite');
@@ -75,16 +83,36 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
   const list = node('div', 'pcm-migration-list');
   const preview = node('section', 'pcm-migration-preview'); preview.hidden = true; preview.setAttribute('aria-label', '迁移后完整顺序');
   const actions = node('div', 'pcm-migration-actions');
+  const resetButton = button('恢复自动位置', 'reset-position', () => { if(!current() || !automaticPlan)return;plan=automaticPlan;manuallyPlaced=false;showPreview(true); }); resetButton.hidden = true;
   const previewButton = button('预览', 'preview', showPreview);
   const backButton = button('返回选择', 'preview-back', () => { selectionView(); previewButton.focus({ preventScroll: true }); }); backButton.hidden = true;
   const applyButton = button('一键迁移', 'apply', apply); applyButton.classList.add('pcm-primary');
-  actions.append(backButton, previewButton, applyButton);
-  box.append(heading, direction, toolbar, errorBox, issues, list, preview, actions); modal.append(box); parent.append(modal);
+  actions.append(resetButton, backButton, previewButton, applyButton);
+  box.append(header, toolbar, positionNote, errorBox, issues, list, preview, actions); modal.append(box); parent.append(modal);
+  dragController=installMigrationDrag({modal,box,header,footer:actions,preview,canDrag:()=>!busy&&!preview.hidden&&current(),onDrop:(id,placement)=>{
+    try{plan=moveMigrationEntry(plan,id,placement);manuallyPlaced=true;showPreview(true);}catch(error){reportError(error.message);}
+  }});
 
   function reportError(message) { errorBox.textContent = message; errorBox.hidden = !message; }
   function selectionView() {
+    dragController?.cancel(); resetButton.hidden = true;
+    positionNote.hidden = !manuallyPlaced;
+    if(manuallyPlaced)positionNote.textContent = '已保留手动位置；更改勾选会重新自动定位。';
     list.hidden = false; toolbar.hidden = false; preview.hidden = true;
     previewButton.hidden = false; backButton.hidden = true;
+    quickButton.hidden = true; quickTargets = []; quickIndex = -1;
+  }
+  function quickView() {
+    if (!current() || preview.hidden || !quickTargets.length) return;
+    quickTargets[quickIndex]?.row.classList.remove('is-quick-current');
+    quickIndex = (quickIndex + 1) % quickTargets.length;
+    const { row, body, toggle } = quickTargets[quickIndex];
+    if (body.hidden) toggle.click();
+    row.classList.add('is-quick-current');
+    quickButton.textContent = `快捷查看${quickIndex + 1}/${quickTargets.length}`;
+    quickButton.title = `已定位第 ${quickIndex + 1} 条；再次点击查看第 ${(quickIndex + 1) % quickTargets.length + 1} 条`;
+    // 仅滚动本窗口，避开固定顶栏；保留按钮焦点以便连续键盘/触屏操作。
+    box.scrollTop += row.getBoundingClientRect().top - header.getBoundingClientRect().bottom - 8;
   }
   function current() {
     if (disposed) return false;
@@ -101,6 +129,7 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
   function close() {
     if (disposed) return;
     disposed = true; clearInterval(freshnessTimer);
+    dragController?.destroy();
     parent.removeEventListener('close', parentClosed);
     if (modal.open) modal.close(); modal.remove();
     if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
@@ -108,14 +137,18 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
   }
   function parentClosed(event) { if (event.target === parent) close(); }
   function setSelected(ids, value) {
+    let changed = false;
     for (const id of ids) {
+      if (selected.has(id) !== value) changed = true;
       if (value) selected.add(id); else selected.delete(id);
       rows.get(id).checkbox.checked = value;
     }
-    recalculate();
+    if (changed) recalculate();
   }
   function selectAll(value) { setSelected((analysis?.candidates || []).map(candidate => candidate.id), value); }
   function recalculate() {
+    const resetManual = manuallyPlaced;
+    manuallyPlaced = false;
     selectionView(); preview.replaceChildren(); reportError('');
     count.textContent = `已选 ${selected.size} / ${analysis?.candidates?.length || 0} 条`;
     for (const group of groupControls) {
@@ -125,6 +158,7 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
     plan = null;
     try { if (analysis) plan = planMigration(source, target, [...selected], { ignoreWhitespace }); }
     catch (error) { reportError(error?.message || '无法规划迁移，请重新打开。'); }
+    automaticPlan = plan;
     issues.replaceChildren();
     const errors = [...new Set([...(analysis?.errors || []), ...(plan?.errors || [])])];
     for (const message of errors) issues.append(node('p', 'pcm-migration-problem', String(message)));
@@ -133,10 +167,17 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
     applyButton.disabled = busy || !selected.size || !plan?.result || errors.length > 0;
     previewButton.disabled = !selected.size || !plan?.result || errors.length > 0;
     current();
+    if(resetManual&&!stale){positionNote.textContent='选择已变化，位置已重新自动规划。';positionNote.hidden=false;}
   }
-  function showPreview() {
+  function showPreview(preserve = false) {
     if (!current() || !plan?.result || previewButton.disabled) return;
-    preview.replaceChildren();
+    // Click handlers pass a MouseEvent; only an explicit true requests a post-drag redraw.
+    preserve = preserve === true;
+    dragController?.cancel(); reportError('');
+    const scrollTop = box.scrollTop;
+    const expanded = new Set([...preview.querySelectorAll('[data-migration-preview-expand][aria-expanded=true]')].map(e=>e.dataset.migrationPreviewExpand));
+    const folded = new Set([...preview.querySelectorAll('[data-migration-preview-group-toggle][aria-expanded=false]')].map(e=>e.dataset.migrationPreviewBlock));
+    preview.replaceChildren(); quickTargets = []; quickIndex = -1;
     const pane = node('div', 'pcm-pane pcm-migration-preview-pane');
     const ordered = node('div', 'pcm-list pcm-migration-preview-order'); pane.append(ordered); preview.append(pane);
     const resultPrompts = new Map(plan.result.prompts.map(prompt => [prompt.identifier, prompt]));
@@ -158,6 +199,7 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
       const head = node('header', 'pcm-group-head'), body = node('div', 'pcm-group-body');
       const groupName = block.group?.name || '未分组';
       const toggle = button('', 'preview-group-toggle', () => {}, 'pcm-group-toggle'); toggle.dataset.migrationPreviewGroupToggle = block.groupId;
+      toggle.dataset.migrationPreviewBlock = JSON.stringify([block.groupId,block.injected,block.entries.find(entry=>!entry.incoming)?.id || block.entries.map(entry=>entry.id).sort()[0]]);
       const caret = node('span', 'pcm-group-caret'); caret.setAttribute('aria-hidden', 'true');
       toggle.append(caret, node('span', 'pcm-group-title', block.injected ? groupName : `${groupName} · 未注入`), node('small', '', `${block.entries.length} 条`));
       disclosure(toggle, body, caret); head.append(toggle);
@@ -171,14 +213,22 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
         open.append(node('span', 'pcm-name', nameOf(prompt)));
         const switchControl = readonlySwitch(enabled, nameOf(prompt), 'preview-enabled', entry.id);
         row.append(open, switchControl);
-        if (entry.incoming) row.append(node('span', 'pcm-badge pcm-added', '本次迁入'));
+        if (entry.incoming) {open.title='拖动调整位置；手机长按拖动，点击查看正文';row.append(node('span', 'pcm-badge pcm-added', '本次迁入'));}
         else row.append(node('span', 'pcm-migration-preview-spacer'));
         promptDisclosure(open, row, prompt, 'preview-body'); body.append(row);
+        if (entry.incoming) quickTargets.push({ row, body, toggle });
       }
     }
     list.hidden = true; toolbar.hidden = true; preview.hidden = false;
+    positionNote.hidden = true;
     previewButton.hidden = true; backButton.hidden = false;
-    box.scrollTop = 0; backButton.focus({ preventScroll: true });
+    resetButton.hidden = !manuallyPlaced;
+    quickButton.hidden = !quickTargets.length;
+    quickButton.textContent = `快捷查看1/${quickTargets.length}`;
+    quickButton.title = '点击查看第 1 条迁入条目；再次点击依次查看，末尾回到第 1 条';
+    for(const control of preview.querySelectorAll('[data-migration-preview-expand]'))if(expanded.has(control.dataset.migrationPreviewExpand))control.click();
+    for(const control of preview.querySelectorAll('[data-migration-preview-group-toggle]'))if(folded.has(control.dataset.migrationPreviewBlock))control.click();
+    box.scrollTop = preserve ? scrollTop : 0; backButton.focus({ preventScroll: true });
   }
   function apply() {
     if (busy || !current() || applyButton.disabled || !plan?.result) return;
