@@ -1,4 +1,4 @@
-// 设置快照页面：保存、恢复与聊天/角色绑定，通过 iframe 通信桥调用宿主，不访问酒馆全局。
+// 设置快照页面：保存、恢复与聊天/角色绑定；区分保存失败与回读未确认，支持只读重新核验。
 import { chooseApiSnapshotBinding } from '../../api/ui/api-snapshot-bind.js';
 import { createSnapshotEditor } from './snapshot-editor.js';
 import { createSnapshotReasoningForm } from './snapshot-reasoning-form.js';
@@ -36,8 +36,12 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
   const filters=node('div','pcm-snapshot-filters'),search=node('input','pcm-snapshot-search');search.type='search';search.placeholder='搜索快照名称';search.setAttribute('aria-label','搜索快照名称');search.addEventListener('input',()=>render());const clearSearch=button('清空搜索',()=>{search.value='';render();search.focus();});filters.append(search,clearSearch);
   const notice = node('p', 'pcm-snapshot-notice', '快照可分别保存预设、全局世界书、正则和推理设置。聊天绑定优先于角色绑定。');
   const status = node('p', 'pcm-snapshot-status'); status.setAttribute('role', 'status');
+  const persistence = node('section', 'pcm-snapshot-persistence'); persistence.hidden = true;
+  const persistenceText = node('p'); persistenceText.setAttribute('role', 'status');
+  const verify = button('重新核验', () => verifyPersistence()); verify.dataset.snapshotVerify = '';
+  persistence.append(persistenceText, verify);
   const list = node('section', 'pcm-snapshot-list'); list.setAttribute('aria-label', '已保存快照');
-  element.append(header, context, toolbar, filters, notice, status, list);
+  element.append(header, context, toolbar, filters, notice, status, persistence, list);
   let data = null, busy = false, disposed = false, revision = 0, refreshPending = false, editor = null;
   // 收藏显示与持久化分开；同一快照等待核验，不锁住其它快照和搜索。
   const pendingFavorites = new Map();
@@ -62,6 +66,24 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     const row=node('div','pcm-snapshot-setting '+cls);row.append(node('span','pcm-snapshot-setting-label',label),node('span','pcm-snapshot-setting-value',value));return row;
   }
   function showStatus(message, error = false) {status.textContent = message; status.classList.toggle('is-error', error);}
+  function persistenceMessage(result = data) {
+    return result?.persistence?.verified === false
+      ? result.persistence.message || '保存请求已提交，但暂时无法确认保存结果。当前页面保留改动，请稍后重新核验，勿重复创建快照。'
+      : '';
+  }
+  function renderPersistence() {
+    const message = persistenceMessage();
+    persistenceText.textContent = message;
+    persistence.hidden = !!editor || !message;
+    verify.disabled = busy || pendingFavorites.size > 0;
+  }
+  function reportResult(result, message, warning = false) {
+    const pending = persistenceMessage(result);
+    showStatus(pending ? '' : message, !pending && warning);
+    if (pending) toast.warning(pending);
+    else if (warning) toast.warning(message);
+    else toast.success(message);
+  }
   function setBusy(value) {
     busy = value;
     for (const b of element.querySelectorAll('button')) {
@@ -70,6 +92,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     }
     element.setAttribute('aria-busy', String(value));
     for (const input of scopePicker.querySelectorAll('input')) input.disabled=value;
+    verify.disabled = value || pendingFavorites.size > 0;
   }
   function bindingName(id) {return data.snapshots.find(s => s.id === id)?.name || (id ? '快照已删除' : '未绑定');}
   function favoriteValue(snapshot) {return pendingFavorites.get(snapshot.id)?.favorite ?? (snapshot.favorite === true);}
@@ -78,6 +101,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
   }
   function updateFavoriteView() {
     if (disposed || !data) return;
+    renderPersistence();
     const focused = document.activeElement, cards = new Map([...list.querySelectorAll('.pcm-snapshot-card')].map(card => [card.dataset.snapshotId,card]));
     for (const snapshot of data.snapshots) {
       const card=cards.get(snapshot.id);if(!card)continue;
@@ -173,6 +197,22 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     }
   }
 
+  async function verifyPersistence() {
+    if (busy || disposed || editor || pendingFavorites.size || !persistenceMessage()) return;
+    setBusy(true); showStatus('正在核验保存结果…');
+    try {
+      // This action only reads the saved state; it must not resubmit or recreate snapshots.
+      const result = await host.request('snapshot-verify');
+      if (disposed) return;
+      data = result; render(); refreshPending = false;
+      reportResult(result, '快照改动已核验保存');
+    } catch (error) {
+      if (!disposed) {showStatus(error.message, true); toast.error(error.message);}
+    } finally {
+      if (!disposed) {setBusy(false); if (refreshPending) {refreshPending = false; void refresh();}}
+    }
+  }
+
   async function saveFavorite(id) {
     if (busy || disposed || !data || pendingFavorites.has(id)) return;
     const snapshot=data.snapshots.find(item=>item.id===id);if(!snapshot)return;
@@ -188,9 +228,14 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
         if(item.id!==id)return item;
         const next={...item};if(favorite)next.favorite=true;else delete next.favorite;return next;
       });
+      // A partial response for this favorite must not hide another in-flight operation's warning.
+      if (result.persistence?.verified === false) data.persistence = result.persistence;
+      else if (!busy && !editor && pendingFavorites.size === 1) delete data.persistence;
+      renderPersistence();
       const message=favorite?'已收藏并置顶':'已取消收藏置顶';
-      if(!busy&&!editor)showStatus(message);
-      toast.success(message);
+      if(!busy&&!editor)reportResult(result,message);
+      else if(persistenceMessage(result))toast.warning(persistenceMessage(result));
+      else toast.success(message);
     } catch(error) {
       if(!disposed){if(!busy&&!editor)showStatus(error.message,true);toast.error(error.message);}
     } finally {
@@ -207,8 +252,8 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     for(const part of [context,toolbar,filters,notice,status,list])part.hidden=false;
     title.textContent='设置快照';back.innerHTML=iconButton('首页','home',()=>{}).innerHTML;
     reload.hidden=false;
-    if(result?.snapshots){data=result;if(!pendingFavorites.size)refreshPending=false;render();showStatus('快照已保存');}
-    else void refresh();
+    if(result?.snapshots){data=result;if(!pendingFavorites.size)refreshPending=false;render();showStatus(persistenceMessage(result)?'':'快照已保存');}
+    else {renderPersistence();void refresh();}
     element.closest('dialog')?.scrollTo(0,0);
   }
   async function openEditor(id) {
@@ -218,7 +263,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
       const model=await host.request('snapshot-editor',{id,contextKey:data.context.key});
       if(disposed)return;
       editor=createSnapshotEditor({host,model,existingId:id,onCancel:()=>closeEditor(),onSaved:closeEditor,toast,prompt,confirm});
-      for(const part of [context,toolbar,filters,notice,status,list])part.hidden=true;
+      for(const part of [context,toolbar,filters,notice,status,persistence,list])part.hidden=true;
       title.textContent=id?'快照详情':'创建快照';reload.hidden=true;back.innerHTML='←';element.append(editor.element);element.closest('dialog')?.scrollTo(0,0);
     }catch(error){if(!disposed){showStatus(error.message,true);toast.error(error.message);}}
     finally{if(!disposed)setBusy(false);}
@@ -260,8 +305,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
       else {data = await host.request('snapshot-list'); if (!disposed) render();}
       if (disposed) return;
       if(!pendingFavorites.size)refreshPending = false;
-      showStatus(message, Boolean(result?.warnings?.length));
-      if (result?.warnings?.length) toast.warning(message); else toast.success(message);
+      reportResult(result, message, Boolean(result?.warnings?.length));
     } catch (error) {if (!disposed) {showStatus(error.message, true); toast.error(error.message);}}
     finally {if (!disposed) {setBusy(false); if (refreshPending) {refreshPending = false; void refresh();}}}
   }

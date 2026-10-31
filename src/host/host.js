@@ -628,6 +628,8 @@ async function handleWorkbenchWorldbook(method, payload) {
 
 // 设置快照保存当前开关与挂载，扩展资源按稳定标识恢复；不覆盖预设或世界书正文。
 const SNAPSHOT_KEY = 'preset_compare_snapshots';
+// 仅记录本页的未确认保存；不写入用户设置，也不把无法回读当成落盘成功。
+const snapshotPersistenceStatus = new WeakMap();
 let snapshotQueue = Promise.resolve();
 let snapshotBusy = 0;
 let snapshotEpoch = 0;
@@ -851,7 +853,7 @@ async function snapshotList(env) {
   const store = snapshotStore(env), context = snapshotContext(env);
   try {context.reasoning=(await readSnapshotReasoning()).current;} catch(error) {context.reasoningError=error.message;}
   const active = resolveSnapshotBinding(store, context.canBindChat ? context.chatBindingId : null, context.characterKey);
-  return clone({snapshots: store.snapshots, context, activeBinding: active ? {id: active.snapshot.id, name: active.snapshot.name, source: active.source} : null, busy: snapshotBusy > 0});
+  return clone({snapshots: store.snapshots, context, activeBinding: active ? {id: active.snapshot.id, name: active.snapshot.name, source: active.source} : null, busy: snapshotBusy > 0, persistence: snapshotPersistenceStatus.get(store) || null});
 }
 
 async function readSnapshotPersistence(env, url, body, {timeoutMs = 8000, label} = {}) {
@@ -870,33 +872,55 @@ async function readSnapshotPersistence(env, url, body, {timeoutMs = 8000, label}
   } finally {clearTimeout(timer);}
 }
 
-async function saveSnapshotSettings(env, verifySwitches = false, reasoning = null) {
+async function saveSnapshotSettings(env, verifySwitches = false, reasoning = null, {allowUnverified = false, verifyOnly = false} = {}) {
   // JSON object key order is not persisted content; array order and values remain significant.
   const fingerprint = data => JSON.stringify(data, (_key, value) => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
     return Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]]));
   });
-  const expectedStore = fingerprint(snapshotStore(env));
+  const store = snapshotStore(env), expectedStore = fingerprint(store);
+  const expectedLinks = fingerprint(env.extensions.extension_settings[API_BINDINGS_KEY] || []);
+  // 保存快照库与应用快照是不同操作；后者仍要求完整核验，不能以待核验代替成功。
+  const canKeepUnverified = allowUnverified && !verifySwitches && !reasoning;
+  const unverified = detail => {
+    const status = {verified:false, message:'保存请求已提交，但暂时无法确认保存结果；当前页面保留改动，请勿重复创建，可稍后重新核验。'+detail};
+    snapshotPersistenceStatus.set(store, status);
+    return status;
+  };
   const settings = env.openai.oai_settings;
   const expectedOrder = verifySwitches ? fingerprint(settings.prompt_order) : null;
   const expectedGroups = verifySwitches ? fingerprint(settings.extensions?.baibaiToolkit?.presetPromptGroups || null) : null;
   const expectedWorlds = verifySwitches ? fingerprint(selectedSnapshotWorlds(env)) : null;
   const expectedResources = verifySwitches ? fingerprint({global:env.extensions.extension_settings.regex || [],preset:settings.extensions?.regex_scripts || [],charLore:snapshotWorldSettings(env)?.charLore || []}) : null;
   const expectedReasoning = reasoning?.current();
-  await env.script.saveSettings();
+  if (!verifyOnly) await env.script.saveSettings();
   // Native saveSettings can return before a debounced save, or swallow a write failure.
   // Wait by reading only: never retry a write that could overwrite another editor's changes.
-  const deadline = Date.now() + 8000;
+  // 请求与重试共用 20 秒预算；正常读取一旦匹配即返回。
+  const deadline = Date.now() + 20000;
   let mismatch = '未确认快照保存成功：回读内容与本次快照不一致。请等待酒馆完成保存后重试；若持续出现，请刷新后核对快照是否存在';
-  for (const delay of [0, 250, 750, 1500, 1500]) {
+  let unreadable = null;
+  for (const delay of [0, 250, 750, 1500, 1500, 3000, 5000, 7000]) {
     if (Date.now() + delay >= deadline) break;
     if (delay) await new Promise(resolve => setTimeout(resolve, delay));
     const remaining = deadline - Date.now();
     if (remaining <= 0) break;
-    const result = await readSnapshotPersistence(env, '/api/settings/get', {}, {timeoutMs: remaining, label: '快照保存核验'});
-    const persisted = typeof result?.settings === 'string' ? JSON.parse(result.settings) : result?.settings;
+    let persisted;
+    try {
+      const result = await readSnapshotPersistence(env, '/api/settings/get', {}, {timeoutMs: remaining, label: '快照保存核验'});
+      persisted = typeof result?.settings === 'string' ? JSON.parse(result.settings) : result?.settings;
+      if (result?.bootstrap?.partial || !persisted || typeof persisted !== 'object' || Array.isArray(persisted)
+        || !persisted.extension_settings || typeof persisted.extension_settings !== 'object' || Array.isArray(persisted.extension_settings)) throw new Error('保存核验返回的数据不完整');
+      unreadable = null;
+    } catch (error) {
+      if (!canKeepUnverified) throw error;
+      unreadable = error;
+      continue;
+    }
     if (fingerprint(persisted?.extension_settings?.[SNAPSHOT_KEY]) !== expectedStore) {
       mismatch = '未确认快照保存成功：回读内容与本次快照不一致。请等待酒馆完成保存后重试；若持续出现，请刷新后核对快照是否存在';
+    } else if (fingerprint(persisted.extension_settings[API_BINDINGS_KEY] || []) !== expectedLinks) {
+      mismatch = '未确认快照 API 绑定关系保存成功，请刷新后核对';
     } else if (verifySwitches && (fingerprint(persisted?.oai_settings?.prompt_order) !== expectedOrder
       || fingerprint(persisted?.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups || null) !== expectedGroups
       || fingerprint(persisted?.world_info_settings?.world_info?.globalSelect || []) !== expectedWorlds)) {
@@ -905,8 +929,12 @@ async function saveSnapshotSettings(env, verifySwitches = false, reasoning = nul
       mismatch = '未确认正则和角色附加世界书保存成功';
     } else if (reasoning && (!reasoning.matches(expectedReasoning) || !sameSnapshotReasoning(persisted?.power_user?.reasoning, expectedReasoning))) {
       mismatch = '未确认自动解析设置保存成功，请核对当前设置后重试';
-    } else return;
+    } else {
+      snapshotPersistenceStatus.delete(store);
+      return {verified:true};
+    }
   }
+  if (canKeepUnverified && (unreadable || verifyOnly)) return unverified(unreadable ? '（保存结果读取暂不可用）' : mismatch);
   throw new Error(mismatch);
 }
 
@@ -1405,6 +1433,11 @@ async function handleSnapshotRequest(method, payload) {
     const env = await snapshotEnvironment(), store = snapshotStore(env);
     const context = snapshotContext(env);
     const existing = store.snapshots.find(item => item.id === payload.id);
+    if (method === 'snapshot-verify') {
+      if (snapshotPersistenceStatus.has(store)) await saveSnapshotSettings(env, false, null, {allowUnverified:true, verifyOnly:true});
+      const result = await snapshotList(env); result.busy = false;
+      return result;
+    }
     if(method==='snapshot-reasoning-template'){
       assertSnapshotContext(env,payload.contextKey);assertSnapshotIdle(env);
       return manageReasoningTemplate(payload,env.script.getRequestHeaders||globalThis.SillyTavern?.getContext?.().getRequestHeaders,async()=>saveSnapshotSettings(env,false,await snapshotReasoningEnvironment()));
@@ -1464,7 +1497,7 @@ async function handleSnapshotRequest(method, payload) {
       if (existing?.favorite === true) snapshot.favorite = true;
       const previous = store.snapshots;
       store.snapshots = existing ? previous.map(s => s.id === existing.id ? snapshot : s) : [...previous, snapshot];
-      try {await saveSnapshotSettings(env);} catch (error) {store.snapshots = previous; throw error;}
+      try {await saveSnapshotSettings(env, false, null, {allowUnverified:true});} catch (error) {store.snapshots = previous; throw error;}
     } else if (method === 'snapshot-reasoning-save') {
       if (!existing) throw new Error('快照已删除，请刷新列表');
       const next = {...existing};
@@ -1474,12 +1507,12 @@ async function handleSnapshotRequest(method, payload) {
       validateSnapshot(next);
       const previous = store.snapshots;
       store.snapshots = previous.map(item => item === existing ? next : item);
-      try {await saveSnapshotSettings(env);} catch (error) {store.snapshots = previous; throw error;}
+      try {await saveSnapshotSettings(env, false, null, {allowUnverified:true});} catch (error) {store.snapshots = previous; throw error;}
     } else if (method === 'snapshot-rename') {
       if (!existing) throw new Error('快照已删除');
       const previous = existing.name;
       existing.name = normalizeSnapshotName(payload.name);
-      try {await saveSnapshotSettings(env);} catch (error) {existing.name = previous; throw error;}
+      try {await saveSnapshotSettings(env, false, null, {allowUnverified:true});} catch (error) {existing.name = previous; throw error;}
     } else if (method === 'snapshot-favorite') {
       if (!existing) throw new Error('快照已删除，请刷新列表');
       if (typeof payload.favorite !== 'boolean') throw new Error('收藏状态无效');
@@ -1487,7 +1520,7 @@ async function handleSnapshotRequest(method, payload) {
         const previous=store.snapshots, next={...existing};
         if(payload.favorite)next.favorite=true;else delete next.favorite;
         store.snapshots=previous.map(snapshot=>snapshot===existing?next:snapshot);
-        try {await saveSnapshotSettings(env);} catch (error) {store.snapshots=previous;throw error;}
+        try {await saveSnapshotSettings(env, false, null, {allowUnverified:true});} catch (error) {store.snapshots=previous;throw error;}
       }
     } else if (method === 'snapshot-delete') {
       if (!existing) throw new Error('快照已删除');
@@ -1496,7 +1529,7 @@ async function handleSnapshotRequest(method, payload) {
       env.extensions.extension_settings[API_BINDINGS_KEY] = (previousLinks || []).filter(link=>link.snapshotId!==payload.id);
       store.snapshots = store.snapshots.filter(s => s.id !== payload.id);
       for (const key of Object.keys(store.characterBindings)) if (store.characterBindings[key] === payload.id) delete store.characterBindings[key];
-      try {await saveSnapshotSettings(env);} catch (error) {Object.assign(store, before); env.extensions.extension_settings[API_BINDINGS_KEY]=previousLinks; throw error;}
+      try {await saveSnapshotSettings(env, false, null, {allowUnverified:true});} catch (error) {Object.assign(store, before); env.extensions.extension_settings[API_BINDINGS_KEY]=previousLinks; throw error;}
       // 其他聊天的引用在加载时视为失效；不遍历或改写用户的聊天文件。
     } else if (method === 'snapshot-bind') {
       assertSnapshotContext(env, payload.contextKey);
@@ -1506,7 +1539,7 @@ async function handleSnapshotRequest(method, payload) {
         const before = store.characterBindings[context.characterKey];
         if (payload.id === null) delete store.characterBindings[context.characterKey];
         else Object.defineProperty(store.characterBindings, context.characterKey, {value: payload.id, writable: true, configurable: true, enumerable: true});
-        try {await saveSnapshotSettings(env);} catch (error) {if (before === undefined) delete store.characterBindings[context.characterKey]; else store.characterBindings[context.characterKey] = before; throw error;}
+        try {await saveSnapshotSettings(env, false, null, {allowUnverified:true});} catch (error) {if (before === undefined) delete store.characterBindings[context.characterKey]; else store.characterBindings[context.characterKey] = before; throw error;}
       } else if (payload.target === 'chat') {
         if (!context.canBindChat) throw new Error('请先打开并保存当前聊天');
         const metadata = env.script.chat_metadata || globalThis.SillyTavern?.getContext?.().chatMetadata;

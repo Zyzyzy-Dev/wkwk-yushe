@@ -1,0 +1,13 @@
+/* 既有预设统计行迁移文字按钮与分组独立供电图标，保持成员开关显示原值。 */
+.pcm-dialog .pcm-summary .pcm-migration-launch{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;width:auto!important;min-width:0!important;height:22px!important;min-height:22px!important;padding:2px 5px!important;font-size:10px!important;line-height:16px!important;white-space:nowrap;margin:0!important;border-radius:6px!important;box-shadow:none!important}
+.pcm-migration-launch[hidden]{display:none!important}
+.pcm-dialog .pcm-pane .pcm-group-actions{gap:3px;align-items:center;flex:none}
+.pcm-dialog .pcm-pane .pcm-group-actions :is(.pcm-group-icon,.pcm-group-gate){display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:26px!important;min-width:26px!important;height:24px!important;min-height:24px!important;margin:0!important;padding:3px!important;border-color:transparent!important;background:transparent!important;box-shadow:none!important;border-radius:5px!important;touch-action:manipulation}
+.pcm-dialog .pcm-pane .pcm-group-actions :is(.pcm-group-icon,.pcm-group-gate):hover{background:color-mix(in srgb,currentColor 9%,transparent)!important}
+.pcm-dialog .pcm-pane .pcm-group-actions :is(.pcm-group-icon,.pcm-group-gate):focus-visible{outline:2px solid var(--pcm-accent,var(--SmartThemeBodyColor));outline-offset:1px}
+.pcm-group-icon svg,.pcm-group-power-track{pointer-events:none}
+.pcm-group-power-track{width:16px;height:9px;display:block;border-radius:9px;background:currentColor;opacity:.8;position:relative}
+.pcm-group-power-knob{position:absolute;width:5px;height:5px;left:2px;top:2px;border-radius:50%;background:var(--pcm-bg,#fff);transition:transform .12s}
+.pcm-group-gate[aria-checked=true] .pcm-group-power-knob{transform:translateX(7px)}
+.pcm-group-gate[aria-checked=false] .pcm-group-power-track{opacity:.35}
+.pcm-group-power-off>.pcm-group-head .pcm-group-title{opacity:.55}

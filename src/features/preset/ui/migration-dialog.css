@@ -1,0 +1,54 @@
+/* 一键迁移：紧凑分组勾选、只读折叠正文，预览复用编辑器的卡片配色与开关外观。 */
+.pcm-migration-modal{box-sizing:border-box;width:min(880px,calc(100vw - 20px));max-width:calc(100vw - 20px);max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);border-radius:12px;color:var(--SmartThemeBodyColor)}
+.pcm-migration-modal .pcm-migration-box{box-sizing:border-box;width:100%;max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);overflow:auto;overscroll-behavior:contain;padding:16px;gap:12px;min-width:0;border-radius:12px}
+.pcm-migration-modal [hidden]{display:none!important}
+.pcm-migration-modal *{box-sizing:border-box;min-width:0}
+.pcm-migration-heading,.pcm-migration-toolbar,.pcm-migration-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pcm-migration-heading{justify-content:space-between}
+.pcm-migration-title{font-size:18px;font-weight:650;margin:0}
+.pcm-migration-direction{font-size:14px;font-weight:600;margin:0;overflow-wrap:anywhere}
+.pcm-migration-modal p{margin:0}
+.pcm-migration-note{font-size:12px;line-height:1.6;opacity:.8;overflow-wrap:anywhere}
+.pcm-migration-count{font-size:12px;margin-left:auto}
+.pcm-migration-list{display:grid;gap:12px}
+.pcm-migration-group{border:1px solid var(--SmartThemeBorderColor);border-radius:10px;background:color-mix(in srgb,var(--SmartThemeBodyColor) 6%,var(--SmartThemeBlurTintColor));overflow:hidden}
+.pcm-migration-group-head,.pcm-migration-candidate-head{display:flex;align-items:center;gap:8px;min-width:0}
+.pcm-migration-group-head{padding:8px 10px}
+.pcm-migration-modal .pcm-migration-checkbox{width:16px;height:16px;flex:0 0 16px;margin:0;accent-color:var(--pcm-selection-edge,#4f9291);cursor:pointer}
+.pcm-migration-group-toggle,.pcm-migration-name{display:flex;align-items:center;gap:6px;flex:1;min-width:0;margin:0;padding:4px 0;border:0;border-radius:4px;background:none;color:inherit;font:inherit;line-height:1.45;text-align:left;cursor:pointer;overflow-wrap:anywhere}
+.pcm-migration-group-toggle{font-size:13px;font-weight:600}
+.pcm-migration-group-toggle>span:not(.pcm-migration-caret){flex:1}
+.pcm-migration-group-toggle small{flex:none;font-size:10px;font-weight:400;opacity:.6;white-space:nowrap}
+.pcm-migration-caret{flex:0 0 10px;font-size:9px;opacity:.7}
+.pcm-migration-group-body{display:grid;gap:6px;padding:0 12px 12px}
+.pcm-migration-group-body[hidden]{display:none!important}
+.pcm-migration-candidate{border:1px solid transparent;border-radius:15px;background:var(--pcm-card-bg,var(--SmartThemeBlurTintColor));overflow:hidden}
+.pcm-migration-candidate.is-selected{border-color:color-mix(in srgb,var(--pcm-selection-edge,#489e9d) 28%,transparent)}
+.pcm-migration-candidate-head{padding:3px 10px}
+.pcm-migration-name{min-height:28px;font-size:12px;white-space:pre-wrap}
+.pcm-migration-candidate-head:hover{background:color-mix(in srgb,var(--pcm-selection-edge,#489e9d) 8%,transparent)}
+.pcm-migration-modal .pcm-migration-content{display:block;margin:0 10px 10px;padding:10px;border:1px solid var(--SmartThemeBorderColor);border-radius:7px;background:var(--pcm-input-bg,var(--SmartThemeBlurTintColor));color:var(--SmartThemeBodyColor);max-height:320px;overflow:auto;overscroll-behavior:contain;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:inherit;font-size:12px;line-height:1.6;user-select:text;-webkit-user-select:text;-webkit-touch-callout:default;cursor:text}
+.pcm-migration-issues{display:grid;gap:5px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.pcm-migration-problem,.pcm-migration-error{border-left:3px solid #cf7762;padding:6px 8px;background:color-mix(in srgb,#cf7762 12%,transparent);overflow-wrap:anywhere}
+.pcm-migration-error{font-size:13px}
+.pcm-migration-preview{min-width:0}
+/* Reuse editor theme selectors, while replacing editor-pane sizing and drag affordances. */
+.pcm-dialog .pcm-migration-modal .pcm-migration-preview-pane{display:block!important;grid-template-rows:none!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important;border:0!important;border-radius:10px;overflow:visible!important;box-shadow:none}
+.pcm-dialog .pcm-migration-modal .pcm-migration-preview-order{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;border-radius:10px}
+.pcm-dialog .pcm-migration-modal .pcm-migration-preview-row{grid-template-columns:minmax(0,1fr) auto auto;cursor:default;touch-action:pan-y}
+.pcm-migration-modal .pcm-migration-preview-row>.pcm-open{min-height:20px}
+.pcm-migration-modal .pcm-migration-preview-row>.pcm-migration-content{grid-column:1/-1;margin:2px 0 0}
+.pcm-migration-modal .pcm-migration-preview-row.is-incoming{border-left:3px solid var(--pcm-selection-edge)!important}
+.pcm-migration-modal .pcm-migration-preview-row .pcm-badge{border-radius:999px;font-size:9px}
+.pcm-migration-modal .pcm-migration-preview-row .pcm-migration-readonly-switch{cursor:default;pointer-events:auto}
+.pcm-migration-modal .pcm-migration-preview-row .pcm-migration-preview-spacer{width:0}
+.pcm-migration-modal .pcm-migration-preview-row .pcm-name{font-size:12px}
+.pcm-migration-modal .pcm-migration-preview .pcm-group-title{white-space:normal;overflow-wrap:anywhere}
+.pcm-migration-modal .pcm-migration-preview .pcm-group-caret{font-size:9px}
+.pcm-migration-modal .pcm-group-actions .pcm-migration-readonly-switch{display:flex;align-items:center;justify-content:center;width:26px;height:24px;cursor:default}
+.pcm-migration-modal .pcm-group-actions .pcm-migration-readonly-switch:hover{background:transparent!important}
+.pcm-migration-actions{justify-content:flex-end;position:sticky;bottom:-16px;background:var(--SmartThemeBlurTintColor);padding:10px 0 0;z-index:1}
+.pcm-migration-modal .menu_button{white-space:normal;overflow-wrap:anywhere;min-height:34px;max-width:100%}
+.pcm-migration-modal .menu_button:disabled{opacity:.45;cursor:not-allowed}
+.pcm-migration-modal :is(button,input):focus-visible{outline:2px solid var(--pcm-selection-edge,var(--SmartThemeBodyColor));outline-offset:2px}
+@media(max-width:600px){.pcm-migration-modal .pcm-migration-box{padding:12px;gap:10px}.pcm-migration-actions{bottom:-12px}.pcm-migration-actions .menu_button{flex:1}.pcm-migration-title{font-size:16px}.pcm-migration-direction{font-size:12px}.pcm-migration-count{font-size:11px}.pcm-migration-group-body{padding:0 8px 8px}.pcm-migration-group-head{padding:6px 8px}.pcm-migration-candidate-head{padding:3px 8px}.pcm-migration-modal .pcm-migration-content{margin:0 8px 8px;padding:8px}.pcm-migration-modal .pcm-migration-preview-row>.pcm-migration-content{margin:2px 0 0}}
