@@ -1,19 +1,28 @@
 // 查找替换条目视图：保持完整候选、分组成员与预设顺序，复用纯替换核心生成不可变预览。
-import {applyReplacementPlan, createReplacementPlan, findLiteralRanges} from '../text-replace.js';
+import {applyReplacementPlan, createReplacementPlan, findSearchRanges, MAX_SEARCH_MATCHES} from '../text-replace.js';
 
 /** Candidate visibility depends only on search conditions, never replacement selection. */
-export function buildReplacementView(context, {query = '', fields = ['content'], caseSensitive = true} = {}) {
+export function buildReplacementView(context, {query = '', fields = ['content'], caseSensitive = true, regex = false} = {}) {
+  if (query) findSearchRanges('', query, {caseSensitive, regex});
   const source = Array.isArray(context?.entries) ? context.entries : [];
   const counts = new Map();
   for (const entry of source) counts.set(entry?.identifier, (counts.get(entry?.identifier) || 0) + 1);
   const order = new Map();
   for (const id of context?.orderedIds || []) if (!order.has(id)) order.set(id, order.size);
+  let matchCount = 0;
   const entries = source.map((entry, index) => {
     const id = typeof entry?.identifier === 'string' ? entry.identifier : '';
-    return {entry, id, key: String(index), selectable: !!id && counts.get(id) === 1, index};
+    const ranges = {name: [], content: []};
+    for (const field of ['name', 'content']) {
+      if (query && fields.includes(field) && typeof entry?.[field] === 'string') {
+        ranges[field] = findSearchRanges(entry[field], query, {caseSensitive, regex});
+        matchCount += ranges[field].length;
+        if (matchCount > MAX_SEARCH_MATCHES) throw new Error('查找命中过多，已超过单次处理上限，请缩小查找范围。');
+      }
+    }
+    return {entry, id, key: String(index), selectable: !!id && counts.get(id) === 1, index, ranges};
   }).sort((a, b) => (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity) || a.index - b.index);
-  const candidates = entries.filter(({entry}) => !query || fields.some(field =>
-    typeof entry?.[field] === 'string' && findLiteralRanges(entry[field], query, {caseSensitive}).length > 0));
+  const candidates = entries.filter(({ranges}) => !query || ranges.name.length || ranges.content.length);
   const byId = new Map(entries.filter(item => item.selectable).map(item => [item.id, item]));
   const assigned = new Set(), groups = [];
   for (const [index, group] of (context?.groups || []).entries()) {

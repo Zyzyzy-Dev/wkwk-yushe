@@ -1,6 +1,6 @@
-// 预设查找替换面板：按默认折叠的分组即时筛选条目、局部跨页选择，并在独立窗口对比替换前后，仅确认后通过回调更新草稿。
-import {findLiteralRanges} from '../text-replace.js';
+// 预设查找替换面板：分组筛选、局部跨页选择及替换预览；自定义正则在可取消的后台任务中执行，确认后才更新草稿。
 import {buildReplacementComparison, buildReplacementView, createEntryReplacementPreview} from './text-replace-view.js';
+import {runReplacementTask} from './text-replace-runner.js';
 
 const PAGE_SIZE = 50;
 let panelSequence = 0;
@@ -33,12 +33,13 @@ function appendSegments(element, segments, className) {
 function sameVersion(a, b) {
   return !!a && !!b && ['preset', 'name', 'source', 'signature'].every(key => a[key] === b[key]);
 }
-function highlight(element, text, query, enabled, caseSensitive) {
+function highlight(element, text, ranges = []) {
   text = typeof text === 'string' ? text : '';
-  if (!query || !enabled) { element.textContent = text; return; }
   let from = 0;
-  for (const [start, end] of findLiteralRanges(text, query, {caseSensitive})) {
-    element.append(document.createTextNode(text.slice(from, start)), node('mark', 'pcm-search-hit pcm-replace-highlight', text.slice(start, end)));
+  for (const [start, end] of ranges) {
+    const mark = node('mark', 'pcm-search-hit pcm-replace-highlight', text.slice(start, end));
+    if (start === end) { mark.classList.add('pcm-replace-empty-hit'); mark.setAttribute('aria-label', '零宽匹配'); }
+    element.append(document.createTextNode(text.slice(from, start)), mark);
     from = end;
   }
   element.append(document.createTextNode(text.slice(from)));
@@ -46,9 +47,10 @@ function highlight(element, text, query, enabled, caseSensitive) {
 
 /** Context versions protect previews; selection stays local and refresh never imports later editor selections. */
 export function createTextReplacePanel({title = '', initialQuery = '', initialScope = 'selected', initialSelectedIds, getContext, onApply, onClose}) {
-  let disposed = false, busy = false;
+  let disposed = false, busy = false, searching = false, previewing = false;
   let context = null, contextVersion = null, view = null, previewState = null, page = 0;
   let selectedIds = new Set(), expanded = new Set(), openGroups = new Set(), previewDialog = null, scope = initialScope === 'all' ? 'all' : 'selected';
+  let generation = 0, searchTimer = null, searchController = null, previewController = null, applyController = null;
   const sequence = ++panelSequence;
   const element = node('section', 'pcm-replace-panel');
   element.dataset.replacePanel = '';
@@ -81,7 +83,11 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
   const contentOption = checkbox('条目正文', 'data-replace-content', true);
   const nameOption = checkbox('条目名称', 'data-replace-name', false);
   const caseOption = checkbox('区分大小写', 'data-replace-case', true);
-  options.append(node('span', 'pcm-replace-strip-label', '查找范围：'), contentOption.element, nameOption.element, caseOption.element);
+  const regexOption = checkbox('正则表达式', 'data-replace-regex', false);
+  options.append(node('span', 'pcm-replace-strip-label', '查找范围：'), contentOption.element, nameOption.element, caseOption.element, regexOption.element);
+  const regexHelp = node('p', 'pcm-replace-note pcm-replace-regex-help', '支持表达式或 /表达式/标记；i 忽略大小写。替换可用 $1、$<名称> 等捕获组。');
+  regexHelp.dataset.replaceRegexHelp = '';
+  regexHelp.hidden = true;
   const scopes = node('div', 'pcm-replace-scopes pcm-replace-strip');
   scopes.setAttribute('role', 'radiogroup');
   scopes.setAttribute('aria-label', '修改范围');
@@ -112,19 +118,21 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
   const results = node('div', 'pcm-replace-results');
   results.dataset.replaceResults = '';
   const footer = node('footer', 'pcm-replace-actions');
-  const previewButton = button('预览替换', 'data-replace-preview', preview);
+  const previewButton = button('预览替换', 'data-replace-preview', () => void preview());
   const applyButton = button('确认替换', 'data-replace-apply', () => void apply());
   applyButton.classList.add('pcm-primary');
   applyButton.disabled = true;
   footer.append(previewButton, applyButton);
-  body.append(textFields, options, scopes, status, results, footer);
+  body.append(textFields, options, regexHelp, scopes, status, results, footer);
 
-  for (const control of [query, replacement, contentOption.control, nameOption.control, caseOption.control]) {
+  for (const control of [query, replacement, contentOption.control, nameOption.control, caseOption.control, regexOption.control]) {
     control.addEventListener(control.tagName === 'TEXTAREA' ? 'input' : 'change', () => {
       if (busy || disposed) return;
       invalidate();
-      if (control !== replacement) { page = 0; rebuildView(); }
-      renderResults();
+      if (control === regexOption.control) syncRegexControls();
+      if (control !== replacement) page = 0;
+      if (control !== replacement || searching || !view) rebuildView({debounce: regexOption.control.checked});
+      else renderResults();
     });
   }
   element.addEventListener('keydown', event => {
@@ -135,7 +143,15 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
   function fields() {
     return [contentOption.control.checked && 'content', nameOption.control.checked && 'name'].filter(Boolean);
   }
-  function searchOptions() { return {query: query.value, fields: fields(), caseSensitive: caseOption.control.checked}; }
+  function searchOptions() { return {query: query.value, fields: fields(), caseSensitive: caseOption.control.checked, regex: regexOption.control.checked}; }
+  function syncRegexControls() {
+    caseOption.control.disabled = busy || regexOption.control.checked;
+    caseOption.element.classList.toggle('is-disabled', regexOption.control.checked);
+    caseOption.element.title = regexOption.control.checked ? '正则模式由表达式标记控制大小写；使用 i 忽略大小写。' : '';
+    regexHelp.hidden = !regexOption.control.checked;
+    query.placeholder = regexOption.control.checked ? '输入表达式或 /表达式/标记' : '输入查找文本';
+    query.setAttribute('aria-label', regexOption.control.checked ? '查找正则表达式' : '查找文本');
+  }
   function report(message = '', error = false) {
     status.textContent = message;
     status.classList.toggle('pcm-replace-error', error);
@@ -143,31 +159,94 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
   function invalidate(message) {
     const hadPreview = !!previewState;
     previewState = null;
+    previewController?.abort();
+    previewController = null;
+    previewing = false;
     closePreviewDialog();
     applyButton.disabled = true;
     report(message ?? (hadPreview ? '条件或选择已变更，请重新预览。' : ''));
   }
-  function rebuildView() {
-    view = buildReplacementView(context || {}, searchOptions());
+  function cancelSearch() {
+    generation++;
+    if (searchTimer !== null) clearTimeout(searchTimer);
+    searchTimer = null;
+    searchController?.abort();
+    searchController = null;
+    searching = false;
+  }
+  function acceptView(next) {
+    view = next;
     page = Math.min(page, Math.max(0, Math.ceil(view.candidates.length / PAGE_SIZE) - 1));
+    const valid = new Set(view.entries.filter(item => item.selectable).map(item => item.id));
+    selectedIds = new Set([...selectedIds].filter(id => valid.has(id)));
+    const keys = new Set(view.entries.map(item => item.key));
+    expanded = new Set([...expanded].filter(key => keys.has(key)));
+  }
+  function rebuildView({debounce = false} = {}) {
+    cancelSearch();
+    const options = searchOptions();
+    if (!options.regex) {
+      try { acceptView(buildReplacementView(context || {}, options)); renderResults(); return true; }
+      catch (error) { view = null; renderResults(); report(error.message || String(error), true); return false; }
+    }
+    const expectedGeneration = generation, expectedVersion = contextVersion;
+    view = null;
+    searching = true;
+    renderResults();
+    report('正在查找…');
+    const run = async () => {
+      searchTimer = null;
+      const controller = new AbortController();
+      searchController = controller;
+      try {
+        const next = await runReplacementTask('view', {context: {entries: context?.entries || [], orderedIds: context?.orderedIds || [], groups: context?.groups || []}, options}, {signal: controller.signal});
+        if (disposed || expectedGeneration !== generation || expectedVersion !== contextVersion) return;
+        if (context && !sameVersion(expectedVersion, getContext().version)) {
+          searchController = null;
+          searching = false;
+          refresh();
+          return;
+        }
+        searching = false;
+        searchController = null;
+        acceptView(next);
+        renderResults();
+        if (status.textContent === '正在查找…') report();
+      } catch (error) {
+        if (disposed || expectedGeneration !== generation || expectedVersion !== contextVersion || error.name === 'AbortError') return;
+        searching = false;
+        searchController = null;
+        view = null;
+        renderResults();
+        report(error.message || String(error), true);
+      }
+    };
+    if (debounce) searchTimer = setTimeout(() => void run(), 180);
+    else void run();
+    return true;
   }
   function effectiveSelection() {
-    return scope === 'all' ? new Set(view.candidates.filter(item => item.selectable).map(item => item.id)) : new Set(selectedIds);
+    return scope === 'all' ? new Set((view?.candidates || []).filter(item => item.selectable).map(item => item.id)) : new Set(selectedIds);
   }
   function syncScopeControls() { for (const control of scopeInputs) control.checked = control.value === scope; }
   function changeSelection(action, focusAttribute, focusValue) {
-    if (disposed || busy) return;
+    if (disposed || busy || searching) return;
     if (scope === 'all') { selectedIds = effectiveSelection(); scope = 'selected'; syncScopeControls(); }
     action(selectedIds);
     invalidate();
     renderResults({attribute: focusAttribute, value: focusValue});
   }
   function updateButtons() {
-    previewButton.disabled = busy || !context;
-    applyButton.disabled = busy || !previewState?.plan.matches.length;
+    element.setAttribute('aria-busy', String(busy || searching || previewing));
+    previewButton.disabled = busy || searching || previewing || !context || !view;
+    applyButton.disabled = busy || searching || previewing || !previewState?.plan.matches.length;
   }
   function renderResults(focus) {
-    if (!view) return;
+    if (!view) {
+      results.replaceChildren(node('p', 'pcm-replace-empty', searching ? '正在更新匹配条目…' : '请调整查找条件后重试。'));
+      updateButtons();
+      return;
+    }
     const selected = effectiveSelection(), first = page * PAGE_SIZE;
     const visible = view.candidates.slice(first, first + PAGE_SIZE), visibleKeys = new Set(visible.map(item => item.key));
     const preset = node('section', 'pcm-replace-preset');
@@ -273,7 +352,7 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
     expand.title = isOpen ? '收起正文' : '展开正文';
     expand.disabled = busy;
     const name = node('span', 'pcm-replace-entry-name');
-    highlight(name, label, query.value, nameOption.control.checked, caseOption.control.checked);
+    highlight(name, label, item.ranges?.name);
     expand.append(name);
     toolbar.append(choice, expand);
     row.append(toolbar);
@@ -283,7 +362,7 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
       detail.dataset.replaceBody = id;
       const pre = node('pre', 'pcm-replace-text');
       pre.dataset.replaceOriginal = id;
-      highlight(pre, entry?.content, query.value, contentOption.control.checked, caseOption.control.checked);
+      highlight(pre, entry?.content, item.ranges?.content);
       detail.append(pre);
       if (!pre.textContent) detail.append(node('span', 'pcm-replace-note', '（空正文）'));
       row.append(detail);
@@ -364,14 +443,8 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
       const changed = !!context, hadPreview = !!previewState;
       context = latest;
       contextVersion = latest.version ? {...latest.version} : null;
-      previewState = null;
-      closePreviewDialog();
+      invalidate();
       rebuildView();
-      const valid = new Set(view.entries.filter(item => item.selectable).map(item => item.id));
-      selectedIds = new Set([...selectedIds].filter(id => valid.has(id)));
-      const keys = new Set(view.entries.map(item => item.key));
-      expanded = new Set([...expanded].filter(key => keys.has(key)));
-      renderResults();
       if (changed) report(hadPreview ? '预设内容或表单已变化，原预览已失效，请重新预览。' : '列表已更新，查找条件和已有选择已保留。');
       return true;
     } catch (error) {
@@ -383,27 +456,50 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
       return false;
     }
   }
-  function preview() {
-    if (busy || disposed) return;
+  async function preview() {
+    if (busy || disposed || searching || previewing) return;
     refresh();
+    if (searching || !view) return;
     invalidate();
+    let controller = null;
     try {
       if (!context) throw new Error('无法读取预设，请关闭后重新打开。');
       const options = {...searchOptions(), replacement: replacement.value};
       if (!options.fields.length) throw new Error('请至少勾选条目正文或条目名称。');
       if (!options.query.length) throw new Error('请输入查找文本；空格和换行也可以作为查找内容。');
-      rebuildView();
       const targets = view.entries.filter(item => scope === 'all' || selectedIds.has(item.id)).map(item => item.entry);
       if (!targets.length) throw new Error('请先选择要修改的条目，或切换到所有条目。');
-      const next = createEntryReplacementPreview(targets, options);
+      const expectedVersion = contextVersion;
+      controller = new AbortController();
+      previewController = controller;
+      previewing = true;
+      updateButtons();
+      report('正在生成替换预览…');
+      const next = options.regex ? await runReplacementTask('preview', {entries: targets, options}, {signal: controller.signal}) : createEntryReplacementPreview(targets, options);
+      if (disposed || controller.signal.aborted || previewController !== controller) return;
+      if (!sameVersion(expectedVersion, getContext().version)) {
+        previewController = null;
+        previewing = false;
+        refresh();
+        report('预设内容或表单已变化，请重新预览。', true);
+        return;
+      }
       previewState = {...next, context: {...context, version: contextVersion && {...contextVersion}, replaceScope: scope, replaceIds: targets.map(entry => entry.identifier)}};
+      previewController = null;
+      previewing = false;
       renderResults();
       report(next.plan.matches.length ? '已在预览窗口显示 ' + next.plan.entryCount + ' 个条目、' + next.plan.matches.length + ' 处修改；核对后点击“确认替换”。' : '没有需要替换的匹配；替换前后相同的内容会自动跳过。');
       if (next.plan.matches.length) openPreviewDialog();
     } catch (error) {
+      if (disposed || controller?.signal.aborted || (controller && previewController !== controller)) return;
       previewState = null;
+      previewController = null;
+      previewing = false;
       renderResults();
       report(error.message || String(error), true);
+    } finally {
+      if (controller && previewController === controller) { previewController = null; previewing = false; }
+      if (!disposed) updateButtons();
     }
   }
   async function apply() {
@@ -412,13 +508,16 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
     refresh();
     if (!previewState?.plan.matches.length) return;
     const currentPreview = previewState, keys = currentPreview.plan.matches.map(match => match.key);
+    const controller = new AbortController();
+    applyController = controller;
     busy = true;
     const priorDisabled = new Map();
     for (const control of element.querySelectorAll('input,textarea,button')) { priorDisabled.set(control, control.disabled); control.disabled = true; }
+    updateButtons();
     report('正在校验并更新草稿…');
     let message, failed = false;
     try {
-      const result = await onApply(currentPreview.plan, keys, currentPreview.context);
+      const result = await onApply(currentPreview.plan, keys, currentPreview.context, {signal: controller.signal});
       if (result === false || result?.ok === false) throw new Error(result?.message || '未应用替换，请重新预览后再试。');
       message = '已更新 ' + (result?.entryCount ?? currentPreview.plan.entryCount) + ' 个条目、' + (result?.matchCount ?? keys.length) + ' 处草稿。可整批撤回，保存后生效。';
     } catch (error) {
@@ -426,13 +525,13 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
       failed = true;
     } finally {
       busy = false;
+      if (applyController === controller) applyController = null;
       if (!disposed) {
         for (const [control, disabled] of priorDisabled) control.disabled = disabled;
         previewState = null;
         // Apply may synchronously renderAll; defer its refresh until the transaction has returned.
-        refresh();
-        rebuildView();
-        renderResults();
+        if (!refresh()) rebuildView();
+        syncRegexControls();
         report(message, failed);
       }
     }
@@ -442,9 +541,14 @@ export function createTextReplacePanel({title = '', initialQuery = '', initialSc
     contextVersion = context.version ? {...context.version} : null;
     selectedIds = new Set(Array.from(initialSelectedIds ?? context.selectedIds ?? [], String));
     rebuildView();
-    const valid = new Set(view.entries.filter(item => item.selectable).map(item => item.id));
-    selectedIds = new Set([...selectedIds].filter(id => valid.has(id)));
-    renderResults();
   } catch (error) { report(error.message || String(error), true); }
-  return {element, refresh, dispose() { disposed = true; previewState = null; closePreviewDialog(); element.remove(); }};
+  return {element, refresh, dispose() {
+    disposed = true;
+    cancelSearch();
+    previewController?.abort();
+    applyController?.abort();
+    previewState = null;
+    closePreviewDialog();
+    element.remove();
+  }};
 }

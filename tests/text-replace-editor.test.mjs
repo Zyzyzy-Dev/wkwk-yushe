@@ -14,7 +14,7 @@ const contextCode = sliceBetween('function getTextReplaceContext(', 'function cl
 const transactionCode = sliceBetween('function applyTextReplacement(', 'function openTextReplace(');
 
 const prompt = (identifier, content, name = identifier) => ({identifier, name, content, role: 'system', injection_position: 0, enabled: true});
-function harness() {
+function harness({worker} = {}) {
   const left = {prompts: [prompt('a', 'old cat', 'old a')]};
   const right = {prompts: [prompt('a', 'cat first', 'cat title'), prompt('b', 'untouched', 'b title'), prompt('c', 'another body', 'c title')]};
   const state = {
@@ -28,7 +28,7 @@ function harness() {
     state, inlineDrafts, textReplaceLineages, singleSide: null, variablePanels,
     filtered: side => state[side].prompts.filter(entry => entry.identifier !== 'c'),
     getBaiBaiGroupState: () => ({groups: [{id: 'g1', name: 'Group 1'}], prompts: {a: {groupId: 'g1'}, b: {groupId: 'g1'}}}),
-    applyReplacementPlan, clone: structuredClone, equalValues: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+    applyReplacementPlan, runReplacementTask: worker, clone: structuredClone, equalValues: (a, b) => JSON.stringify(a) === JSON.stringify(b),
     pushUndo: action => undo.push(action), rebuildCache: () => { rebuilds++; }, renderAll: () => { renders++; },
     pcmToastr: {warning: message => warnings.push(message)},
   };
@@ -271,4 +271,51 @@ test('editor content-only undo preserves a later direct name edit and keeps the 
   assert.equal(env.state.new.prompts[0].content, 'cat first');
   assert.equal(env.state.new.prompts[0].name, 'new independent title');
   assert.equal(env.state.dirty.new, true);
+});
+
+function pendingRegex() {
+  const tasks=[];
+  const env=harness({worker:(type,payload,options)=>new Promise((resolve,reject)=>tasks.push({type,payload:structuredClone(payload),options,resolve,reject}))});
+  const pending=preview(env);pending.plan.regex=true;
+  const controller=new AbortController();
+  const start=()=>env.applyTextReplacement('new',pending.plan,pending.keys,pending.context,{signal:controller.signal});
+  const finish=(index=0)=>tasks[index].resolve(applyReplacementPlan(tasks[index].payload.entries,tasks[index].payload.plan,tasks[index].payload.keys));
+  return {env,tasks,pending,controller,start,finish};
+}
+
+test('regex application waits for worker validation before changing editor data and keeps undo',async()=>{
+  const {env,tasks,controller,start,finish}=pendingRegex(),before=structuredClone(env.state.new);
+  const work=start();assert.equal(typeof work?.then,'function','regex evaluation must leave the UI thread');
+  assert.equal(tasks.length,1);assert.equal(tasks[0].type,'apply');assert.equal(tasks[0].options.signal,controller.signal);
+  assert.deepEqual(env.state.new,before);assert.equal(env.undo.length,0);
+  finish();assert.deepEqual(await work,{entryCount:1,matchCount:1});
+  assert.equal(env.state.new.prompts[0].content,'dog first');
+  assert.equal(env.undoTextReplacement(env.undo[0]),true);assert.deepEqual(env.state.new,before);
+});
+
+test('regex reply cannot overwrite a preset or pending form edited while it ran',async()=>{
+  for(const change of [env=>{env.state.new.prompts[0].content='later body'},env=>{env.inlineDrafts.set(env.state.new.prompts[0],{content:'later form'})},env=>{env.state.new=structuredClone(env.state.new)}]){
+    const {env,start,finish}=pendingRegex();const work=start();assert.equal(typeof work?.then,'function');
+    change(env);const before=structuredClone(env.state.new);
+    finish();await assert.rejects(work,/变化|重新预览/);assert.deepEqual(env.state.new,before);assert.equal(env.undo.length,0);
+  }
+});
+
+test('closing the replacement panel cancels pending regex application even if worker reply arrives',async()=>{
+  const {env,controller,start,finish}=pendingRegex(),before=structuredClone(env.state.new);
+  const work=start();assert.equal(typeof work?.then,'function');controller.abort();finish();
+  await assert.rejects(work,/取消|Abort/);assert.deepEqual(env.state.new,before);assert.equal(env.undo.length,0);
+});
+
+test('variable edits introduced during regex work block the eventual commit',async()=>{
+  const {env,start,finish}=pendingRegex(),before=structuredClone(env.state.new);
+  const work=start();assert.equal(typeof work?.then,'function');env.variablePanels.set('new',{panel:{hasDraft:()=>true}});finish();
+  await assert.rejects(work,/变量面板/);assert.deepEqual(env.state.new,before);assert.equal(env.undo.length,0);
+});
+
+test('regex worker failure and duplicate replies leave no partial or duplicate undo transaction',async()=>{
+  const failed=pendingRegex(),before=structuredClone(failed.env.state.new);const work=failed.start();assert.equal(typeof work?.then,'function');
+  failed.tasks[0].reject(Error('正则运行超时'));await assert.rejects(work,/超时/);assert.deepEqual(failed.env.state.new,before);assert.equal(failed.env.undo.length,0);
+  const duplicate=pendingRegex(),first=duplicate.start(),second=duplicate.start();assert.equal(typeof first?.then,'function');
+  duplicate.finish(0);await first;duplicate.finish(1);await assert.rejects(second,/变化|重新预览/);assert.equal(duplicate.env.undo.length,1);
 });

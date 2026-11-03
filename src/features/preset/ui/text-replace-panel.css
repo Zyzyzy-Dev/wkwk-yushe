@@ -12,6 +12,9 @@
 .pcm-replace-strip-label{flex:none;white-space:nowrap}
 .pcm-replace-options{flex-wrap:wrap;column-gap:12px;row-gap:6px}
 .pcm-replace-check{display:flex;align-items:center;gap:5px;min-width:0;white-space:nowrap;cursor:pointer}
+.pcm-replace-check.is-disabled{opacity:.55;cursor:default}
+.pcm-replace-regex-help{padding:0 2px}
+.pcm-replace-empty-hit{display:inline-block;min-width:2px;height:1em;vertical-align:baseline;box-shadow:inset -2px 0 0 currentColor}
 .pcm-replace-panel .pcm-replace-check input[type=checkbox]{appearance:auto!important;flex:none;width:14px!important;height:14px!important;min-width:14px!important;padding:0!important;margin:0!important;accent-color:var(--pcm-accent,var(--SmartThemeBodyColor));cursor:pointer}
 .pcm-replace-scopes{justify-content:flex-start;column-gap:16px}
 .pcm-replace-scope{display:flex;align-items:center;gap:9px;white-space:nowrap;min-width:0;cursor:pointer}

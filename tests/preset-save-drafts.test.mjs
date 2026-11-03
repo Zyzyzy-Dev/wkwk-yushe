@@ -1,4 +1,4 @@
-// 顶部保存真实函数回归：未提交表单零请求，异步保存期间新编辑或切换不被旧读回覆盖。
+// 顶部保存真实函数回归：未提交表单先确认，取消/检查零请求，异步编辑和切换均保留草稿。
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -16,40 +16,49 @@ function harness() {
     old: preset('old side'), new: preset('new text'), oldName: 'old.json', newName: 'new.json',
     tavernSource: {old: 'old', new: 'new'}, dirty: {old: false, new: true},
     modified: {old: new Set(), new: new Set(['a'])}, dragged: {old: new Set(), new: new Set(['a'])},
+    showDraftMarkers: {old:false,new:false},
   };
   let resolveRequest, rejectRequest, rebuilds = 0, renders = 0;
   const response = new Promise((resolve, reject) => { resolveRequest = resolve; rejectRequest = reject; });
-  const inlineDrafts = new WeakMap(), requests = [], applied = [], notices = [], errors = [];
+  const inlineDrafts = new WeakMap(), requests = [], applied = [], notices = [], errors = [], confirmations = [], markerRefreshes = [];
+  let controlSyncs=0, prefSaves=0;
   const dependencies = {
     state, inlineDrafts, clone: structuredClone, validate: value => value,isPendingPromptDraft,buildPresetDraftSnapshot,
     host: {request: (type, payload) => { requests.push({type, payload}); return response; }},
     pcmToast: (message, kind) => notices.push({message, kind}),
     console: {error: (...args) => errors.push(args)},
     rebuildCache: () => { rebuilds++; }, renderAll: () => { renders++; }, recordApply: args => applied.push(args),
+    shell:()=>({}),choosePresetSave:options=>new Promise(resolve=>confirmations.push({options,resolve})),
+    syncDraftControls:()=>{controlSyncs++;},refreshDraftIndicators:side=>markerRefreshes.push(side),saveUiPrefs:async()=>{prefSaves++;},
   };
   const save = new Function(...Object.keys(dependencies), saveCode + '\nconst originalApply=applyTavernPreset; applyTavernPreset=(...args)=>{recordApply(args);return originalApply(...args);};return saveSideToTavern;')(...Object.values(dependencies));
-  return {state, inlineDrafts, save, requests, applied, notices, errors, resolve: resolveRequest, reject: rejectRequest, calls: () => ({rebuilds, renders})};
+  return {state, inlineDrafts, save, requests, applied, notices, errors, confirmations,markerRefreshes,
+    confirm:async choice=>{assert.ok(confirmations.length,'待确认窗口存在');confirmations.at(-1).resolve(choice);await Promise.resolve();},
+    resolve: resolveRequest, reject: rejectRequest, calls: () => ({rebuilds, renders}),markerCalls:()=>({controlSyncs,prefSaves})};
 }
 
-test('top-level save with a pending inline draft sends no host request and preserves every field', async () => {
+test('top-level save with a pending inline draft waits for confirmation and cancellation preserves every field', async () => {
   const env = harness(), current = env.state.new, prompt = current.prompts[0];
   const draft = {...prompt, content: 'unsubmitted text', name: 'unsubmitted name', role: 'assistant', injection_position: 1};
   env.inlineDrafts.set(prompt, draft);
   const before = structuredClone(current);
-  await env.save('new');
+  const pending=env.save('new');
+  assert.equal(env.confirmations.length,1,'未提交的编辑必须先确认');
+  assert.equal(env.requests.length,0);
+  await env.confirm(null);await pending;
   assert.equal(env.requests.length, 0);
   assert.equal(env.applied.length, 0);
   assert.equal(env.state.new, current);
   assert.deepEqual(current, before);
   assert.equal(env.inlineDrafts.get(prompt), draft);
   assert.equal(env.state.dirty.new, true);
-  assert.match(env.notices[0].message, /未提交/);
-  assert.equal(env.notices[0].kind, 'warning');
+  assert.equal(env.notices.length,0);
 });
 
 test('top-level save without pending drafts sends an immutable snapshot and applies the actual readback', async () => {
   const env = harness(), original = env.state.new, old = env.state.old;
   const pending = env.save('new');
+  assert.equal(env.confirmations.length,0,'已提交到预设的改动直接保存');
   assert.equal(env.requests.length, 1);
   assert.equal(env.requests[0].type, 'save-preset');
   assert.equal(env.requests[0].payload.name, 'new');
@@ -162,14 +171,14 @@ test('top-level save rejects a missing readback without clearing the local dirty
   assert.deepEqual(env.calls(), {rebuilds: 0, renders: 0});
 });
 
-test('merge save includes closed entry drafts on this side without touching the other side or source', async () => {
+test('direct save confirmation includes closed entry drafts on this side without touching the other side or source', async () => {
   const env=harness(), current=env.state.new, other=env.state.old;
-  env.state.mergeSave=true;
   current.prompts.push({identifier:'b',name:'closed',content:'before',injection_trigger:['normal','continue'],custom:{keep:true}});
   const first=current.prompts[0], second=current.prompts[1], draft={content:'{{random::A::B}}'};
   env.inlineDrafts.set(first,draft);env.inlineDrafts.set(second,{name:'closed edited',content:'after',trigger:'normal'});
   const otherDraft={content:'other side untouched'};env.inlineDrafts.set(other.prompts[0],otherDraft);
   const before=structuredClone(current),pending=env.save('new');
+  assert.equal(env.confirmations.length,1);assert.equal(env.requests.length,0);await env.confirm('save');
   assert.equal(env.requests.length,1);
   const payload=env.requests[0].payload.preset;
   assert.equal(payload.prompts[0].content,'{{random::A::B}}');
@@ -183,18 +192,20 @@ test('merge save includes closed entry drafts on this side without touching the 
   assert.equal(env.notices.at(-1).kind,'success');
 });
 
-test('merge save failure preserves original model and every pending draft', async () => {
+test('confirmed direct save failure preserves original model and every pending draft', async () => {
   const env=harness(),current=env.state.new,prompt=current.prompts[0],draft={content:'pending text',role:'assistant'};
-  env.state.mergeSave=true;env.inlineDrafts.set(prompt,draft);
+  env.inlineDrafts.set(prompt,draft);
   const before=structuredClone(current),pending=env.save('new');
+  assert.equal(env.confirmations.length,1);await env.confirm('save');
   assert.equal(env.requests.length,1);env.reject(Error('network unavailable'));await pending;
   assert.equal(env.state.new,current);assert.deepEqual(current,before);assert.equal(env.inlineDrafts.get(prompt),draft);
   assert.equal(env.applied.length,0);assert.equal(env.notices.at(-1).kind,'error');
 });
 
-test('merge save keeps a draft edited again during the request', async () => {
-  const env=harness(),current=env.state.new,prompt=current.prompts[0];env.state.mergeSave=true;
+test('confirmed direct save keeps a draft edited again during the request', async () => {
+  const env=harness(),current=env.state.new,prompt=current.prompts[0];
   env.inlineDrafts.set(prompt,{content:'first pending'});const pending=env.save('new');
+  assert.equal(env.confirmations.length,1);await env.confirm('save');
   assert.equal(env.requests.length,1);
   const newer={content:'second pending'};env.inlineDrafts.set(prompt,newer);
   env.resolve(env.requests[0].payload.preset);await pending;
@@ -202,18 +213,19 @@ test('merge save keeps a draft edited again during the request', async () => {
   assert.equal(env.state.dirty.new,true);assert.equal(env.notices.at(-1).kind,'info');
 });
 
-test('merge save keeps a local revert to the original while a pending draft is saving', async () => {
-  const env=harness(),current=env.state.new,prompt=current.prompts[0];env.state.mergeSave=true;
+test('confirmed direct save keeps a local revert to the original while a pending draft is saving', async () => {
+  const env=harness(),current=env.state.new,prompt=current.prompts[0];
   env.inlineDrafts.set(prompt,{content:'first pending'});const pending=env.save('new');
+  assert.equal(env.confirmations.length,1);await env.confirm('save');
   assert.equal(env.requests.length,1);env.inlineDrafts.delete(prompt);
   env.resolve(env.requests[0].payload.preset);await pending;
   assert.equal(env.applied.length,0);assert.equal(env.state.new,current);assert.equal(prompt.content,'new text');
 });
 
-test('an unchanged remembered form does not block saving with merge save off', async () => {
+test('an unchanged remembered form permits saving without a confirmation', async () => {
   const env=harness(),prompt=env.state.new.prompts[0];
   env.inlineDrafts.set(prompt,{name:prompt.name,role:'system',trigger:'',injection_position:'0',injection_depth:'4',injection_order:'100',content:prompt.content});
-  const pending=env.save('new');assert.equal(env.requests.length,1);
+  const pending=env.save('new');assert.equal(env.requests.length,1);assert.equal(env.confirmations.length,0);
   assert.deepEqual(env.requests[0].payload.preset,env.state.new);
   env.resolve(env.requests[0].payload.preset);await pending;assert.equal(env.notices.at(-1).kind,'success');
 });
@@ -229,4 +241,49 @@ test('two columns bound to the same native preset cannot save it concurrently', 
   const first=env.save('new'),second=env.save('old');
   assert.equal(env.requests.length,1);env.resolve(env.requests[0].payload.preset);await Promise.all([first,second]);
   assert.equal(env.state.old.prompts[0].content,'old side');
+});
+
+test('checking pending entries enables this side triangle markers without saving or toggling existing checks off',async()=>{
+  for(const alreadyEnabled of [false,true]){
+    const env=harness(),current=env.state.new,prompt=current.prompts[0],draft={content:'not submitted'};
+    env.inlineDrafts.set(prompt,draft);env.state.showDraftMarkers.new=alreadyEnabled;
+    const pending=env.save('new');assert.equal(env.confirmations.length,1);await env.confirm('check');await pending;
+    assert.equal(env.requests.length,0);assert.equal(env.state.new,current);assert.equal(env.inlineDrafts.get(prompt),draft);
+    assert.deepEqual(env.state.showDraftMarkers,{old:false,new:true});assert.deepEqual(env.markerRefreshes,['new']);
+    assert.deepEqual(env.markerCalls(),{controlSyncs:1,prefSaves:1});assert.deepEqual(env.calls(),{rebuilds:0,renders:0});
+  }
+});
+
+test('a cancelled confirmation releases side and preset name guards for another save attempt',async()=>{
+  const env=harness();env.inlineDrafts.set(env.state.new.prompts[0],{content:'not submitted'});
+  const first=env.save('new');assert.equal(env.confirmations.length,1);await env.confirm(null);await first;
+  const next=env.save('new');assert.equal(env.confirmations.length,2);await env.confirm('save');
+  assert.equal(env.requests.length,1);env.resolve(env.requests[0].payload.preset);await next;
+});
+
+test('a second save on the same side or native name cannot open another confirmation',async()=>{
+  const env=harness();env.inlineDrafts.set(env.state.new.prompts[0],{content:'not submitted'});env.state.tavernSource.old='new';
+  const first=env.save('new'),sameSide=env.save('new'),sameName=env.save('old');
+  assert.equal(env.confirmations.length,1);assert.equal(env.requests.length,0);
+  await env.confirm('save');assert.equal(env.requests.length,1);env.resolve(env.requests[0].payload.preset);
+  await Promise.all([first,sameSide,sameName]);assert.equal(env.applied.length,1);
+});
+
+for(const change of ['draft','model','preset','source'])test('confirmation cannot save after '+change+' changes while waiting',async()=>{
+  const env=harness(),original=env.state.new,prompt=original.prompts[0];
+  env.inlineDrafts.set(prompt,{content:'pending at confirmation'});
+  const pending=env.save('new');assert.equal(env.confirmations.length,1);
+  if(change==='draft')env.inlineDrafts.set(prompt,{content:'later pending'});
+  if(change==='model')prompt.content='newer submitted model';
+  if(change==='preset')env.state.new=preset('switched preset');
+  if(change==='source')env.state.tavernSource.new='another binding';
+  const latest=env.state.new,before=structuredClone(latest),latestDraft=env.inlineDrafts.get(prompt);
+  await env.confirm('save');await pending;
+  assert.equal(env.requests.length,0);assert.equal(env.applied.length,0);assert.equal(env.state.new,latest);
+  assert.deepEqual(latest,before);assert.equal(env.inlineDrafts.get(prompt),latestDraft);assert.equal(env.notices.at(-1).kind,'info');
+});
+
+test('local file saves continue to direct users to export without a confirmation or host write',async()=>{
+  const env=harness();env.state.tavernSource.new=null;env.inlineDrafts.set(env.state.new.prompts[0],{content:'pending'});
+  await env.save('new');assert.equal(env.requests.length,0);assert.equal(env.confirmations.length,0);assert.match(env.notices[0].message,/导出/);
 });

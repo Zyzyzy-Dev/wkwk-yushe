@@ -105,3 +105,24 @@ test('comparison handles deletion and longer replacements without shifting marks
   assert.deepEqual(joinHits(next.fields[0].after), ['<字数要求>', '<字数要求>']);
   assert.equal(joinText(next.fields[0].after), 'ab<字数要求>cd<字数要求>');
 });
+
+test('regex candidate view provides reusable ranges for both selected fields', () => {
+  const view = buildReplacementView(context, {query: '/needle/i', regex: true, fields: ['name', 'content']});
+  assert.deepEqual(view.candidates.map(item => item.id), ['c', 'a', 'b']);
+  assert.deepEqual(view.entries[0].ranges, {name: [], content: [[3, 9]]});
+  assert.deepEqual(view.entries[1].ranges, {name: [], content: [[6, 12], [18, 24]]});
+  assert.deepEqual(view.entries[2].ranges, {name: [[0, 6]], content: []});
+  assert.deepEqual(buildReplacementView(context).entries[0].ranges, {name: [], content: []});
+  assert.deepEqual(buildReplacementView(context, {query: '/needle/i', regex: true, fields: []}).candidates, []);
+  assert.throws(() => buildReplacementView({entries: []}, {query: '[', regex: true}), /正则/);
+});
+
+test('regex comparison retains all original text around zero-width insertion points', () => {
+  const source = [{identifier: 'a', name: 'A', content: '😀x'}];
+  const preview = createEntryReplacementPreview(source, {query: '/(?=.)/gu', replacement: '|', regex: true});
+  const [entry] = buildReplacementComparison(preview.plan, preview.afterById);
+  assert.equal(joinText(entry.fields[0].before), '😀x');
+  assert.equal(joinText(entry.fields[0].after), '|😀|x');
+  assert.deepEqual(joinHits(entry.fields[0].after), ['|', '|']);
+  assert.equal(entry.count, 2);
+});
