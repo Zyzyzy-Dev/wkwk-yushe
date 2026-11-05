@@ -576,20 +576,22 @@ export function contentSimilarity(left, right, ignoreWhitespace = false) {
   return (2 * intersection) / (leftBigrams.size + rightBigrams.size);
 }
 
-function myers(left, right) {
+function myers(left, right, maxDistance) {
   const leftLength = left.length;
   const rightLength = right.length;
   if (!leftLength) return right.map(value => ['+', value]);
   if (!rightLength) return left.map(value => ['-', value]);
 
-  const offset = leftLength + rightLength;
-  const width = 2 * offset + 1;
+  const cap = Math.min(maxDistance, leftLength + rightLength);
+  if (Math.abs(leftLength - rightLength) > cap) return null;
+  const offset = cap + 1;
+  const width = 2 * cap + 3;
   let frontier = new Int32Array(width);
   const trace = [];
   let distance = -1;
 
-  for (let d = 0; d <= offset; d++) {
-    if (d > MYERS_MAX_DISTANCE) return null;
+  let work = 0;
+  for (let d = 0; d <= cap; d++) {
     trace.push(frontier);
     const next = frontier.slice();
     for (let diagonal = -d; diagonal <= d; diagonal += 2) {
@@ -598,6 +600,7 @@ function myers(left, right) {
         : next[diagonal - 1 + offset] + 1;
       let y = x - diagonal;
       while (x < leftLength && y < rightLength && left[x] === right[y]) {
+        if (++work > 250000) return null;
         x++;
         y++;
       }
@@ -610,6 +613,7 @@ function myers(left, right) {
     frontier = next;
     if (distance >= 0) break;
   }
+  if (distance < 0) return null;
 
   const operations = [];
   let x = leftLength;
@@ -640,7 +644,18 @@ function myers(left, right) {
   return operations;
 }
 
-function diffSequence(left, right, limit) {
+// Unique nonblank anchors in increasing order split large rewrites without a quadratic table.
+function alignedAnchors(left,right) {
+  function positions(items){const m=new Map();items.forEach((v,i)=>{if(v.trim())m.set(v,m.has(v)?-1:i);});return m;}
+  const a=positions(left),b=positions(right),chain=[],tails=[];
+  for(const [v,i] of a){const j=b.get(v);if(i<0||j===undefined||j<0)continue;
+    let lo=0,hi=tails.length;while(lo<hi){const k=(lo+hi)>>>1;if(chain[tails[k]].j<j)lo=k+1;else hi=k;}
+    chain.push({i,j,prev:lo?tails[lo-1]:-1});tails[lo]=chain.length-1;
+  }
+  const result=[];for(let i=tails.at(-1);i!=null&&i>=0;i=chain[i].prev)result.push(chain[i]);return result.reverse();
+}
+
+function diffSequence(left, right, limit, allowAnchors=true) {
   let start = 0;
   const shorter = Math.min(left.length, right.length);
   while (start < shorter && left[start] === right[start]) start++;
@@ -657,13 +672,19 @@ function diffSequence(left, right, limit) {
   const leftMiddleLength = leftEnd - start;
   const rightMiddleLength = rightEnd - start;
   let middle = null;
-  if (leftMiddleLength > 0
-    && rightMiddleLength > 0
-    && leftMiddleLength * rightMiddleLength <= limit
-    && leftMiddleLength + rightMiddleLength <= DIFF_MAX_SEQUENCE) {
-    middle = myers(left.slice(start, leftEnd), right.slice(start, rightEnd));
+  if (leftMiddleLength && rightMiddleLength) {
+    const a=left.slice(start,leftEnd),b=right.slice(start,rightEnd);
+    const small=leftMiddleLength*rightMiddleLength<=limit&&leftMiddleLength+rightMiddleLength<=DIFF_MAX_SEQUENCE;
+    middle=myers(a,b,small?MYERS_MAX_DISTANCE:32);
+    if(!middle&&allowAnchors){
+      const anchors=alignedAnchors(a,b);
+      if(anchors.length){middle=[];let x=0,y=0;
+        for(const {i,j} of anchors){for(const op of diffSequence(a.slice(x,i),b.slice(y,j),limit,false))middle.push(op);middle.push([' ',a[i]]);x=i+1;y=j+1;}
+        for(const op of diffSequence(a.slice(x),b.slice(y),limit,false))middle.push(op);
+      }
+    }
   }
-  if (middle) operations.push(...middle);
+  if (middle) {for(const op of middle)operations.push(op);}
   else {
     for (let index = start; index < leftEnd; index++) operations.push(['-', left[index]]);
     for (let index = start; index < rightEnd; index++) operations.push(['+', right[index]]);
@@ -691,34 +712,71 @@ function inlineOperations(oldLine, newLine) {
   return segments;
 }
 
+function lineProfile(line) {
+  const counts=new Map();let total=0;
+  for(const word of inlineTokens(line)){
+    if(!word.trim())continue;
+    const weight=/[\p{L}\p{N}]/u.test(word)?1:.1;
+    counts.set(word,(counts.get(word)||0)+weight);total+=weight;
+  }
+  return {counts,total};
+}
+function alignedRows(block,rows) {
+  const add=(t,text)=>rows.push({t,paired:false,segs:[{t,text}]});
+  const pair=(a,b)=>{
+    const segs=inlineOperations(a,b).map(({type:t,text})=>({t,text}));
+    rows.push({t:'-',paired:true,segs},{t:'+',paired:true,segs});
+  };
+  const a=[],b=[];let chars=0;
+  for(const [t,s] of block){if(t!=='+')a.push(s);if(t!=='-')b.push(s);chars+=s.length;}
+  if(a.length===1&&b.length===1){pair(a[0],b[0]);return;}
+  if(!a.length||!b.length){
+    for(const [t,s] of block)add(t,s);return;
+  }
+  if(a.length*b.length>4096||chars*Math.min(a.length,b.length)>1000000){
+    // Preserve inline edits in long runs of parallel revisions, but never zip shifted blocks.
+    let minus=[],plus=[];
+    const flush=()=>{
+      if(minus.length===plus.length){for(let i=0;i<minus.length;i++)pair(minus[i],plus[i]);}
+      else{for(const line of minus)add('-',line);for(const line of plus)add('+',line);}
+      minus=[];plus=[];
+    };
+    for(const [t,s] of block){if(t===' '){flush();add(t,s);}else (t==='-'?minus:plus).push(s);}
+    flush();return;
+  }
+  // Local order-preserving alignment: matching a meaningful title outweighs matching a blank.
+  const ap=a.map(lineProfile),bp=b.map(lineProfile),stride=b.length+1;
+  const dp=new Float64Array((a.length+1)*stride),step=new Uint8Array(dp.length);
+  for(let i=a.length-1;i>=0;i--)for(let j=b.length-1;j>=0;j--){
+    const k=i*stride+j;let weight=0;
+    if(a[i]===b[j])weight=a[i].trim()?2:.08;
+    else if(ap[i].total&&bp[j].total){
+      let shared=0;for(const [w,v] of ap[i].counts)shared+=Math.min(v,bp[j].counts.get(w)||0);
+      const ratio=2*shared/(ap[i].total+bp[j].total);if(ratio>=.3)weight=ratio;
+    }
+    const diag=weight?weight+dp[k+stride+1]:-1,down=dp[k+stride],right=dp[k+1];
+    step[k]=diag>=down&&diag>=right?1:down>=right?2:3;dp[k]=Math.max(diag,down,right);
+  }
+  let i=0,j=0;
+  while(i<a.length||j<b.length){
+    const direction=i===a.length?3:j===b.length?2:step[i*stride+j];
+    if(direction===1){if(a[i]===b[j])add(' ',a[i]);else pair(a[i],b[j]);i++;j++;}
+    else if(direction===2)add('-',a[i++]);else add('+',b[j++]);
+  }
+}
 export function buildRows(operations) {
-  const rows = [];
-  let index = 0;
-  while (index < operations.length) {
-    if (operations[index][0] === ' ') {
-      rows.push({ t: ' ', paired: false, segs: [{ t: ' ', text: operations[index][1] }] });
-      index++;
-      continue;
+  const rows=[];
+  for(let i=0;i<operations.length;){
+    const [t,text]=operations[i];
+    if(t===' '){rows.push({t,paired:false,segs:[{t,text}]});i++;continue;}
+    const start=i++;
+    while(i<operations.length){
+      if(operations[i][0]!==' '){i++;continue;}
+      let j=i;while(j<i+2&&operations[j]?.[0]===' '&&!operations[j][1].trim())j++;
+      if(j===i||j===operations.length||operations[j][0]===' ')break;
+      i=j;
     }
-    const deleted = [];
-    const inserted = [];
-    while (index < operations.length && operations[index][0] === '-') deleted.push(operations[index++][1]);
-    while (index < operations.length && operations[index][0] === '+') inserted.push(operations[index++][1]);
-    const pairCount = Math.min(deleted.length, inserted.length);
-    const paired = [];
-    for (let pair = 0; pair < pairCount; pair++) paired.push(inlineOperations(deleted[pair], inserted[pair]));
-    for (let item = 0; item < deleted.length; item++) {
-      const segments = item < pairCount
-        ? paired[item].map(segment => ({ t: segment.type, text: segment.text }))
-        : [{ t: '-', text: deleted[item] }];
-      rows.push({ t: '-', paired: item < pairCount, segs: segments });
-    }
-    for (let item = 0; item < inserted.length; item++) {
-      const segments = item < pairCount
-        ? paired[item].map(segment => ({ t: segment.type, text: segment.text }))
-        : [{ t: '+', text: inserted[item] }];
-      rows.push({ t: '+', paired: item < pairCount, segs: segments });
-    }
+    alignedRows(operations.slice(start,i),rows);
   }
   return rows;
 }

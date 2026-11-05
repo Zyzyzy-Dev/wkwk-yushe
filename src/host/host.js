@@ -15,6 +15,7 @@ import { applyPresetToMemory, shouldRefreshActivePreset } from '../features/pres
 import { captureSnapshot, normalizeSnapshotName, planSnapshotRestore, resolveSnapshotBinding, snapshotOrder, validateSnapshot, snapshotPresetEditor, snapshotScope, selectSnapshotScope } from '../features/snapshot/snapshot.js';
 import { captureWorldEntries, restoreWorldEntries, captureRegexSwitches, restoreRegexSwitches, capturePresetRegex, normalizePresetRegex, restorePresetRegex, validateSnapshotResources, normalizeSnapshotResources, regexEditor } from '../features/snapshot/snapshot-resources.js';
 import { createIdentifier } from '../features/preset/core.js';
+import {validateLibraryFolders,moveLibraryItems,removeLibraryFolder,libraryFingerprint} from '../shared/library-folders.js';
 import { normalizeWorkbenchBook } from '../features/worldbook/worldbook-workbench.js';
 import { API_STORE_KEY, API_ADDITIONAL_FIELDS, normalizeApiAdditional, normalizeApiProfile, planApiSwitch, readNativeApiProfiles, maskApiSecret } from '../features/api/api-manager.js';
 
@@ -262,7 +263,7 @@ async function handleApiManagerRequest(method, payload) {
     if (Array.isArray(secrets.secret_state?.[key]) && activeId(secrets.secret_state[key]) !== id) throw new Error('原生密钥显示未同步，请刷新后核对');
   };
   const persist = async profiles => {
-    extensions.extension_settings[API_STORE_KEY] = { version: 1, profiles };
+    extensions.extension_settings[API_STORE_KEY] = { ...store, profiles };
     script.saveSettingsDebounced();
   };
   if (method === 'api-manager-links') {
@@ -309,9 +310,33 @@ async function handleApiManagerRequest(method, payload) {
       throw error;
     } finally { clearTimeout(timer); }
   }
+  if(method==='api-manager-folders'||method==='api-manager-folder-delete'){
+    const previous=extensions.extension_settings[API_STORE_KEY];
+    const previousLinks=extensions.extension_settings[API_BINDINGS_KEY];
+    const removal=method==='api-manager-folder-delete'?removeLibraryFolder(store.folders,payload,store.profiles):null;
+    const folders=removal?.folders||validateLibraryFolders(store.folders,payload.expected,payload.folders,store.profiles);
+    const profiles=removal?.items||store.profiles,next={...store,folders,profiles};
+    const links=removal?(previousLinks||[]).filter(link=>!removal.removed.has(link.apiId)):previousLinks||[];
+    extensions.extension_settings[API_STORE_KEY]=next;
+    if(removal?.removed.size)extensions.extension_settings[API_BINDINGS_KEY]=links;
+    try{await script.saveSettings();}catch(error){
+      if(previous===undefined)delete extensions.extension_settings[API_STORE_KEY];else extensions.extension_settings[API_STORE_KEY]=previous;
+      if(previousLinks===undefined)delete extensions.extension_settings[API_BINDINGS_KEY];else extensions.extension_settings[API_BINDINGS_KEY]=previousLinks;
+      throw error;
+    }
+    // Native saveSettings may resolve before disk is updated. Never undo an accepted write on readback failure.
+    let verified=false;
+    try{
+      const saved=await readSnapshotPersistence({script},'/api/settings/get',{}, {label:'API 分组保存核验'});
+      const settings=typeof saved.settings==='string'?JSON.parse(saved.settings):saved.settings;
+      verified=!saved.bootstrap?.partial&&libraryFingerprint(settings?.extension_settings?.[API_STORE_KEY])===libraryFingerprint(next)
+        &&libraryFingerprint(settings?.extension_settings?.[API_BINDINGS_KEY]||[])===libraryFingerprint(links);
+    }catch{}
+    return {folders,verified,removedIds:removal?[...removal.removed]:[]};
+  }
   if (method === 'api-manager-list') {
     const keys = await readKeys();
-    return { preferences: clone(extensions.extension_settings.preset_compare_api_entries || {}), profiles: clone(store.profiles), activeIds:store.profiles.filter(profile=>isApiProfileActive(profile,current(keys))).map(profile=>profile.id), links:clone(extensions.extension_settings[API_BINDINGS_KEY] || []), keys, current: current(keys), supported: script.main_api === 'openai' && settings.chat_completion_source === 'custom' };
+    return { folders:clone(store.folders||[]), preferences: clone(extensions.extension_settings.preset_compare_api_entries || {}), profiles: clone(store.profiles), activeIds:store.profiles.filter(profile=>isApiProfileActive(profile,current(keys))).map(profile=>profile.id), links:clone(extensions.extension_settings[API_BINDINGS_KEY] || []), keys, current: current(keys), supported: script.main_api === 'openai' && settings.chat_completion_source === 'custom' };
   }
   if (method === 'api-manager-native-list' || method === 'api-manager-native-import') {
     const entries = readNativeApiProfiles(extensions.extension_settings.connectionManager?.profiles ?? [], await readKeys());
@@ -327,6 +352,7 @@ async function handleApiManagerRequest(method, payload) {
     return { count: selected.length };
   }
   if (method === 'api-manager-delete') {
+    if(store.folders)store.folders=moveLibraryItems(store.folders,[payload.id],'');
     extensions.extension_settings[API_BINDINGS_KEY] = (extensions.extension_settings[API_BINDINGS_KEY] || []).filter(link=>link.apiId!==payload.id);
     await persist(store.profiles.filter(item => item.id !== payload.id));
     return true;
@@ -853,7 +879,7 @@ async function snapshotList(env) {
   const store = snapshotStore(env), context = snapshotContext(env);
   try {context.reasoning=(await readSnapshotReasoning()).current;} catch(error) {context.reasoningError=error.message;}
   const active = resolveSnapshotBinding(store, context.canBindChat ? context.chatBindingId : null, context.characterKey);
-  return clone({snapshots: store.snapshots, context, activeBinding: active ? {id: active.snapshot.id, name: active.snapshot.name, source: active.source} : null, busy: snapshotBusy > 0, persistence: snapshotPersistenceStatus.get(store) || null});
+  return clone({snapshots: store.snapshots, folders:store.folders||[], context, activeBinding: active ? {id: active.snapshot.id, name: active.snapshot.name, source: active.source} : null, busy: snapshotBusy > 0, persistence: snapshotPersistenceStatus.get(store) || null});
 }
 
 async function readSnapshotPersistence(env, url, body, {timeoutMs = 8000, label} = {}) {
@@ -1416,7 +1442,7 @@ async function applyLinkedSnapshot(env, snapshot, payload, automatic = false) {
 
 async function handleSnapshotRequest(method, payload) {
   // User recovery actions invalidate queued automatic work before joining the queue.
-  if (method === 'snapshot-delete' || method === 'snapshot-apply' || (method === 'snapshot-bind' && payload.id === null)) {
+  if (method === 'snapshot-delete' || (method === 'snapshot-folder-delete'&&payload.deleteItems===true) || method === 'snapshot-apply' || (method === 'snapshot-bind' && payload.id === null)) {
     snapshotAutoPending = false;
     snapshotAutoToken++;
     clearTimeout(snapshotAutoTimer);
@@ -1508,6 +1534,23 @@ async function handleSnapshotRequest(method, payload) {
       const previous = store.snapshots;
       store.snapshots = previous.map(item => item === existing ? next : item);
       try {await saveSnapshotSettings(env, false, null, {allowUnverified:true});} catch (error) {store.snapshots = previous; throw error;}
+    } else if(method==='snapshot-folder-delete'){
+      const next=removeLibraryFolder(store.folders,payload,store.snapshots);
+      const before={folders:store.folders,snapshots:store.snapshots,characterBindings:store.characterBindings};
+      const previousLinks=env.extensions.extension_settings[API_BINDINGS_KEY];
+      store.folders=next.folders;store.snapshots=next.items;
+      if(next.removed.size){
+        store.characterBindings=Object.fromEntries(Object.entries(store.characterBindings).filter(([,id])=>!next.removed.has(id)));
+        env.extensions.extension_settings[API_BINDINGS_KEY]=(previousLinks||[]).filter(link=>!next.removed.has(link.snapshotId));
+      }
+      try{await saveSnapshotSettings(env,false,null,{allowUnverified:true});}catch(error){
+        Object.assign(store,before);
+        if(previousLinks===undefined)delete env.extensions.extension_settings[API_BINDINGS_KEY];else env.extensions.extension_settings[API_BINDINGS_KEY]=previousLinks;
+        throw error;
+      }
+    } else if(method==='snapshot-folders'){
+      const previous=store.folders;store.folders=validateLibraryFolders(previous,payload.expected,payload.folders,store.snapshots);
+      try{await saveSnapshotSettings(env,false,null,{allowUnverified:true});}catch(error){if(previous===undefined)delete store.folders;else store.folders=previous;throw error;}
     } else if (method === 'snapshot-rename') {
       if (!existing) throw new Error('快照已删除');
       const previous = existing.name;
@@ -1528,6 +1571,7 @@ async function handleSnapshotRequest(method, payload) {
       const previousLinks = env.extensions.extension_settings[API_BINDINGS_KEY];
       env.extensions.extension_settings[API_BINDINGS_KEY] = (previousLinks || []).filter(link=>link.snapshotId!==payload.id);
       store.snapshots = store.snapshots.filter(s => s.id !== payload.id);
+      if(store.folders)store.folders=moveLibraryItems(store.folders,[payload.id],'');
       for (const key of Object.keys(store.characterBindings)) if (store.characterBindings[key] === payload.id) delete store.characterBindings[key];
       try {await saveSnapshotSettings(env, false, null, {allowUnverified:true});} catch (error) {Object.assign(store, before); env.extensions.extension_settings[API_BINDINGS_KEY]=previousLinks; throw error;}
       // 其他聊天的引用在加载时视为失效；不遍历或改写用户的聊天文件。

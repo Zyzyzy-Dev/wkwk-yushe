@@ -19,7 +19,7 @@
 .pcm-dialog.pcm-theme-day input:not([type="checkbox"]),.pcm-dialog.pcm-theme-day select{background-color:#fffaf2!important;border-color:#dfcfb9!important;color:#4b3b2d!important}
 .pcm-dialog.pcm-theme-day .pcm-inline-content textarea:not(.pcm-live-area),.pcm-dialog.pcm-theme-day .pcm-vars-raw textarea{background:#fffaf2!important;border-color:#dfcfb9!important;color:#4b3b2d!important;-webkit-text-fill-color:#4b3b2d!important;caret-color:#4b3b2d!important}
 .pcm-dialog.pcm-theme-day .pcm-free-select{background:#fffaf2;border-color:#dfcfb9;color:#705f4d}
-.pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:linear-gradient(125deg,#e5e9d6,#f0f0de);border-color:#b8c095;color:#495c32;box-shadow:0 2px 7px #707b4e10}
+.pcm-dialog.pcm-theme-day .pcm-free-select:is(:has(input:checked),[aria-pressed="true"]){background:linear-gradient(125deg,#e5e9d6,#f0f0de);border-color:#b8c095;color:#495c32;box-shadow:0 2px 7px #707b4e10}
 .pcm-dialog.pcm-theme-day .pcm-switch.pcm-op-enabled{border-color:#86936670}
 .pcm-dialog.pcm-theme-day .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#879762}
 .pcm-dialog.pcm-theme-day .pcm-switch.pcm-op-enabled .pcm-switch-knob{background:#fff7e5}
@@ -46,7 +46,7 @@
 .pcm-dialog.pcm-theme-night .menu_button.pcm-primary{background:linear-gradient(125deg,#83a598,#458588)!important;border-color:#83a598!important;color:#282828!important;box-shadow:0 2px 9px #83a59815}
 .pcm-dialog.pcm-theme-night .menu_button.pcm-primary:hover{background:#a7c0b5!important;filter:none;box-shadow:0 3px 12px #83a59825}
 .pcm-dialog.pcm-theme-night .pcm-free-select{background:#3c3836;border-color:#665c54;color:#d5c4a1}
-.pcm-dialog.pcm-theme-night .pcm-free-select:has(input:checked){background:#504945;border-color:#928374;color:#ebdbb2;box-shadow:0 2px 7px #00000010}
+.pcm-dialog.pcm-theme-night .pcm-free-select:is(:has(input:checked),[aria-pressed="true"]){background:#504945;border-color:#928374;color:#ebdbb2;box-shadow:0 2px 7px #00000010}
 .pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-track{background:#83a598}
 .pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled .pcm-switch-knob{background:#ebdbb2}
 .pcm-dialog.pcm-theme-night .pcm-switch.pcm-op-enabled{background:#3c3836;border-color:#83a598;color:#ebdbb2}
@@ -67,7 +67,7 @@
 .pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-header{background:linear-gradient(110deg,color-mix(in srgb,var(--SmartThemeBodyColor) 5%,transparent),transparent)}
 .pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-header h2{background:none;color:var(--SmartThemeBodyColor);-webkit-text-fill-color:currentColor}
 .pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-pane-head{background:color-mix(in srgb,var(--SmartThemeBlurTintColor) 96%,var(--SmartThemeBodyColor) 4%)}
-.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-free-select:has(input:checked){background:color-mix(in srgb,var(--SmartThemeBodyColor) 13%,var(--SmartThemeBlurTintColor));border-color:color-mix(in srgb,var(--SmartThemeBodyColor) 55%,var(--SmartThemeBlurTintColor));color:var(--SmartThemeBodyColor)}
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-free-select:is(:has(input:checked),[aria-pressed="true"]){background:color-mix(in srgb,var(--SmartThemeBodyColor) 13%,var(--SmartThemeBlurTintColor));border-color:color-mix(in srgb,var(--SmartThemeBodyColor) 55%,var(--SmartThemeBlurTintColor));color:var(--SmartThemeBodyColor)}
 .pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .pcm-row.active{background:color-mix(in srgb,var(--SmartThemeBodyColor) 10%,transparent);box-shadow:inset 3px 0 var(--SmartThemeBodyColor)}
 .pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) .menu_button.pcm-primary{background:color-mix(in srgb,var(--SmartThemeBodyColor) 14%,var(--SmartThemeBlurTintColor))!important;border-color:color-mix(in srgb,var(--SmartThemeBodyColor) 50%,var(--SmartThemeBlurTintColor))!important;color:var(--SmartThemeBodyColor)!important;box-shadow:none}
 
@@ -104,7 +104,7 @@
 .pcm-dialog .pcm-version-forms{gap:8px}
 .pcm-dialog .pcm-compare{margin-inline:6px}
 .pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) :is(.menu_button,.pcm-import,.pcm-free-select){border:1px solid var(--pcm-row-edge)!important;border-radius:9px;background:var(--pcm-card-bg)!important;box-shadow:0 2px 0 var(--pcm-card-shade);color:var(--SmartThemeBodyColor)!important}
-.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) :is(.menu_button.pcm-primary,.pcm-free-select:has(input:checked)){background:var(--pcm-selection)!important;border-color:var(--pcm-selection-edge)!important}
+.pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) :is(.menu_button.pcm-primary,.pcm-free-select:is(:has(input:checked),[aria-pressed="true"])){background:var(--pcm-selection)!important;border-color:var(--pcm-selection-edge)!important}
 .pcm-dialog:not(.pcm-theme-day):not(.pcm-theme-night) :is(.pcm-project-bar input,.pcm-tools input,.pcm-tools select){border:1px solid var(--pcm-row-edge)!important;border-radius:9px;background:var(--pcm-card-bg)!important}
 @media(max-width:900px){
   /* 旧移动样式有 !important 的单边框，在此完整覆盖，宽度包含边框且不额外加 margin。 */

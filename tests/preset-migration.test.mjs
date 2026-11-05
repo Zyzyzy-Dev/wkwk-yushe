@@ -27,9 +27,10 @@ test('copy preserves full prompt, effective order fields and unrelated target fi
  assert.equal(result.temperature,.73); assert.deepEqual(result.prompt_order[1],target.prompt_order[1]);
  result.prompts.find(x=>x.identifier==='x').custom.v=99; assert.equal(source.prompts[1].custom.v,2);
 });
-test('global reversed sections reject, manual placement repairs or smaller selection succeeds', () => {
+test('reordered independently anchored sections follow target order without moving existing rows', () => {
  const source=preset(['A','x','B','C','y','D']),target=preset(['C','D','A','B']);
- const plan=planMigration(source,target,['x','y']); assert.match(plan.errors.join(' '),/顺序|区段/); assert.equal(plan.result,undefined);
+ const plan=planMigration(source,target,['x','y']); assert.deepEqual(plan.errors,[]);assert.deepEqual(ids(plan.result),['C','y','D','A','x','B']);
+ assert.deepEqual(ids(plan.result).filter(id=>!['x','y'].includes(id)),ids(target));
  assert.deepEqual(planMigration(source,target,['x']).errors,[]);
  const fixed=planMigration(source,target,['x','y'],{placements:{y:{afterId:'B'}}}); assert.deepEqual(fixed.errors,[]); assert.deepEqual(ids(fixed.result),['C','D','A','x','B','y']);
 });
@@ -151,7 +152,7 @@ test('automatic diagnostics do not point users to removed placement controls',()
  for(const [source,target,chosen] of [
   [preset(['x']),preset(['A']),['x']],
   [preset(['A','x','B']),preset(['B','A']),['x']],
-  [preset(['A','x','B','C','y','D']),preset(['C','D','A','B']),['x','y']],
+  [preset(['A','x','B','C','y','D']),preset(['C','A','D','B']),['x','y']],
   [groups(preset(['A','x','B','y','C']),[{id:'g',name:'New'}],{x:{groupId:'g'},y:{groupId:'g'}}),preset(['A','B','C']),['x','y']],
  ]){
   const plan=planMigration(source,target,chosen);assert.ok(plan.errors.length);assert.doesNotMatch(plan.errors.join(' '),/指定|调整位置|选择目标分组/);
@@ -181,17 +182,40 @@ test('a new group cannot silently span existing entries between incoming segment
  const source=groups(preset(['A','x','B','y','C']),[{id:'g',name:'New'}],{x:{groupId:'g'},y:{groupId:'g'}});
  const target=preset(['A','B','C']);assert.match(planMigration(source,target,['x','y']).errors.join(' '),/跨越|分组/);
 });
-test('default selection only unchecks every inversion participant and keeps unrelated candidates',()=>{
+test('default selection includes safe moved sections and unrelated candidates',()=>{
  const source=preset(['A','x','B','C','y','D','E','z','F']),target=preset(['C','D','A','B','E','F']);
  const a=analyzeMigration(source,target);
- assert.deepEqual(a.candidates.map(c=>[c.id,c.defaultSelected]),[['x',false],['y',false],['z',true]]);
- assert.match(a.candidates[0].defaultReason,/顺序|区段/);assert.match(a.candidates[1].defaultReason,/顺序|区段/);
+ assert.deepEqual(a.candidates.map(c=>[c.id,c.defaultSelected]),[['x',true],['y',true],['z',true]]);
  assert.deepEqual(planMigration(source,target,a.candidates.filter(c=>c.defaultSelected).map(c=>c.id)).errors,[]);
 });
-test('all nonadjacent inversion participants are excluded from default selection',()=>{
+test('several reversed sections each retain their local order',()=>{
  const source=preset(['A','x','B','C','y','D','E','z','F','G','safe','H']);
  const target=preset(['E','F','C','D','A','B','G','H']);const a=analyzeMigration(source,target);
- assert.deepEqual(a.candidates.map(c=>[c.id,c.defaultSelected]),[['x',false],['y',false],['z',false],['safe',true]]);
+ assert.deepEqual(a.candidates.map(c=>[c.id,c.defaultSelected]),[['x',true],['y',true],['z',true],['safe',true]]);
+ assert.deepEqual(ids(planMigration(source,target,['safe','x','z','y']).result),['E','z','F','C','y','D','A','x','B','G','safe','H']);
+});
+
+test('only one anchor or overlapping intervals still cannot justify reversing incoming sections',()=>{
+ for(const [source,target] of [
+   [preset(['x','A','B','y','C']),preset(['B','C','A'])],
+   [preset(['A','x','B','C','y','D']),preset(['C','A','D','B'])],
+ ]){
+   const a=analyzeMigration(source,target);
+   assert.deepEqual(a.candidates.map(c=>c.defaultSelected),[false,false]);
+   const plan=planMigration(source,target,['x','y']);assert.equal(plan.result,undefined);
+   assert.match(plan.errors.join(' '),/“x”.*“y”/);
+ }
+});
+
+test('moved groups keep incoming siblings and disabled states while preserving target metadata',()=>{
+ const source=groups(preset(['A','x','B','C','y1','y2','y3','D']),[{id:'writing',name:'写作'},{id:'emotion',name:'情感'}],{A:{groupId:'writing'},x:{groupId:'writing'},B:{groupId:'writing'},C:{groupId:'emotion'},y1:{groupId:'emotion'},y2:{groupId:'emotion'},y3:{groupId:'emotion'},D:{groupId:'emotion'}});
+ source.prompt_order[0].order[5].enabled=false;
+ const target=groups(preset(['C','D','A','extra','B']),[{id:'writing',name:'写作',enabled:false},{id:'emotion',name:'情感',enabled:true}],{A:{groupId:'writing'},extra:{groupId:'writing'},B:{groupId:'writing'},C:{groupId:'emotion'},D:{groupId:'emotion'}});
+ const before=JSON.stringify([source,target]),plan=planMigration(source,target,['y3','x','y2','y1']);
+ assert.deepEqual(plan.errors,[]);assert.deepEqual(ids(plan.result),['C','y1','y2','y3','D','A','x','extra','B']);
+ assert.equal(plan.result.prompt_order[0].order.find(r=>r.identifier==='y2').enabled,false);
+ assert.deepEqual(plan.result.extensions.baibaiToolkit.presetPromptGroups.groups,target.extensions.baibaiToolkit.presetPromptGroups.groups);
+ assert.equal(JSON.stringify([source,target]),before);
 });
 
 test('reusing a group away from its existing block requires explicit reassignment or placement',()=>{

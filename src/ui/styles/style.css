@@ -72,7 +72,7 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-free-select input[type="checkbox"]::before{content:"";width:8px;height:8px;transform:scale(0);transition:transform .12s ease-in-out;box-shadow:inset 1em 1em var(--SmartThemeBodyColor);transform-origin:center;clip-path:polygon(14% 44%,0 65%,50% 100%,100% 16%,80% 0%,43% 62%)}
 .pcm-free-select input[type="checkbox"]:checked{border-color:#36b47d;background:#36b47d}
 .pcm-free-select input[type="checkbox"]:checked::before{transform:scale(1)}
-.pcm-free-select:has(input:checked){background:color-mix(in srgb,#36b47d 14%,transparent);border-color:#36b47d;color:var(--SmartThemeBodyColor)}.pcm-free-select input{margin:0}
+.pcm-free-select:is(:has(input:checked),[aria-pressed="true"]){background:color-mix(in srgb,#36b47d 14%,transparent);border-color:#36b47d;color:var(--SmartThemeBodyColor)}.pcm-free-select input{margin:0}
 .pcm-uninjected-toggle{width:100%;border:0;border-radius:0;color:inherit;text-align:left;cursor:pointer}.pcm-uninjected-toggle:hover{background:color-mix(in srgb,#d8a44a 14%,rgba(0,0,0,.07))}.pcm-uninjected-toggle>.pcm-group-caret{flex:0 0 12px;font-size:9px}.pcm-uninjected-toggle>span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pcm-uninjected .pcm-group-body[hidden]{display:none!important}.pcm-uninjected.pcm-collapsed{background:rgba(0,0,0,.015)}.pcm-free-selected{opacity:.68;outline:2px solid #e6b85f;outline-offset:-2px;background:color-mix(in srgb,#e6b85f 14%,rgba(0,0,0,.12))!important}.pcm-free-selected:hover{opacity:.82}
 
 /* Disabled prompts: gray the whole row so enabled entries stand out at a glance. */
@@ -304,7 +304,7 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-dialog.pcm-theme-night .pcm-free-select:hover{background:#3c3836;border-color:#665c52}
 .pcm-dialog.pcm-theme-night .pcm-free-select input[type="checkbox"]{border-color:#7c6f64;background:#1d2021}
 .pcm-dialog.pcm-theme-night .pcm-free-select input[type="checkbox"]:checked{border-color:#83a598;background:#458588}
-.pcm-dialog.pcm-theme-night .pcm-free-select:has(input:checked){background:rgba(69,133,136,0.18);border-color:#83a598;color:#fbf1c7}
+.pcm-dialog.pcm-theme-night .pcm-free-select:is(:has(input:checked),[aria-pressed="true"]){background:rgba(69,133,136,0.18);border-color:#83a598;color:#fbf1c7}
 /* 深色(夜间)模式:勾选圆内打白色勾 */
 .pcm-dialog.pcm-theme-night .pcm-free-select input[type="checkbox"]::before{box-shadow:inset 1em 1em #ebdbb2}
 
@@ -468,9 +468,9 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-free-select{padding:5px 11px;border:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 80%,transparent);border-radius:999px;background:color-mix(in srgb,var(--SmartThemeBodyColor) 4%,transparent);cursor:pointer;user-select:none;transition:background .15s,border-color .15s}
 .pcm-free-select:hover{border-color:color-mix(in srgb,var(--SmartThemeBodyColor) 45%,transparent)}
 .pcm-free-select input{display:none}
-.pcm-free-select:has(input:checked){background:color-mix(in srgb,#55c98e 20%,transparent);border-color:#55c98e;font-weight:600}
-.pcm-dialog.pcm-theme-night .pcm-free-select:has(input:checked){background:#8ec07c26;border-color:#8ec07c}
-.pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:#427b5820;border-color:#427b58}
+.pcm-free-select:is(:has(input:checked),[aria-pressed="true"]){background:color-mix(in srgb,#55c98e 20%,transparent);border-color:#55c98e;font-weight:600}
+.pcm-dialog.pcm-theme-night .pcm-free-select:is(:has(input:checked),[aria-pressed="true"]){background:#8ec07c26;border-color:#8ec07c}
+.pcm-dialog.pcm-theme-day .pcm-free-select:is(:has(input:checked),[aria-pressed="true"]){background:#427b5820;border-color:#427b58}
 
 /* ---------- 图标按钮 ---------- */
 .pcm-icon-btn{width:30px;height:30px;min-width:30px;min-height:30px;padding:0!important;display:inline-flex!important;align-items:center;justify-content:center}
@@ -512,7 +512,7 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-dialog.pcm-theme-day .pcm-free-select:hover{background:rgba(0,0,0,0.05);border-color:#cabfa4}
 .pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]{border-color:#bdae93;background:#fffefa}
 .pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]:checked{border-color:#427b58;background:#427b58}
-.pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:rgba(66,123,88,0.12);border-color:#427b58;color:#28251f}
+.pcm-dialog.pcm-theme-day .pcm-free-select:is(:has(input:checked),[aria-pressed="true"]){background:rgba(66,123,88,0.12);border-color:#427b58;color:#28251f}
 /* 白色(浅色)模式:勾选圆内打黑色勾 */
 .pcm-dialog.pcm-theme-day .pcm-free-select input[type="checkbox"]::before{box-shadow:inset 1em 1em #3c3836}
 
@@ -739,7 +739,7 @@ dialog{font-family:var(--mainFontFamily)}
 .pcm-dialog.pcm-theme-day .menu_button,.pcm-dialog.pcm-theme-day .pcm-import{border-radius:10px;border-color:#e6e2d8!important;box-shadow:0 2px 5px #344d3705}
 .pcm-dialog.pcm-theme-day .menu_button:hover,.pcm-dialog.pcm-theme-day .pcm-import:hover{background:#f0f4e9!important;border-color:#c7d6bf!important}
 .pcm-dialog.pcm-theme-day .pcm-free-select{border-radius:10px;border-color:#e6e2d8;background:#fffefa;color:#4c564f}
-.pcm-dialog.pcm-theme-day .pcm-free-select:has(input:checked){background:linear-gradient(135deg,#e5efdf,#edf4e8);border-color:#b5cda9;color:#2f6946;box-shadow:0 2px 8px #427b5810}
+.pcm-dialog.pcm-theme-day .pcm-free-select:is(:has(input:checked),[aria-pressed="true"]){background:linear-gradient(135deg,#e5efdf,#edf4e8);border-color:#b5cda9;color:#2f6946;box-shadow:0 2px 8px #427b5810}
 .pcm-dialog.pcm-theme-day .pcm-compare{background:#fffefa;border-top-color:#afcba6;border-radius:16px 16px 0 0}
 .pcm-dialog.pcm-theme-day .pcm-compare-head{background:#fffefa}
 .pcm-dialog.pcm-theme-day .pcm-version-editor,.pcm-dialog.pcm-theme-day .pcm-picker-panel,.pcm-dialog.pcm-theme-day .pcm-worldbook-panel{border-radius:14px;border-color:#e6e2d8;background:#fffefa}

@@ -1,17 +1,11 @@
 // 一键迁移窗口：固定顶栏、分组勾选、正文只读的可拖动预览，一次应用到新版草稿。
 import { analyzeMigration, planMigration } from '../migration.js';
-import { findPromptOrderEntry } from '../core.js';
 import { moveMigrationEntry } from '../migration-order.js';
 import { installMigrationDrag } from './migration-drag.js';
+import {analyzeSwitchSync,previewSwitches,finalizeMigrationSwitches} from '../migration-switches.js';
 
 let dialogSequence = 0;
 const nameOf = item => String(item?.name || '未命名条目');
-const idOf = item => typeof item === 'string' ? item : item?.identifier;
-const orderRows = preset => new Map((findPromptOrderEntry({ ...preset, prompt_order: preset?.prompt_order || [] })?.order || []).map(row => [idOf(row), row]));
-const enabledOf = (prompt, rows) => {
-  const row = rows.get(prompt.identifier);
-  return row && typeof row === 'object' && typeof row.enabled === 'boolean' ? row.enabled : prompt.enabled !== false;
-};
 
 export function openMigrationDialog({ parent, source, target, targetPreview = target, sourceName, targetName, ignoreWhitespace = false, isCurrent, onApply, onClose }) {
   if (!parent?.isConnected || parent.querySelector('.pcm-migration-modal')) return { close() {} };
@@ -50,18 +44,25 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
     });
     disclosure(control, body); container.append(body);
   }
-  function readonlySwitch(enabled, name, key, id, group = false) {
-    const control = node('span', group ? 'pcm-group-gate pcm-migration-readonly-switch' : `pcm-switch pcm-migration-readonly-switch ${enabled ? 'pcm-op-enabled' : 'pcm-op-disabled'}`);
-    control.setAttribute('role', 'switch'); control.setAttribute('aria-checked', String(enabled)); control.setAttribute('aria-readonly', 'true');
-    control.setAttribute('aria-label', `${name}开关（只读）`); control.setAttribute(`data-migration-${key}`, id);
-    control.title = `${enabled ? '已开启' : '已关闭'}（只读）`;
+  function previewSwitch(enabled, name, key, id, group = false) {
+    const control = node('button', group ? 'pcm-group-gate pcm-migration-switch' : `pcm-switch pcm-migration-switch ${enabled ? 'pcm-op-enabled' : 'pcm-op-disabled'}`);
+    control.type='button';control.setAttribute('role', 'switch'); control.setAttribute('aria-checked', String(enabled));
+    control.setAttribute('aria-label', `${name}开关`); control.setAttribute(`data-migration-${key}`, id);
+    control.title = `${enabled ? '已开启' : '已关闭'}，点击修改预览`;
+    control.addEventListener('click',()=>{
+      if(busy||!current())return;
+      remember();manual=new Map(manual);
+      const switchId=(group?'g:':'p:')+id;
+      if(view.defaults.get(switchId)===!enabled)manual.delete(switchId);else manual.set(switchId,!enabled);
+      refreshView();showPreview(true);preview.querySelector(`[data-migration-${key}="${CSS.escape(id)}"]`)?.focus({preventScroll:true});
+    });
     const track = node('span', group ? 'pcm-group-power-track' : 'pcm-switch-track');
     track.append(node('span', group ? 'pcm-group-power-knob' : 'pcm-switch-knob')); control.append(track);
     return control;
   }
   let disposed = false, stale = false, busy = false, plan = null, analysis, freshnessTimer;
   let quickTargets = [], quickIndex = -1;
-  let dragController, automaticPlan = null, manuallyPlaced = false;
+  let dragController, manual=new Map(),syncInfo,view,history=[];
   const selected = new Set(), rows = new Map(), groupControls = [];
   const sourcePrompts = new Map((source?.prompts || []).map(prompt => [prompt.identifier, prompt]));
   const modal = node('dialog', 'pcm-modal pcm-migration-modal');
@@ -78,26 +79,50 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
   const positionNote = node('p', 'pcm-migration-position-note'); positionNote.hidden = true; positionNote.setAttribute('role','status');
   const count = node('span', 'pcm-migration-count'); count.setAttribute('role', 'status');
   toolbar.append(button('全选', 'select-all', () => selectAll(true)), button('清空', 'clear', () => selectAll(false)), count);
+  let syncEnabled=false;
+  const syncButton=button('同步开关','sync',()=>{
+    if(busy||!current())return;
+    remember();syncEnabled=!syncEnabled;refreshView();if(!preview.hidden){showPreview(true);syncButton.focus({preventScroll:true});}
+  },'pcm-free-select');
+  syncButton.title='按旧版同步可对应的条目和分组开关';
+  const syncSummary=node('small','pcm-migration-switch-summary');syncSummary.setAttribute('role','status');
+  const switchBar=node('div','pcm-migration-switch-bar');switchBar.append(syncButton,syncSummary);
   const issues = node('div', 'pcm-migration-issues'); issues.setAttribute('role', 'status'); issues.setAttribute('aria-live', 'polite');
   const errorBox = node('div', 'pcm-migration-error'); errorBox.setAttribute('role', 'alert'); errorBox.hidden = true;
   const list = node('div', 'pcm-migration-list');
   const preview = node('section', 'pcm-migration-preview'); preview.hidden = true; preview.setAttribute('aria-label', '迁移后完整顺序');
   const actions = node('div', 'pcm-migration-actions');
-  const resetButton = button('恢复自动位置', 'reset-position', () => { if(!current() || !automaticPlan)return;plan=automaticPlan;manuallyPlaced=false;showPreview(true); }); resetButton.hidden = true;
+  const undoButton = button('撤回上一步','undo',()=>{
+    if(!current()||busy||!history.length)return;
+    const prev=history.pop();plan=prev.plan;manual=prev.manual;syncEnabled=prev.sync;refreshView();showPreview(true);
+    if(!undoButton.disabled)undoButton.focus({preventScroll:true});
+  });undoButton.hidden=true;
   const previewButton = button('预览', 'preview', showPreview);
   const backButton = button('返回选择', 'preview-back', () => { selectionView(); previewButton.focus({ preventScroll: true }); }); backButton.hidden = true;
   const applyButton = button('一键迁移', 'apply', apply); applyButton.classList.add('pcm-primary');
-  actions.append(resetButton, backButton, previewButton, applyButton);
-  box.append(header, toolbar, positionNote, errorBox, issues, list, preview, actions); modal.append(box); parent.append(modal);
+  actions.append(undoButton, backButton, previewButton, applyButton);
+  box.append(header, toolbar, switchBar,positionNote, errorBox, issues, list, preview, actions); modal.append(box); parent.append(modal);
+  function remember(){history.push({plan,manual,sync:syncEnabled});}
+  function refreshView(){
+    syncButton.setAttribute('aria-pressed',String(syncEnabled));
+    syncButton.disabled=stale||busy;
+    if(plan?.result&&syncEnabled&&!syncInfo)syncInfo=analyzeSwitchSync(source,targetPreview,ignoreWhitespace);
+    view=plan?.result?previewSwitches(plan.result,syncEnabled?syncInfo:null,manual):null;
+    const changes=[...(view?.writes.values()||[])],on=changes.filter(Boolean).length;
+    syncSummary.textContent=syncEnabled||manual.size?`将开启 ${on} 项，关闭 ${changes.length-on} 项`+(syncEnabled&&syncInfo?`；${syncInfo.skipped} 条无可靠生效对应、${view?.skippedGroups||0} 组未同步`:''):'按旧版同步条目和分组开关；不含正则、脚本。';
+    undoButton.disabled=!history.length||busy||stale;
+    previewButton.disabled=!plan?.result||!!plan.errors.length||stale;
+    applyButton.disabled=busy||previewButton.disabled||(!plan.entries.length&&!changes.length);
+  }
   dragController=installMigrationDrag({modal,box,header,footer:actions,preview,canDrag:()=>!busy&&!preview.hidden&&current(),onDrop:(id,placement)=>{
-    try{plan=moveMigrationEntry(plan,id,placement);manuallyPlaced=true;showPreview(true);}catch(error){reportError(error.message);}
+    try{const next=moveMigrationEntry(plan,id,placement);if(next===plan)return;remember();plan=next;refreshView();showPreview(true);}catch(error){reportError(error.message);}
   }});
 
   function reportError(message) { errorBox.textContent = message; errorBox.hidden = !message; }
   function selectionView() {
-    dragController?.cancel(); resetButton.hidden = true;
-    positionNote.hidden = !manuallyPlaced;
-    if(manuallyPlaced)positionNote.textContent = '已保留手动位置；更改勾选会重新自动定位。';
+    dragController?.cancel(); undoButton.hidden = true;
+    positionNote.hidden = !history.length;
+    if(history.length)positionNote.textContent = '已保留预览调整；更改迁入条目选择将重新规划。';
     list.hidden = false; toolbar.hidden = false; preview.hidden = true;
     previewButton.hidden = false; backButton.hidden = true;
     quickButton.hidden = true; quickTargets = []; quickIndex = -1;
@@ -122,7 +147,7 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
     }
     if (stale) {
       selectionView(); reportError('两侧预设、表单草稿或比较选项已变化，请关闭后重新打开迁移窗口。');
-      applyButton.disabled = true; previewButton.disabled = true;
+      applyButton.disabled = true; previewButton.disabled = true; syncButton.disabled=true;
     }
     return !stale;
   }
@@ -147,8 +172,8 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
   }
   function selectAll(value) { setSelected((analysis?.candidates || []).map(candidate => candidate.id), value); }
   function recalculate() {
-    const resetManual = manuallyPlaced;
-    manuallyPlaced = false;
+    const resetManual = history.length>0;
+    history=[];manual=new Map();
     selectionView(); preview.replaceChildren(); reportError('');
     count.textContent = `已选 ${selected.size} / ${analysis?.candidates?.length || 0} 条`;
     for (const group of groupControls) {
@@ -158,16 +183,17 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
     plan = null;
     try { if (analysis) plan = planMigration(source, target, [...selected], { ignoreWhitespace }); }
     catch (error) { reportError(error?.message || '无法规划迁移，请重新打开。'); }
-    automaticPlan = plan;
     issues.replaceChildren();
     const errors = [...new Set([...(analysis?.errors || []), ...(plan?.errors || [])])];
     for (const message of errors) issues.append(node('p', 'pcm-migration-problem', String(message)));
-    issues.hidden = !errors.length;
+    const fallback=plan?.entries?.filter(e=>e.boundaryFallback)||[];
+    for(const reason of new Set(fallback.map(e=>e.reason)))issues.append(node('p','',`${fallback.filter(e=>e.reason===reason).length} 条：${reason}`));
+    if(fallback.some(e=>analysis.candidates.find(c=>c.id===e.id)?.sourceGroup?.enabled===false))issues.append(node('p','','原分组已关闭，放入未分组后将按各条目自身开关生效。'));
+    issues.hidden = !issues.childElementCount;
     for (const [id, row] of rows) row.element.classList.toggle('is-selected', selected.has(id));
-    applyButton.disabled = busy || !selected.size || !plan?.result || errors.length > 0;
-    previewButton.disabled = !selected.size || !plan?.result || errors.length > 0;
+    refreshView();
     current();
-    if(resetManual&&!stale){positionNote.textContent='选择已变化，位置已重新自动规划。';positionNote.hidden=false;}
+    if(resetManual&&!stale){positionNote.textContent='迁入条目选择已变化，预览调整已重新规划。';positionNote.hidden=false;}
   }
   function showPreview(preserve = false) {
     if (!current() || !plan?.result || previewButton.disabled) return;
@@ -182,7 +208,6 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
     const ordered = node('div', 'pcm-list pcm-migration-preview-order'); pane.append(ordered); preview.append(pane);
     const resultPrompts = new Map(plan.result.prompts.map(prompt => [prompt.identifier, prompt]));
     const displayPrompts = new Map((targetPreview?.prompts || []).map(prompt => [prompt.identifier, prompt]));
-    const resultRows = orderRows(plan.result), displayRows = orderRows(targetPreview);
     const meta = plan.result.extensions?.baibaiToolkit?.presetPromptGroups;
     const groups = new Map((meta?.groups || []).map(group => [group.id, group]));
     const blocks = [];
@@ -203,29 +228,33 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
       const caret = node('span', 'pcm-group-caret'); caret.setAttribute('aria-hidden', 'true');
       toggle.append(caret, node('span', 'pcm-group-title', block.injected ? groupName : `${groupName} · 未注入`), node('small', '', `${block.entries.length} 条`));
       disclosure(toggle, body, caret); head.append(toggle);
-      if (block.group) { const groupActions = node('span', 'pcm-group-actions'); groupActions.append(readonlySwitch(block.group.enabled !== false, groupName, 'preview-group-enabled', block.groupId, true)); head.append(groupActions); }
+      if (block.group) { const groupActions = node('span', 'pcm-group-actions'),key='g:'+block.groupId;
+        section.classList.toggle('pcm-group-power-off',!view.values.get(key));
+        if(view.tags.has(key))groupActions.append(node('small','pcm-migration-switch-tag',view.tags.get(key)));
+        groupActions.append(previewSwitch(view.values.get(key), groupName, 'preview-group-enabled', block.groupId, true)); head.append(groupActions); }
       section.append(head, body); ordered.append(section);
       for (const entry of block.entries) {
         const prompt = (!entry.incoming && displayPrompts.get(entry.id)) || resultPrompts.get(entry.id);
-        const enabled = enabledOf(prompt, entry.incoming ? resultRows : displayRows);
+        const key='p:'+entry.id,enabled=view.values.get(key);
         const row = node('article', `pcm-row pcm-migration-preview-row${enabled ? '' : ' pcm-row-disabled'}${entry.incoming ? ' is-incoming' : ''}`); row.dataset.migrationPreviewPrompt = entry.id;
         const open = button('', 'preview-expand', () => {}, 'pcm-open'); open.dataset.migrationPreviewExpand = entry.id;
         open.append(node('span', 'pcm-name', nameOf(prompt)));
-        const switchControl = readonlySwitch(enabled, nameOf(prompt), 'preview-enabled', entry.id);
+        const switchControl = previewSwitch(enabled, nameOf(prompt), 'preview-enabled', entry.id);
         row.append(open, switchControl);
-        if (entry.incoming) {open.title='拖动调整位置；手机长按拖动，点击查看正文';row.append(node('span', 'pcm-badge pcm-added', '本次迁入'));}
-        else row.append(node('span', 'pcm-migration-preview-spacer'));
+        const labels=node('span','pcm-migration-row-labels');row.append(labels);
+        if (entry.incoming) {open.title='拖动调整位置；手机长按拖动，点击查看正文';labels.append(node('span', 'pcm-badge pcm-added', '本次迁入'));}
+        if(view.tags.has(key))labels.append(node('small','pcm-migration-switch-tag',view.tags.get(key)));
         promptDisclosure(open, row, prompt, 'preview-body'); body.append(row);
-        if (entry.incoming) quickTargets.push({ row, body, toggle });
+        if (entry.incoming||view.tags.has(key)) quickTargets.push({ row, body, toggle });
       }
     }
     list.hidden = true; toolbar.hidden = true; preview.hidden = false;
     positionNote.hidden = true;
     previewButton.hidden = true; backButton.hidden = false;
-    resetButton.hidden = !manuallyPlaced;
+    undoButton.hidden=false;undoButton.disabled=!history.length;
     quickButton.hidden = !quickTargets.length;
     quickButton.textContent = `快捷查看1/${quickTargets.length}`;
-    quickButton.title = '点击查看第 1 条迁入条目；再次点击依次查看，末尾回到第 1 条';
+    quickButton.title = '依次查看本次迁入或调整开关的条目';
     for(const control of preview.querySelectorAll('[data-migration-preview-expand]'))if(expanded.has(control.dataset.migrationPreviewExpand))control.click();
     for(const control of preview.querySelectorAll('[data-migration-preview-group-toggle]'))if(folded.has(control.dataset.migrationPreviewBlock))control.click();
     box.scrollTop = preserve ? scrollTop : 0; backButton.focus({ preventScroll: true });
@@ -234,10 +263,10 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
     if (busy || !current() || applyButton.disabled || !plan?.result) return;
     busy = true; applyButton.disabled = true;
     try {
-      if (onApply?.(plan) === true) { close(); return; }
+      if (onApply?.(finalizeMigrationSwitches(plan,view)) === true) { close(); return; }
       reportError('未完成迁移，请核对提示后重试。');
     } catch (error) { reportError(error?.message || '迁移失败，未关闭当前窗口。'); }
-    finally { busy = false; if (!disposed) { applyButton.disabled = !selected.size || !plan?.result || !!plan?.errors?.length || !!analysis?.errors?.length; current(); } }
+    finally { busy = false; if (!disposed) {refreshView();current();} }
   }
   try { analysis = analyzeMigration(source, target, { ignoreWhitespace }); }
   catch (error) { analysis = { candidates: [], errors: [error?.message || '分析失败，请重新打开。'] }; }
@@ -270,7 +299,7 @@ export function openMigrationDialog({ parent, source, target, targetPreview = ta
     }
     list.append(section);
   }
-  if (!analysis.candidates?.length) list.append(node('p', 'pcm-migration-note', '没有可迁移的已注入条目。'));
+  if (!analysis.candidates?.length) list.append(node('p', 'pcm-migration-note', '没有需要补入的已注入条目。仍可同步开关，或打开预览手动调整。'));
   // Editor delegation is deliberately isolated: preview rows have no editing or drag data attributes.
   for (const eventName of ['click', 'change', 'pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'dragstart', 'dragover', 'drop']) modal.addEventListener(eventName, event => event.stopPropagation());
   modal.addEventListener('keydown', event => {

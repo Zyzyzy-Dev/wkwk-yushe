@@ -114,6 +114,32 @@
 
 /* 搜索与快照卡片同一内容列，桌面限制输入宽度。 */
 .pcm-snapshot-filters{max-width:1000px;margin:12px auto;width:100%;box-sizing:border-box}
+.pcm-library-folder{grid-column:1/-1;display:grid;gap:8px;min-width:0}
+.pcm-library-folder-heading{display:flex;align-items:center;gap:8px;border:1px solid var(--snap-border);border-radius:10px;background:var(--snap-card);padding:3px 8px;min-width:0}
+.pcm-api-manager .pcm-library-folder-head{display:flex;align-items:center;gap:8px;flex:1;min-width:0;text-align:left;padding:5px 2px;border:0;background:transparent}
+.pcm-library-folder-actions{display:flex;gap:6px;flex:none}
+.pcm-api-manager .pcm-library-folder-actions .pcm-api-icon{flex-basis:28px;width:28px;height:28px;min-height:28px;padding:5px}
+.pcm-library-folder-head::before{content:'▸'}.pcm-library-folder-head[aria-expanded=true]::before{content:'▾'}
+.pcm-library-folder-head strong,.pcm-library-member span,.pcm-library-member small{overflow-wrap:anywhere;min-width:0}
+.pcm-library-folder-head small{white-space:nowrap}
+.pcm-library-folder-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
+.pcm-library-folder-body[hidden]{display:none!important}.pcm-library-folder-empty{padding:6px 12px;color:var(--snap-muted)}
+.pcm-api-quick .pcm-library-folder-body{grid-template-columns:minmax(0,1fr)}
+.pcm-library-dialog-box{padding:16px;display:grid;gap:12px}.pcm-library-dialog-box :is(h3,p){margin:0;overflow-wrap:anywhere}
+.pcm-library-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.pcm-library-tools :is(input,select){flex:1 1 100px}.pcm-library-tools:last-child{justify-content:flex-end}
+.pcm-library-dialog [hidden],.pcm-library-save[hidden],.pcm-library-selection-count[hidden]{display:none!important}
+.pcm-library-selection-count{align-self:center;color:var(--snap-muted)}
+.pcm-library-selecting [data-library-item]{cursor:pointer;user-select:none;-webkit-user-select:none}
+.pcm-library-selecting [data-library-item] button{pointer-events:none;opacity:.35;cursor:inherit}
+.pcm-api-manager .pcm-library-mode[aria-pressed=true],.pcm-library-dialog button[aria-pressed=true]{border-color:var(--snap-accent);background:color-mix(in srgb,var(--snap-accent) 20%,var(--snap-card));color:var(--snap-fg);font-weight:600}
+.pcm-api-manager .pcm-snapshot-card.is-group-selected{outline:2px solid var(--snap-accent);outline-offset:-2px;border-color:var(--snap-accent);background:color-mix(in srgb,var(--snap-accent) 14%,var(--snap-card))}
+.pcm-library-selecting [data-library-item]:focus-visible{outline:2px dashed var(--snap-accent);outline-offset:2px}
+.pcm-library-dialog .pcm-library-danger{border-color:#b85a4f;color:var(--snap-fg);background:color-mix(in srgb,#c76352 14%,var(--snap-card))}
+.pcm-library-dialog-box input,.pcm-library-dialog-box select{max-width:100%}
+.pcm-snapshot-toolbar{flex-wrap:wrap}
+.pcm-snapshot-filters button[aria-pressed=true]{border-color:var(--snap-accent);background:color-mix(in srgb,var(--snap-accent) 23%,var(--snap-card))}
+@media(max-width:650px){.pcm-library-folder-body{grid-template-columns:minmax(0,1fr)}.pcm-snapshot-manager .pcm-snapshot-toolbar .pcm-snapshot-create{width:auto}}
 .pcm-snapshot-search{flex:0 1 360px;width:360px}
 .pcm-snapshot-preset-regex-option{width:100%;min-width:0;border-top:1px solid var(--snap-border);padding-top:6px}
 .pcm-snapshot-preset-regex-option[hidden]{display:none}
