@@ -17,6 +17,7 @@ import { captureWorldEntries, restoreWorldEntries, captureRegexSwitches, restore
 import { createIdentifier } from '../features/preset/core.js';
 import {validateLibraryFolders,moveLibraryItems,removeLibraryFolder,libraryFingerprint} from '../shared/library-folders.js';
 import { normalizeWorkbenchBook } from '../features/worldbook/worldbook-workbench.js';
+import { createWorkbenchSaveIO } from './worldbook-persistence.js';
 import { API_STORE_KEY, API_ADDITIONAL_FIELDS, normalizeApiAdditional, normalizeApiProfile, planApiSwitch, readNativeApiProfiles, maskApiSecret } from '../features/api/api-manager.js';
 
 // Track native worldbook writes from module startup, not only after a workbench window opens.
@@ -586,7 +587,8 @@ async function handleWorkbenchWorldbook(method, payload) {
     // The raw disk object is the CAS baseline; normalization must not change it.
     return {name, book: clone(book)};
   }
-  const names = await workbenchDiskNames(env);
+  const persistence = createWorkbenchSaveIO(env);
+  const names = await persistence.names();
   if (typeof payload.create !== 'boolean') throw new Error('请明确选择覆盖保存或另存世界书');
   const create = payload.create, book = normalizeWorkbenchBook(payload.book), base = payload.base;
   const exists = list => list.some(value => value.toLocaleLowerCase() === name.toLocaleLowerCase());
@@ -599,7 +601,7 @@ async function handleWorkbenchWorldbook(method, payload) {
   // Block ordinary native editor input while checking and writing; restore its previous state even on failure.
   const editor = document.getElementById('WorldInfo'), wasInert = editor?.inert;
   if (editor) editor.inert = true;
-  let writeAttempted = false, synced = false;
+  let synced = false;
   try {
     if (world.worldInfoCache.has(name)) {
       // Native saveWorldInfo caches first and debounces the POST. Even a reverted edit can leave an old
@@ -612,17 +614,16 @@ async function handleWorkbenchWorldbook(method, payload) {
     // The debounce only tells us when a POST starts. Wait for all real responses, including slow old saves.
     await awaitWorkbenchWorldWrites();
     if (create) {
-      if (exists(await stableWorkbenchWorldRead(() => workbenchDiskNames(env)))) throw new Error('同名世界书已存在，请使用其他名称');
+      if (exists(await stableWorkbenchWorldRead(() => persistence.names()))) throw new Error('同名世界书已存在，请使用其他名称');
     } else {
-      const current = await stableWorkbenchWorldRead(() => readSnapshotPersistence(env, '/api/worldinfo/get', {name}));
+      const current = await stableWorkbenchWorldRead(() => persistence.read('/api/worldinfo/get', {name}, '保存前世界书内容检查'));
       if (!sameWorkbenchJSON(current, base)) throw new Error('世界书「' + name + '」已被外部修改，保存冲突；请重新载入或另存');
     }
     assertWorkbenchCache(world, name, base, create);
     // The native API has no atomic compare-and-swap. Check as late as possible and serialize all plugin writes.
-    writeAttempted = true;
-    await writeSnapshotResource(env, '/api/worldinfo/edit', {name, data: book});
+    await persistence.write('/api/worldinfo/edit', {name, data: book}, '世界书写入');
     await awaitWorkbenchWorldWrites();
-    const persisted = await stableWorkbenchWorldRead(() => readSnapshotPersistence(env, '/api/worldinfo/get', {name}));
+    const persisted = await stableWorkbenchWorldRead(() => persistence.read('/api/worldinfo/get', {name}, '世界书保存后核验'));
     normalizeWorkbenchBook(persisted);
     await syncWorkbenchBook(env, name, persisted, base, create);
     synced = true;
@@ -633,15 +634,15 @@ async function handleWorkbenchWorldbook(method, payload) {
     }
     const event = script.event_types?.WORLDINFO_UPDATED;
     if (event) await script.eventSource.emit(event, name, clone(persisted));
-    const finalBook = await stableWorkbenchWorldRead(() => readSnapshotPersistence(env, '/api/worldinfo/get', {name}));
+    const finalBook = await stableWorkbenchWorldRead(() => persistence.read('/api/worldinfo/get', {name}, '世界书保存后最终核验'));
     if (!sameWorkbenchJSON(finalBook, persisted)) throw new Error('世界书保存后又发生外部修改，未确认保存成功；请重新载入核验');
     assertWorkbenchCache(world, name, persisted);
     return {name, book: clone(persisted)};
   } catch (error) {
-    if (writeAttempted && !synced) {
+    if (persistence.writeAttempted && !synced) {
       // A timeout/HTTP error may happen after the server wrote the book. Read back only; never roll back over newer data.
       try {
-        const actual = await readSnapshotPersistence(env, '/api/worldinfo/get', {name});
+        const actual = await persistence.read('/api/worldinfo/get', {name}, '世界书异常后核验');
         normalizeWorkbenchBook(actual);
         await syncWorkbenchBook(env, name, actual, base, create);
       } catch { /* Keep the original error and any concurrent native edits. The UI keeps its draft. */ }

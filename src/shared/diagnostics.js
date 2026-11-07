@@ -38,6 +38,7 @@ export function createDiagnosticLog({now = Date.now, limit = 20} = {}) {
         row.durationMs = duration(now() - row.at);
         row.outcome = outcomeName(outcome);
         if (row.outcome === 'failed' && error === 'AbortError') row.outcome = 'cancelled';
+        if (row.outcome === 'failed' && error === 'TimeoutError') row.outcome = 'timeout';
         if (row.outcome === 'failed') row.error = errorName(error);
       };
     },

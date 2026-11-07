@@ -58,7 +58,7 @@ export function createWorldbookWorkbench({host,session=createWorkbenchSession(),
     if(session[side].book!==original||JSON.stringify(original)!==before)throw Error('世界书已变化，请重新选择后删除');
     const book=clone(original);for(const id of ids)delete book.entries[id];selected[side].clear();change(side,book);
   }
-  function announce(message,error=false){status.textContent=error?message:'';status.classList.toggle('is-error',error);}
+  function announce(message,error=false,progress=false){status.textContent=error||progress?message:'';status.classList.toggle('is-error',error);}
   function setBusy(value){busy=value;element.setAttribute('aria-busy',String(value));for(const control of element.querySelectorAll('button,input,select,textarea'))control.disabled=value||control.dataset.unavailable==='true'||control.dataset.intrinsicDisabled==='true';}
   async function run(action){if(busy||disposed)return;setBusy(true);announce('');try{await action();}catch(e){if(!disposed){announce(e.message,true);const message=activeModal?.querySelector('.pcm-wb-error');if(message)message.textContent=e.message;toast.error(e.message);}}finally{if(!disposed){setBusy(false);for(const progress of element.querySelectorAll('.pcm-wb-progress'))progress.textContent='';}}}
   function requireBook(side){if(!session[side].book)throw Error('请先导入或新建'+names[side]+'世界书');}
@@ -152,6 +152,7 @@ export function createWorldbookWorkbench({host,session=createWorkbenchSession(),
   async function save(side,asNew){
     requireBook(side);const s=session[side];let name=s.source,create=asNew||!s.source;
     if(create){name=await prompt('另存世界书名称（不能与已有世界书重名）',s.name+(s.source?' 副本':''));if(name===null)return;name=name.trim();if(!name)throw Error('请输入世界书名称');}
+    announce('正在检查并保存世界书，请保持酒馆在前台…',false,true);
     const result=await host.request('workbench-save-worldbook',{name,book:clone(s.book),base:create?null:clone(s.base),create});
     if(disposed)return;s.book=normalizeWorkbenchBook(result.book);s.base=clone(result.book);s.name=result.name;s.source=result.name;s.dirty=false;render();announce('已保存到酒馆：'+result.name);toast.success('世界书已保存');
   }

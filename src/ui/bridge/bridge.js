@@ -62,14 +62,14 @@ async function request(method, payload) {
   await connection;
   const id = ++requestId;
   // 多本世界书需要逐本保存与读回核验，不能沿用单次编辑操作的短超时。
-  // Workbench import has two sequential disk reads (up to 45s each), plus the shared queue.
+  // 工作台读取可有两次45秒读取；保存的网络请求共用120秒预算，另留排队和原生同步时间。
   // 宿主导出可能等待系统保存/分享窗口；超时仅报告未知状态，不自动再次下载。
-  const timeoutMs = method === 'diagnostics-context' ? 1500 : method === 'ai-stitch-generate' ? stitchRpcTimeoutMs(payload?.timeoutMinutes) : method === 'ai-stitch-create' || method === 'ai-stitch-verify' || method === 'export-preset' || method.startsWith('snapshot-') || method.startsWith('api-manager-') || method === 'workbench-read-worldbook' ? 180_000 : REQUEST_TIMEOUT_MS;
+  const timeoutMs = method === 'diagnostics-context' ? 1500 : method === 'ai-stitch-generate' ? stitchRpcTimeoutMs(payload?.timeoutMinutes) : method === 'ai-stitch-create' || method === 'ai-stitch-verify' || method === 'export-preset' || method.startsWith('snapshot-') || method.startsWith('api-manager-') || method === 'workbench-read-worldbook' || method === 'workbench-save-worldbook' ? 180_000 : REQUEST_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);
       finish('timeout');
-      reject(new Error(`宿主请求超时：${method}`));
+      reject(new Error(method === 'workbench-save-worldbook' ? '等待世界书保存结果超时，后台可能仍在处理；草稿已保留，请先导出草稿，再刷新酒馆核对，勿直接重复保存。' : `宿主请求超时：${method}`));
     }, timeoutMs);
     pending.set(id, { resolve, reject, timer, finish });
     try {port.postMessage({ type: 'request', id, method, payload });}
