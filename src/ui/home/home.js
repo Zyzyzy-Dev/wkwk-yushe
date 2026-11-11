@@ -19,11 +19,14 @@ export function createToolboxHome({ themeIcon, onCycleTheme }) {
       </div>
     </header>
     <div class="pcm-home-content">
+      <div class="pcm-home-editor-row">
       <button type="button" class="pcm-toolbox-card" data-action="open-editor">
         <span class="pcm-toolbox-card-icon" aria-hidden="true"><img src="${notesCat}" alt="" width="128" height="128" draggable="false"></span>
         <span class="pcm-toolbox-card-copy"><strong>预设编辑</strong><small><span>预设对比 · 缝合 · 迁移</span><span>变量检查 · 预设正则缝合</span><span>世界书条目一键迁移到预设</span></small></span>
         <span class="pcm-home-card-go" aria-hidden="true">${arrow}</span>
       </button>
+      <button type="button" class="pcm-home-editor-settings" data-action="editor-settings" aria-label="预设编辑设置" title="预设编辑设置">${svg('<path d="m9 3-.6 2.3-2 .9-2.2-.6-2 3.5 1.6 1.7v2.4l-1.6 1.7 2 3.5 2.2-.6 2 .9L9 21h4l.6-2.3 2-.9 2.2.6 2-3.5-1.6-1.7v-2.4l1.6-1.7-2-3.5-2.2.6-2-.9L13 3Z"/><circle cx="11" cy="12" r="3"/>')}</button>
+      </div>
       <button type="button" class="pcm-toolbox-card pcm-snapshot-home-card" data-action="open-snapshots">
         <span class="pcm-toolbox-card-icon pcm-snapshot-home-icon" aria-hidden="true">${svg('<rect x="3" y="6" width="18" height="15" rx="3"/><path d="M8 6l2-3h4l2 3"/><circle cx="12" cy="13" r="4"/>')}</span>
         <span class="pcm-toolbox-card-copy"><strong>设置快照</strong><small><span>预设开关 · 全局世界书挂载</span><span>一键切换 · 绑定聊天或角色</span></small></span>

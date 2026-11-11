@@ -1,4 +1,5 @@
 // 预设更新编辑器 · 酒馆宿主桥：与 host/ 下原生列表适配共同封装主 document/API。
+import {EDITOR_PREFERENCES_KEY,normalizeEditorPreferences} from '../features/preset/editor-preferences.js';
 import { installNativeGroups } from './native-groups.js';
 import { handleAiStitch } from './ai-stitch.js';
 import { exportPresetFile } from './preset-export.js';
@@ -146,6 +147,14 @@ async function listTavernPresets() {
 }
 
 async function handleRequest(method, payload) {
+  if (method === 'preset-editor-preferences') return snapshotSerial(async () => {
+    const [{extension_settings},script]=await Promise.all([import('/scripts/extensions.js'),import('/script.js')]);
+    const next=normalizeEditorPreferences(extension_settings[EDITOR_PREFERENCES_KEY],payload);
+    if(payload && Object.keys(next).some(key=>typeof payload[key]==='boolean')){
+      extension_settings[EDITOR_PREFERENCES_KEY]=next;script.saveSettingsDebounced();editorEntrySync?.(next);
+    }
+    return next;
+  },false);
   if (method === 'diagnostics-context') return readHostDiagnostics({
     tauri: Boolean(globalThis.__TAURITAVERN__),
     versionText: document.getElementById('version_display')?.textContent || document.getElementById('version_display_welcome')?.textContent || '',
@@ -1739,8 +1748,8 @@ class AppHost {
     this.tauriLayoutCleanup = null;
   }
 
-  open(apiQuick = false) {
-    this.apiQuick = apiQuick;
+  open(apiQuick = false, editorQuick = false) {
+    this.apiQuick = apiQuick;this.editorQuick=editorQuick;
     this.openRequested = true;
     if (!this.dialog?.isConnected) this.mount();
     try {
@@ -1750,7 +1759,7 @@ class AppHost {
       this.dialog.setAttribute('open', '');
     }
     applyImportantStyles(this.dialog, apiQuick ? {width:'min(600px, 96vw)',height:'min(780px, 92dvh)',margin:'auto','border-radius':'16px'} : {width:'100vw',height:'100dvh',margin:'0','border-radius':'0'});
-    if (this.uiReady) this.sendEvent('open', {apiQuick:this.apiQuick});
+    if (this.uiReady) this.sendEvent('open', {apiQuick:this.apiQuick,editorQuick:this.editorQuick});
   }
 
   close() {
@@ -1882,7 +1891,7 @@ class AppHost {
       this.uiReady = true;
       this.bindTavernEvents();
       this.sendEnvironment();
-      if (this.openRequested) this.sendEvent('open', {apiQuick:this.apiQuick});
+      if (this.openRequested) this.sendEvent('open', {apiQuick:this.apiQuick,editorQuick:this.editorQuick});
     } else if (message.name === 'close') {
       this.close();
     }
@@ -1968,6 +1977,7 @@ class AppHost {
       safeInsets,
       keyboardOffset: Math.max(this.ttKeyboard, cssKeyboard, surfaceKeyboard, visualKeyboard),
       viewport: {
+        layoutHeight: window.innerHeight,
         width: window.visualViewport?.width || window.innerWidth,
         height: window.visualViewport?.height || window.innerHeight,
       },
@@ -1984,12 +1994,14 @@ class AppHost {
   }
 }
 
-let apiEntrySync = null;
-async function installApiEntries(controller) {
+// API／快照与预设编辑共用入口生命周期，各自保留设置、注册项及位置。
+let apiEntrySync = null, editorEntrySync = null;
+async function installApiEntries(controller, editor = false) {
   const { extension_settings } = await import('/scripts/extensions.js');
-  let preferences = extension_settings.preset_compare_api_entries || {};
-  const qrId = APP_ID + '-api-qr', ballId = APP_ID + '-api-ball', railId = APP_ID + '-api-rail';
-  const positionKey = APP_ID + '.api-ball-position';
+  let preferences = extension_settings[editor ? EDITOR_PREFERENCES_KEY : 'preset_compare_api_entries'] || {};
+  const kind=editor?'editor':'api', label=editor?'预设编辑':'API / 设置快照';
+  const qrId = APP_ID + '-'+kind+'-qr', ballId = APP_ID + '-'+kind+'-ball', railId = APP_ID + '-'+kind+'-rail';
+  const positionKey = APP_ID + '.'+kind+'-ball-position';
   let position = null, drag = null, moved = false;
   try {
     const saved = JSON.parse(localStorage.getItem(positionKey));
@@ -1997,7 +2009,7 @@ async function installApiEntries(controller) {
   } catch { /* 存储不可用或旧值损坏时仍可使用默认位置。 */ }
   const make = (id, text) => {
     const button = document.createElement('button'); button.id = id; button.type = 'button'; button.textContent = text;
-    button.title = '打开 API 快切'; button.setAttribute('aria-label', '打开 API 快切');
+    button.title = '打开 '+label; button.setAttribute('aria-label', '打开 '+label);
     applyImportantStyles(button, { display:'inline-flex', visibility:'visible', opacity:'1', 'align-items':'center', 'justify-content':'center',
       'box-sizing':'border-box', margin:'0', padding:'5px 10px', width:'auto', height:'30px', 'min-width':'0', 'min-height':'30px',
       border:'1px solid var(--SmartThemeBorderColor, #888)', 'border-radius':'8px', background:'var(--SmartThemeBlurTintColor, #333)',
@@ -2005,7 +2017,7 @@ async function installApiEntries(controller) {
     button.addEventListener('click', event => {
       event.preventDefault(); event.stopPropagation();
       if (id === ballId && moved) { moved = false; return; }
-      controller.open(true);
+      controller.open(!editor, editor);
     }); return button;
   };
   const placeBall = () => {
@@ -2014,7 +2026,7 @@ async function installApiEntries(controller) {
     const left = viewport?.offsetLeft || 0, top = viewport?.offsetTop || 0;
     const width = viewport?.width || innerWidth, height = viewport?.height || innerHeight;
     const x = Math.max(left + 8, Math.min(left + width - 56, position?.x ?? left + width - 64));
-    const y = Math.max(top + 8, Math.min(top + height - 56, position?.y ?? top + height - 160));
+    const y = Math.max(top + 8, Math.min(top + height - 56, position?.y ?? top + height - (editor ? 224 : 160)));
     applyImportantStyles(button, {left:x+'px', top:y+'px', right:'auto', bottom:'auto'});
   };
   const syncQrVisibility = () => {
@@ -2032,7 +2044,7 @@ async function installApiEntries(controller) {
     const registry = window.qrAssistantExtensionApi;
     if (Array.isArray(registry)) {
       const index = registry.findIndex(entry=>entry.dom_id===qrId);
-      if (preferences.quickReply && index < 0) registry.push({dom_id:qrId, group_name:'酒馆盒子', button_name:'API / 设置快照'});
+      if (preferences.quickReply && index < 0) registry.push({dom_id:qrId, group_name:'酒馆盒子', button_name:label});
       if (!preferences.quickReply && index >= 0) registry.splice(index,1);
     }
     if (!preferences.quickReply) document.getElementById(railId)?.remove();
@@ -2043,12 +2055,12 @@ async function installApiEntries(controller) {
         const rail = document.createElement('div'); rail.id = railId;
         applyImportantStyles(rail, {display:'flex', visibility:'visible', opacity:'1', 'justify-content':'center',
           'flex':'0 0 100%', 'grid-column':'1 / -1', order:'-1', width:'100%', 'min-height':'34px', padding:'2px', position:'relative', 'box-sizing':'border-box'});
-        rail.append(make(qrId, 'API快切')); form.prepend(rail);
+        rail.append(make(qrId, editor ? '预设编辑' : 'API快切')); form.prepend(rail);
       }
     }
     if (!preferences.floating) { document.getElementById(ballId)?.remove(); }
     else if (!document.getElementById(ballId)) {
-      const button = make(ballId, 'API');
+      const button = make(ballId, editor ? '预设' : 'API');
       applyImportantStyles(button, {position:'fixed', width:'48px', height:'48px', 'border-radius':'50%', 'z-index':'29999',
         'box-shadow':'0 3px 12px #0004', 'touch-action':'none', transform:'none', 'max-width':'48px', 'max-height':'48px'});
       button.addEventListener('pointerdown', event => {
@@ -2077,7 +2089,8 @@ async function installApiEntries(controller) {
       document.body.append(button); placeBall();
     }
   };
-  apiEntrySync = next => { preferences=next; sync(); syncQrVisibility(); };
+  const update = next => { preferences=next; sync(); syncQrVisibility(); };
+  if(editor)editorEntrySync=update;else apiEntrySync=update;
   const observer = new MutationObserver(() => {if(preferences.quickReply||preferences.floating) sync();});
   observer.observe(document.body, {childList:true,subtree:true});
   window.addEventListener('resize', placeBall);
@@ -2113,6 +2126,7 @@ function addMenu(controller) {
 export function installPresetCompareHost() {
   const controller = new AppHost();
   void installNativeGroupControls().catch(error => console.warn(`[${APP_ID}] native groups unavailable`, error));
+  void installApiEntries(controller, true).catch(error => console.warn(`[${APP_ID}] Editor entries unavailable`, error));
   void installApiEntries(controller).catch(error => console.warn(`[${APP_ID}] API entries unavailable`, error));
   void installApiQuickCommand().catch(error => console.warn(`[${APP_ID}] API quick command unavailable`, error));
   void installSnapshotBindings(controller).catch(error => console.warn(`[${APP_ID}] snapshot bindings unavailable`, error));

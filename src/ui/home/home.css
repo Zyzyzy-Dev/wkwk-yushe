@@ -77,3 +77,12 @@
 @media(max-height:500px) and (min-width:600px){.pcm-toolbox-home{padding:max(12px,var(--pcm-safe-top)) max(12px,var(--pcm-safe-right)) max(12px,var(--pcm-safe-bottom)) max(12px,var(--pcm-safe-left))}.pcm-home-content{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:calc(100% - 190px);margin:0}.pcm-toolbox-card{max-height:none;padding:8px;gap:8px}.pcm-toolbox-card-icon{width:45px;height:45px;flex-basis:45px}.pcm-toolbox-card-copy strong{font-size:18px}.pcm-toolbox-card-copy small{font-size:10px}.pcm-home-card-go{display:none}}
 
 @media(max-height:720px) and (max-width:900px){.pcm-snapshot-home-icon{padding:8px}}
+/* 四张卡片使用相同宽高；宽屏齿轮位于卡片外，窄屏放在卡片右侧的独立点击区。 */
+.pcm-home-content{display:grid;grid-template-rows:repeat(4,minmax(0,1fr))}
+.pcm-home-editor-row{position:relative;display:flex;align-items:stretch;z-index:1;flex:1;min-height:0;max-height:132px;width:100%}
+.pcm-home-editor-row .pcm-toolbox-card{width:100%;min-width:0}
+.pcm-home-editor-settings{position:absolute;right:-48px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:40px;height:40px;padding:9px;border:1.5px solid var(--home-border);border-radius:12px;background:var(--home-surface);color:var(--home-text);box-shadow:0 2px 0 var(--home-shadow);cursor:pointer;z-index:2}
+.pcm-home-editor-settings:hover{background:var(--home-soft)}
+@media(min-width:901px) and (min-height:501px){.pcm-home-content{max-width:min(660px,calc(100% - 48px))}}
+@media(max-width:900px),(max-height:500px){.pcm-home-editor-settings{right:12px;width:34px;height:36px;padding:7px}.pcm-home-editor-row .pcm-toolbox-card{padding-right:56px}.pcm-home-editor-row .pcm-home-card-go{display:none}}
+@media(max-height:500px) and (min-width:600px){.pcm-home-content{grid-template-rows:repeat(2,minmax(0,1fr))}.pcm-home-editor-row{max-height:none}}

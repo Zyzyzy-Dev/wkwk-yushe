@@ -1,0 +1,39 @@
+/* 预设编辑设置：沿用现有主题，用滑动开关及高亮入口按钮组织为三个紧凑分区。 */
+.pcm-editor-settings{width:min(520px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);border-radius:16px}
+.pcm-editor-settings .pcm-modal-box{box-sizing:border-box;width:100%;max-height:calc(100dvh - 24px);overflow:auto;border-radius:16px;gap:14px}
+.pcm-editor-settings header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pcm-editor-settings h2{font-size:18px;margin:0}
+.pcm-editor-settings header button{width:30px;min-width:30px;height:30px;padding:0;font-size:21px}
+.pcm-editor-settings-options{display:grid;gap:10px}
+.pcm-editor-setting{padding:12px 14px;border-radius:16px;background:color-mix(in srgb,var(--SmartThemeBodyColor) 5%,transparent);font-size:13px;line-height:1.5}
+.pcm-editor-setting-row{display:flex;align-items:center;gap:12px}
+.pcm-editor-setting-row>span{min-width:0}
+.pcm-editor-setting small{display:block;margin-top:8px;font-size:12px;line-height:1.6;opacity:.78}
+.pcm-dialog .pcm-editor-settings .pcm-setting-switch{box-sizing:border-box;position:relative;flex:0 0 42px;width:42px;height:24px;min-height:24px;margin:0;padding:0;border:1px solid var(--SmartThemeBorderColor);border-radius:20px;background:color-mix(in srgb,var(--SmartThemeBodyColor) 20%,var(--SmartThemeBlurTintColor));cursor:pointer}
+.pcm-setting-switch>span{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--SmartThemeBodyColor);transition:transform .15s}
+.pcm-dialog .pcm-editor-settings .pcm-setting-switch[aria-checked=true]{background:var(--pcm-accent,var(--SmartThemeBodyColor))}
+.pcm-setting-switch[aria-checked=true]>span{transform:translateX(18px);background:var(--SmartThemeBlurTintColor)}
+.pcm-editor-shortcuts{display:flex;flex-wrap:wrap;gap:16px;margin-top:8px}
+.pcm-dialog .pcm-editor-shortcuts .pcm-api-entry-toggle{display:flex;align-items:center;justify-content:center;gap:6px;min-width:84px;min-height:30px;margin:0;padding:5px 12px;border:1px dashed var(--SmartThemeBorderColor);border-radius:18px;background:transparent;color:var(--SmartThemeBodyColor);font-size:12px}
+.pcm-dialog .pcm-editor-shortcuts .pcm-api-entry-toggle[aria-pressed=true]{border-style:solid;border-color:var(--pcm-accent,var(--SmartThemeBodyColor));background:color-mix(in srgb,var(--pcm-accent,var(--SmartThemeBodyColor)) 22%,var(--SmartThemeBlurTintColor))}
+/* 状态始终占两行，读写提示或错误出现时不改变居中弹窗和控件位置。 */
+.pcm-editor-settings-status{margin:0;height:3.2em;overflow:auto;overflow-wrap:anywhere;font-size:12px;line-height:1.6}
+.pcm-editor-settings button:focus-visible{outline:2px solid var(--pcm-selection-edge,var(--SmartThemeBodyColor));outline-offset:3px}
+.pcm-editor-settings button:disabled{opacity:.5;cursor:wait}
+/* 常用符号一排，更多符号/模板可展开；浮层仅在选区稳定后出现，保留随机转换按钮。 */
+.pcm-creator-toolbar{position:fixed;z-index:10010;display:flex;flex-direction:column;box-sizing:border-box;width:max-content;padding:5px;border:1px solid var(--SmartThemeBorderColor);border-radius:10px;background:var(--SmartThemeBlurTintColor);color:var(--SmartThemeBodyColor);box-shadow:0 4px 18px #0004;user-select:none;overflow:auto;overscroll-behavior:contain}
+.pcm-creator-toolbar[hidden],.pcm-creator-toolbar [hidden]{display:none!important}
+.pcm-creator-row{display:flex;flex-wrap:wrap;gap:3px}
+.pcm-creator-dock-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 3px 4px;font-size:12px}
+.pcm-dialog .pcm-creator-dock-head button{font:inherit;min-height:30px;padding:3px 8px}
+.pcm-creator-toolbar.pcm-creator-docked{width:324px}
+.pcm-creator-docked .pcm-creator-row{justify-content:space-between}
+.pcm-dialog .pcm-creator-toolbar button{box-sizing:border-box;min-width:30px;min-height:32px;padding:4px 6px;margin:0;border:0;border-radius:6px;background:transparent;color:inherit;font:600 13px ui-monospace,monospace;cursor:pointer}
+.pcm-dialog .pcm-creator-toolbar button:hover,.pcm-dialog .pcm-creator-toolbar button:focus-visible,.pcm-dialog .pcm-creator-toolbar button[aria-expanded=true]{background:var(--pcm-selection-fill,#8883);outline:1px solid var(--SmartThemeBorderColor)}
+.pcm-creator-more{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;width:300px;max-width:100%;padding-top:6px;margin-top:5px;border-top:1px solid var(--SmartThemeBorderColor)}
+.pcm-dialog .pcm-creator-more button{min-width:0;padding:6px 3px;font-size:12px;font-family:inherit;font-weight:500}
+.pcm-creator-tag-form{box-sizing:border-box;width:300px;max-width:100%;padding:8px 4px 4px;display:grid;gap:8px;font-size:12px}
+.pcm-creator-tag-form label{display:grid;gap:6px}.pcm-creator-tag-form input{box-sizing:border-box;width:100%;min-width:0;user-select:text;padding:6px;font:inherit}
+.pcm-creator-tag-form small{white-space:normal;line-height:1.5}.pcm-creator-tag-form small:empty{display:none}
+@media(max-width:360px){.pcm-editor-settings .pcm-modal-box{padding:14px}.pcm-editor-setting{padding:10px}.pcm-editor-setting-row{gap:8px}.pcm-creator-row{gap:2px}.pcm-dialog .pcm-creator-row button{min-width:28px;min-height:34px;padding:3px 4px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){.pcm-setting-switch>span{transition:none}}
