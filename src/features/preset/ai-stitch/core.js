@@ -48,7 +48,8 @@ export function formatStitchSource(source,item,baseline){
  if(Object.hasOwn(item,'adaptedContent')){validateAdaptedContent(source,item,baseline);return item.adaptedContent;}
  if(item.format===undefined)return source.content;
  keys(item.format,['lines','tag']);
- const lines=source.content.split(/(?<=\n)/),seen=new Set();
+ // 保留空行和原始换行，不依赖旧版 Safari 不支持的正则后行断言。
+ const lines=source.content.match(/[^\n]*\n|[^\n]+$/g)||[''],seen=new Set();
  const anchor=baseline?.prompts?.find(p=>p.identifier===item.anchorId)?.content||'';
  const specs=item.format.lines??[];
  if(!Array.isArray(specs)||specs.length>lines.length)fail('格式行方案无效');

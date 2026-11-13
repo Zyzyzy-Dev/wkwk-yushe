@@ -4,6 +4,15 @@ import assert from 'node:assert/strict';
 import { checkEntrySymbols, checkPresetStructure } from '../src/features/preset/syntax-check.js';
 const entry=(text,id='a')=>({id,name:id,text});
 const run=(texts)=>{const entries=texts.map((t,i)=>entry(t,String(i)));return checkPresetStructure({entries,streams:[{fragments:entries.map(e=>({type:'source',entryId:e.id,text:e.text,start:0,end:e.text.length}))}],uncertainties:[]});};
+test('围栏屏蔽保留混合换行后的正文定位与首尾空行',()=>{
+ const text='\n```text\r\n[「😀\r\n\r\n```\n\n【尾\r\n';
+ const result=checkEntrySymbols(entry(text));assert.equal(result.issues.length,1);
+ const issue=result.issues[0];assert.equal(issue.code,'symbol-unclosed');assert.equal(issue.start,text.indexOf('【尾'));assert.equal(issue.line,7);assert.equal(issue.column,1);
+});
+test('空正文、连续空行、结尾无换行的围栏及长行保持检查结果',()=>{
+ for(const text of ['', '\n\n', '\r\n\r\n', '```\n[\n```', '正常😀'.repeat(20000)+'\r\n'])assert.equal(checkEntrySymbols(entry(text)).issues.length,0);
+ assert.ok(checkEntrySymbols(entry('\r\n```\r\n[\r\n')).issues.some(i=>i.code==='fence-unclosed'));
+});
 test('XML pairs across entries, Chinese attributes and self close',()=>assert.equal(run(['<最高原则 x="a"><b/>','</最高原则>']).issues.length,0));
 test('crossing is bounded and has related source',()=>{const r=run(['<a><b>','</a></b>']);assert.ok(r.issues.some(i=>i.code==='tag-crossing'&&i.related));assert.ok(r.issues.length<=2);});
 test('legacy, inline and fenced examples ignored; isolated custom reviewed',()=>{assert.equal(run(['<user> `<user_input>`\n```xml\n<a>(\n```']).issues.length,0);assert.equal(run(['正文提及 <content> 标签']).issues.length,0);assert.ok(run(['<content>\n<content>']).issues.length);});

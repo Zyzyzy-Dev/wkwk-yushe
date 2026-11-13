@@ -9,7 +9,8 @@ function issue(e,code,start,end,message,severity='error',related) {return {code,
 // 围栏/内联代码仅屏蔽普通符号和标签；宏始终先独立扫描。
 function codeMask(text) {
     const mask=new Uint8Array(text.length);let fence=null,offset=0;
-    for(const line of text.split(/(?<=\n)/)) {
+    // 保留每行原始换行，避免旧版 Safari 在模块解析时拒绝后行断言。
+    for(const line of text.match(/[^\n]*\n|[^\n]+$/g)||['']) {
         const m=/^\s*(`{3,})([^\r\n]*)/.exec(line);
         if(fence) {mask.fill(1,offset,offset+line.length);if(m&&m[1].length>=fence&&m[2].trim()==='')fence=null;}
         else if(m) {fence=m[1].length;mask.fill(1,offset,offset+line.length);}

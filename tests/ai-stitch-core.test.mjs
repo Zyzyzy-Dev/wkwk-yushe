@@ -1,9 +1,17 @@
 // 组装器拒绝模型越权、严格保留原文与已有字段，并验证变量执行顺序。
 import test from 'node:test';import assert from 'node:assert/strict';
-import { assembleStitch, makeStitchInput, previewStitchSource, stitchAnchorIssue, stitchContext } from '../src/features/preset/ai-stitch/core.js';
+import { assembleStitch, makeStitchInput, previewStitchSource, formatStitchSource, stitchAnchorIssue, stitchContext } from '../src/features/preset/ai-stitch/core.js';
 const base=()=>({unknown:{keep:1},prompts:[{identifier:'a',name:'定义',content:'{{setvar::tone::}}',role:'system'},{identifier:'b',name:'读取',content:'前\r\n{{getvar::tone}} 后',role:'system'}],prompt_order:[{character_id:100001,order:[{identifier:'a',enabled:true},{identifier:'b',enabled:true}]}],extensions:{baibaiToolkit:{presetPromptGroups:{groups:[{id:'g',name:'组',enabled:true}],prompts:{a:{groupId:'g'},b:{groupId:'g'}}}},regex_scripts:[{x:1}]}});
 const input=(content=' \r\n中文😀\n{{user}}\r\n ' )=>makeStitchInput(base(),[{id:'s',name:'来源',content}], '指导','session',1);
 const plan=(i,extra={})=>({schemaVersion:1,sessionId:i.sessionId,revision:i.revision,items:[{sourceId:'s',anchorId:'a',placement:'after',groupId:'g',mode:'direct',role:'system',reason:'相关',...extra}]});
+test('按行格式保留空内容、首尾空行和混合换行，末尾换行不生成额外行',()=>{
+ for(const text of ['', '\n', '\n\n', '\r', '\r\n', '中文😀', '\n甲\r\n\r\n乙\n', '甲\r乙\u2028丙\u2029丁']){
+  assert.equal(formatStitchSource({content:text},{format:{lines:[]}}),text);
+ }
+ const text='\n甲😀\r\n\r\n乙\n';
+ assert.equal(formatStitchSource({content:text},{format:{lines:[{line:2,style:'heading2'},{line:4,style:'heading3'}]}}),'\n## 甲😀\r\n\r\n### 乙\n');
+ assert.throws(()=>formatStitchSource({content:text},{format:{lines:[{line:5,style:'heading2'}]}}),/格式行号/);
+});
 test('锚点阻止原因区分禁用、分组、聊天位置和触发器，发送同一诊断',()=>{
  for(const [edit,pattern] of [[i=>i.baseline.prompts[0].enabled=false,/条目已禁用/],[i=>i.baseline.extensions.baibaiToolkit.presetPromptGroups.groups[0].enabled=false,/分组已禁用/],[i=>i.baseline.prompts[0].injection_position=1,/聊天中/],[i=>i.baseline.prompts[0].injection_trigger=['normal'],/触发条件.*normal/]]){const i=input();edit(i);assert.match(stitchAnchorIssue(i.baseline,'a'),pattern);assert.match(stitchContext(i).baseline.prompts[0].anchorIssue,pattern);assert.throws(()=>assembleStitch(i,plan(i)),pattern);}
 });
