@@ -14,7 +14,7 @@ export function installEntryTools(detail,{onCheckSymbols,onError=()=>{},history,
     const target=last?.canUndo()?last:adapters.find(a=>a.canUndo());if(target)target.undo();refreshUndo();});
   for(const editor of detail.querySelectorAll('.pcm-version-editor')){
     const area=editor.querySelector('textarea[name=content]'),heading=editor.querySelector('.pcm-variable-entry-heading');
-    if(!area||!heading||heading.querySelector('.pcm-entry-tools'))continue;
+    if(!area||area.readOnly||!area.form?.classList.contains('pcm-inline-form')||!heading||heading.querySelector('.pcm-entry-tools'))continue;
     const {side,id}=area.form.dataset,bar=doc.createElement('div');bar.className='pcm-entry-tools';
     const adapter=createContentEditorAdapter({area,initial:history?.get(side,id),onState:state=>{history?.set(side,id,state);last=adapter;refreshUndo();}});
     adapters.push(adapter);

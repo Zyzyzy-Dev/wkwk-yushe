@@ -1,0 +1,40 @@
+/* 临时库占用双栏中的另一侧，保留原预设节点与移动端高度比例。 */
+.pcm-dialog .pcm-app.pcm-with-library{display:flex!important;flex-direction:column!important;overflow:auto!important;min-height:0!important;height:100%!important}
+.pcm-app.pcm-with-library>.pcm-header{flex:none}
+.pcm-dialog .pcm-app.pcm-with-library>.pcm-lists{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr);gap:10px;flex:1;min-height:300px!important;overflow:hidden!important}
+.pcm-dialog .pcm-app.pcm-with-library .pcm-pane:not(.pcm-library-obscured){width:auto!important;min-width:0!important;height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
+.pcm-dialog .pcm-app .pcm-library-obscured{display:none!important}
+.pcm-dialog .pcm-app.pcm-with-library .pcm-list{flex:1;min-height:70px!important;max-height:none!important;overflow:auto!important}
+.pcm-dialog .pcm-app.pcm-with-library>.pcm-single-resizer{display:none!important}
+.pcm-dialog .pcm-app.pcm-with-library>[data-compare]:not(.pcm-hidden){flex:1 0 260px;min-height:260px!important;max-height:55vh!important;width:auto!important;margin:8px 0 0!important;overflow:auto!important}
+.pcm-dialog .pcm-app.pcm-with-library.pcm-single-detail>.pcm-lists{flex:0 0 52%;min-height:300px!important}
+.pcm-dialog .pcm-app.pcm-with-library .pcm-version-forms{grid-template-columns:minmax(0,1fr)!important}
+.pcm-dialog .pcm-app.pcm-with-library .pcm-compare-corner .pcm-collapse{width:auto!important;min-width:max-content!important;white-space:nowrap!important;writing-mode:horizontal-tb;font-size:12px!important}
+@media(min-width:901px){
+ /* 与普通双栏使用相同三行网格和详情高度，列表占据剩余空间。 */
+ .pcm-dialog .pcm-app.pcm-with-library{display:grid!important;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden!important}
+ .pcm-dialog .pcm-app.pcm-with-library>.pcm-lists,.pcm-dialog .pcm-app.pcm-with-library.pcm-single-detail>.pcm-lists{min-height:0!important}
+ .pcm-dialog .pcm-app.pcm-with-library>[data-compare]:not(.pcm-hidden){min-height:0!important;max-height:62vh!important;margin:0 6px!important}
+ .pcm-dialog .pcm-app.pcm-with-library>[data-library-detail][data-library-paired=false]:not(.pcm-hidden){width:calc((100% - 10px)/2)!important;box-sizing:border-box;justify-self:start;margin:8px 0 0!important}
+ .pcm-dialog .pcm-app.pcm-with-library>[data-library-detail=new][data-library-paired=false]:not(.pcm-hidden){justify-self:end}
+ .pcm-dialog .pcm-app.pcm-with-library>[data-library-paired=true] .pcm-version-forms{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+}
+.pcm-dialog .pcm-app.pcm-with-library .pcm-pane-head{flex-wrap:wrap}
+.pcm-dialog .pcm-summary .pcm-library-launch{flex-shrink:0;margin-left:4px;min-height:22px!important;padding:2px 5px!important;font-size:10px!important;line-height:16px!important;white-space:nowrap}
+.pcm-dialog [data-action=toggle-temp-library][aria-pressed=true]{background:var(--pcm-selection)!important;border-color:var(--pcm-selection-edge)!important;color:var(--SmartThemeBodyColor)!important}
+.pcm-temp-drop-end{padding:10px;text-align:center;font-size:11px;opacity:.75;border:1px dashed var(--SmartThemeBorderColor);border-radius:7px;margin:6px 0}
+.pcm-dialog .pcm-temp-inserted{animation:pcm-temp-arrival 1.6s ease-out}
+@keyframes pcm-temp-arrival{0%,45%{background:var(--pcm-selection);box-shadow:inset 0 0 0 2px var(--pcm-selection-edge)}100%{box-shadow:inset 0 0 0 0 transparent}}
+@media(prefers-reduced-motion:reduce){.pcm-dialog .pcm-temp-inserted{animation:none;outline:2px solid var(--pcm-selection-edge);outline-offset:-2px}}
+@media(max-width:900px){
+ .pcm-dialog .pcm-app.pcm-with-library .pcm-header .pcm-project-bar .pcm-desktop-undo{display:inline-flex!important}
+ .pcm-dialog .pcm-app.pcm-with-library{display:block!important;overflow:auto!important;height:auto!important}
+ .pcm-dialog .pcm-app.pcm-with-library>.pcm-lists,.pcm-dialog .pcm-app.pcm-with-library.pcm-single-detail>.pcm-lists{display:flex!important;flex-direction:column!important;min-height:0!important;gap:8px;overflow:visible!important}
+ .pcm-dialog .pcm-app.pcm-with-library .pcm-pane:has([data-list=old]),.pcm-dialog .pcm-app.pcm-with-library [data-replaces-side=old]{height:var(--pcm-old-pane-height,42dvh)!important;min-height:160px!important;flex:none!important}
+ .pcm-dialog .pcm-app.pcm-with-library .pcm-pane:has([data-list=new]),.pcm-dialog .pcm-app.pcm-with-library [data-replaces-side=new]{height:var(--pcm-new-pane-height,42dvh)!important;min-height:160px!important;flex:none!important}
+ .pcm-dialog .pcm-app.pcm-with-library>[data-compare]:not(.pcm-hidden){max-height:none!important;min-height:320px!important}
+ .pcm-dialog .pcm-temp-head .pcm-pane-resizer{display:grid;place-items:center;width:32px;height:28px;flex:0 0 32px;touch-action:none!important;cursor:ns-resize;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;color:var(--SmartThemeBodyColor);border:1px solid var(--pcm-row-edge);border-radius:7px;background:var(--pcm-row-bg)}
+}
+@media(max-width:520px){.pcm-worldbook-positions{flex-wrap:wrap!important}.pcm-worldbook-positions>.pcm-worldbook-collect{flex:1 0 100%!important}}
+/* 首页与其他工具页的显隐优先于临时库布局。 */
+.pcm-dialog .pcm-app.pcm-with-library.pcm-view-hidden{display:none!important}

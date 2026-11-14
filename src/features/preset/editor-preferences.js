@@ -1,6 +1,6 @@
 // 预设编辑偏好：仅接受布尔开关，导入折叠只初始化编辑器视图，不写入预设元数据。
 export const EDITOR_PREFERENCES_KEY = 'preset_compare_editor_preferences';
-export const EDITOR_DEFAULTS = Object.freeze({collapseGroups:false, quickReply:false, floating:false, creatorMode:false});
+export const EDITOR_DEFAULTS = Object.freeze({collapseGroups:false, quickReply:false, floating:false, creatorMode:false, overwriteSameIdOnDrop:true});
 
 export function normalizeEditorPreferences(value, patch) {
   return Object.fromEntries(Object.entries(EDITOR_DEFAULTS).map(([key, fallback]) =>

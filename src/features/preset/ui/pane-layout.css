@@ -44,10 +44,12 @@
   .pcm-dialog .pcm-lists .pcm-pane{flex:none!important;min-height:160px!important}
   .pcm-dialog .pcm-lists .pcm-pane:nth-child(1){height:var(--pcm-old-pane-height,42dvh)!important}
   .pcm-dialog .pcm-lists .pcm-pane:nth-child(2){height:var(--pcm-new-pane-height,42dvh)!important}
-  .pcm-dialog .pcm-pane-head .pcm-pane-resizer{display:grid;place-items:center;width:32px;min-width:24px;height:28px;flex:0 0 32px;align-self:center;touch-action:none!important;cursor:ns-resize;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;color:var(--SmartThemeBodyColor);border:1px solid var(--pcm-row-edge);border-radius:7px;background:var(--pcm-row-bg)}
-  .pcm-pane-resizer::before{content:"";width:15px;height:6px;border-block:2px solid currentColor;opacity:.65}
+  /* 顶部短线同时作为实际比例把手；透明触控区独占一行，避免压住标题按钮。 */
+  .pcm-dialog .pcm-app .pcm-lists :is(.pcm-pane-head,.pcm-temp-head):has(>.pcm-pane-resizer){position:relative!important;padding-top:24px!important}
+  .pcm-dialog .pcm-app .pcm-lists :is(.pcm-pane-head,.pcm-temp-head):has(>.pcm-pane-resizer)::before{display:none!important}
+  .pcm-dialog .pcm-app .pcm-lists :is(.pcm-pane-head,.pcm-temp-head)>.pcm-pane-resizer{position:absolute;top:0;left:50%;transform:translateX(-50%);display:grid;place-items:center;width:72px;min-width:72px;height:24px;min-height:24px;margin:0!important;padding:0!important;box-sizing:border-box;touch-action:none!important;cursor:ns-resize;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;color:var(--SmartThemeBodyColor);border:0;border-radius:7px;background:transparent}
+  .pcm-pane-resizer::before{content:"";width:34px;height:3px;border:0;border-radius:2px;background:currentColor;opacity:.5}
   .pcm-pane-resizer.pcm-resizer-holding{outline:2px solid var(--pcm-selection-edge);background:var(--pcm-selection)!important}
   .pcm-pane-resizer:focus-visible{outline:2px solid var(--pcm-selection-edge);outline-offset:2px}
   .pcm-resizing-panes,.pcm-resizing-panes *{cursor:ns-resize!important;user-select:none!important;-webkit-user-select:none!important}
 }
-@media(max-width:350px){.pcm-dialog .pcm-pane-head .pcm-pane-resizer{flex-basis:25px;width:25px}}

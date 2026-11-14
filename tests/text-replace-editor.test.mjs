@@ -14,7 +14,7 @@ const contextCode = sliceBetween('function getTextReplaceContext(', 'function cl
 const transactionCode = sliceBetween('function applyTextReplacement(', 'function openTextReplace(');
 
 const prompt = (identifier, content, name = identifier) => ({identifier, name, content, role: 'system', injection_position: 0, enabled: true});
-function harness({worker} = {}) {
+function harness({worker, tempLibrarySide = null} = {}) {
   const left = {prompts: [prompt('a', 'old cat', 'old a')]};
   const right = {prompts: [prompt('a', 'cat first', 'cat title'), prompt('b', 'untouched', 'b title'), prompt('c', 'another body', 'c title')]};
   const state = {
@@ -25,7 +25,7 @@ function harness({worker} = {}) {
   const inlineDrafts = new WeakMap(), textReplaceLineages = new WeakMap(), undo = [], warnings = [], variablePanels = new Map();
   let rebuilds = 0, renders = 0;
   const dependencies = {
-    state, inlineDrafts, textReplaceLineages, singleSide: null, variablePanels,
+    state, inlineDrafts, textReplaceLineages, singleSide: null, tempLibrarySide, variablePanels,
     filtered: side => state[side].prompts.filter(entry => entry.identifier !== 'c'),
     getBaiBaiGroupState: () => ({groups: [{id: 'g1', name: 'Group 1'}], prompts: {a: {groupId: 'g1'}, b: {groupId: 'g1'}}}),
     applyReplacementPlan, runReplacementTask: worker, clone: structuredClone, equalValues: (a, b) => JSON.stringify(a) === JSON.stringify(b),
@@ -52,6 +52,15 @@ test('replacement browser receives the preset label and rendered order including
   assert.deepEqual(context.orderedIds, ['b', 'a', 'c']);
   assert.deepEqual(context.entries.map(entry => entry.identifier), ['a', 'b', 'c']);
   assert.deepEqual(context.groups[0].ids, ['a', 'b']);
+});
+
+test('temporary library replacement targets the visible selection rather than the retained preset pair', () => {
+  const env = harness({tempLibrarySide:'new'});
+  env.state.activeSide='new';env.state.activeId='b';
+  env.state.freeSelect={enabled:true,oldId:'a',newId:'a'};
+  assert.equal(env.getTextReplaceContext('new').currentId,'b');
+  assert.equal(env.getTextReplaceContext('new','c').currentId,'c');
+  assert.equal(env.state.freeSelect.newId,'a');
 });
 
 test('editor undo refuses an old replacement after loading another preset with the same IDs', () => {

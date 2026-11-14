@@ -1,4 +1,4 @@
-// 移动端双列表布局：比例约束、长按拖动、持久化及监听生命周期。
+// 移动端双列表布局：中央比例把手、长按拖动、持久化及监听生命周期。
 export function paneHeights(total, ratio) {
   total = Math.max(320, Number.isFinite(total) ? Math.round(total) : 320);
   ratio = Number.isFinite(ratio) ? ratio : 0.5;
@@ -21,7 +21,8 @@ export function installPaneLayout(dialog, onEnvironment) {
   grip.title = '长按后上下拖动调整比例；方向键微调，Home 恢复各半';
   panes.forEach((pane, i) => { pane.id = dialog.id + '-pane-' + (i ? 'new' : 'old'); });
   grip.setAttribute('aria-controls', panes.map(pane => pane.id).join(' '));
-  panes[1].querySelector('.pcm-pane-head').insertBefore(grip, panes[1].querySelector('.pcm-actions'));
+  // 把手固定在面板顶部中央，不参与标题与工具按钮的横向排布。
+  panes[1].querySelector('.pcm-pane-head').append(grip);
   const mobile = matchMedia('(max-width: 900px)');
   let ratio = 0.5, sizes = paneHeights(320, ratio), gesture = null, timer = 0, frame = 0;
   try {
@@ -41,7 +42,10 @@ export function installPaneLayout(dialog, onEnvironment) {
     grip.setAttribute('aria-valuemax', String(Math.floor((sizes.total - 160) / sizes.total * 100)));
     const percent = Math.round(sizes.old / sizes.total * 100);
     grip.setAttribute('aria-valuenow', String(percent));
-    grip.setAttribute('aria-valuetext', `旧版 ${percent}%，新版 ${100 - percent}%`);
+    const library = lists.querySelector('[data-temp-library]'), replaced = library?.dataset.replacesSide;
+    grip.setAttribute('aria-label', library ? '调整预设与临时库高度比例' : '调整新旧预设高度比例');
+    grip.setAttribute('aria-controls', panes.map((pane, i) => replaced === (i ? 'new' : 'old') ? library.id : pane.id).join(' '));
+    grip.setAttribute('aria-valuetext', `${replaced === 'old' ? '临时库' : '旧版'} ${percent}%，${replaced === 'new' ? '临时库' : '新版'} ${100 - percent}%`);
   }
   const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(refresh); };
   function finish(commit = false) {

@@ -25,7 +25,7 @@ export function createWorldbookImportSession() {
   return { books: new Map(), selected: new Set(), query: '', filter: 'all', keepDisabled: true };
 }
 
-export function openWorldbookPanel({ dialog, title, onApply, onPick, session = createWorldbookImportSession() }) {
+export function openWorldbookPanel({ dialog, title, onApply, onPick, onCollect, session = createWorldbookImportSession() }) {
   dialog.querySelector('[data-worldbook-panel]')?.remove();
   const panel = node('section', 'pcm-picker open');
   panel.dataset.worldbookPanel = '';
@@ -194,6 +194,13 @@ export function openWorldbookPanel({ dialog, title, onApply, onPick, session = c
       } catch (error) { panel.classList.add('open'); dialog.classList.add('pcm-worldbook-open'); report(error); }
     }, 'pcm-primary');
     applyButtons.push(apply); positions.append(apply);
+  }
+  if (onCollect) {
+    const collect = button('加入临时库', () => {
+      try { onCollect(selectedItems(), {keepDisabled: keep.checked}); close(); }
+      catch (error) { report(error); }
+    }, 'pcm-primary pcm-worldbook-collect');
+    applyButtons.push(collect); positions.append(collect);
   }
   footer.append(keepLabel, positions);
   body.append(sources, status, filters, count, list);

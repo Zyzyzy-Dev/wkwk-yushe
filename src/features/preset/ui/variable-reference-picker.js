@@ -8,6 +8,7 @@ export function installVariableReferencePicker(detail, {getPreset, isInjected}) 
   const button=(text,action)=>{const el=node('button',text);el.type='button';el.className='menu_button';el.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();action();});return el;};
   for(const editor of detail.querySelectorAll('.pcm-version-editor')) {
   const area=editor.querySelector('textarea[name=content]');
+  if(!area||area.readOnly||!area.form?.classList.contains('pcm-inline-form'))continue;
   const launch=button('插入引用变量',()=>{
     detail.querySelector('[data-variable-reference-picker]')?.remove();
     const side=area.form.dataset.side,preset=getPreset(side);

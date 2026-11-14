@@ -26,7 +26,7 @@ function harness() {
   const inlineDrafts = new WeakMap(), textReplaceLineages = new WeakMap(), exportingPresets = new Set();
   const undo = [], requests = [], notices = [], summaries = [], button = {disabled: false};
   const dependencies = {
-    state, inlineDrafts, textReplaceLineages, exportingPresets, singleSide: null, variablePanels: new Map(),
+    state, inlineDrafts, textReplaceLineages, exportingPresets, singleSide: null, tempLibrarySide: null, variablePanels: new Map(),
     filtered: side => state[side].prompts, getBaiBaiGroupState: () => null,
     clone: structuredClone, equalValues: (a, b) => JSON.stringify(a) === JSON.stringify(b), applyReplacementPlan,
     pushUndo: action => undo.push(action), rebuildCache: () => {}, renderAll: () => {},

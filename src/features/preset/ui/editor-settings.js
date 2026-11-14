@@ -1,4 +1,4 @@
-// 首页预设编辑设置：三个紧凑分区，滑动开关与快捷入口高亮按钮逐项保存，失败保留原状态。
+// 首页预设编辑设置：紧凑分区，滑动开关与快捷入口高亮按钮逐项保存，失败保留原状态。
 import {normalizeEditorPreferences} from '../editor-preferences.js';
 
 export function openEditorSettings({parent,host,onPreferences}) {
@@ -8,6 +8,7 @@ export function openEditorSettings({parent,host,onPreferences}) {
   modal.innerHTML=`<div class="pcm-modal-box"><header><h2>预设编辑设置</h2><button type="button" class="menu_button" data-settings-close aria-label="关闭设置">×</button></header>
     <div class="pcm-editor-settings-options">
       <div class="pcm-editor-setting"><div class="pcm-editor-setting-row"><span id="pcm-collapse-setting-label">导入预设时，预设分组默认折叠</span><button type="button" class="pcm-setting-switch" role="switch" aria-checked="false" aria-labelledby="pcm-collapse-setting-label" data-editor-preference="collapseGroups"><span></span></button></div></div>
+      <div class="pcm-editor-setting"><div class="pcm-editor-setting-row"><span id="pcm-overwrite-setting-label">同 ID／同名覆盖</span><button type="button" class="pcm-setting-switch" role="switch" aria-checked="true" aria-labelledby="pcm-overwrite-setting-label" aria-describedby="pcm-overwrite-setting-description" data-editor-preference="overwriteSameIdOnDrop"><span></span></button></div><small id="pcm-overwrite-setting-description">跨预设拖入条目：开启时覆盖可靠同 ID 或两侧唯一且完全同名的条目；关闭时，遇到同 ID／同名创建编号副本。匹配有歧义时始终保留原条目。</small></div>
       <div class="pcm-editor-setting"><div>开启预设编辑快捷入口：</div><div class="pcm-editor-shortcuts"><button type="button" class="pcm-api-entry-toggle" aria-pressed="false" data-editor-preference="floating">悬浮球</button><button type="button" class="pcm-api-entry-toggle" aria-pressed="false" data-editor-preference="quickReply">快速回复</button></div></div>
       <div class="pcm-editor-setting"><div class="pcm-editor-setting-row"><span id="pcm-creator-setting-label">创作者模式</span><button type="button" class="pcm-setting-switch" role="switch" aria-checked="false" aria-labelledby="pcm-creator-setting-label" aria-describedby="pcm-creator-setting-description" data-editor-preference="creatorMode"><span></span></button></div><small id="pcm-creator-setting-description">开启后在预设条目正文中选中文字后会显示符号工具栏，可以快捷添加对应符号</small></div>
     </div><p class="pcm-editor-settings-status" role="status">正在读取设置…</p></div>`;

@@ -1,8 +1,9 @@
 // 整个预设分组的不可变排序/迁移：保持来源、未知字段和未注入条目。
 import { clone, createIdentifier, findPromptOrderEntry } from './core.js';
+import {createSameIdDropCopy} from './prompt-drop-copy.js';
 const idOf = item => typeof item === 'string' ? item : item?.identifier;
 const metadata = preset => preset?.extensions?.baibaiToolkit?.presetPromptGroups;
-export function transferPresetGroup(source, target, groupId, beforeId = null) {
+export function transferPresetGroup(source, target, groupId, beforeId = null, {overwriteSameIdOnDrop=true} = {}) {
   if (!source || !target) throw new Error('请先导入两侧预设');
   const sourceMeta = metadata(source), group = sourceMeta?.groups?.find(g => String(g.id) === groupId);
   if (!group) throw new Error('来源分组已变化');
@@ -15,6 +16,8 @@ export function transferPresetGroup(source, target, groupId, beforeId = null) {
   if (!sourceIds.size) throw new Error('分组中没有条目');
   const srcOrder = sourceEntry?.order?.length ? sourceEntry.order : source.prompts.map(p => ({ identifier: p.identifier, enabled: p.enabled !== false }));
   const sourceOrder = [...new Set([...srcOrder.map(idOf), ...source.prompts.map(p => p.identifier)])].filter(id => sourceIds.has(id));
+  const sourceMap = new Map(source.prompts.map(p => [p.identifier,p]));
+  const targetMap = new Map(target.prompts.map(p => [p.identifier,p]));
   const ext = result.extensions.baibaiToolkit ??= {};
   const meta = ext.presetPromptGroups ??= { groups: [], prompts: {} };
   meta.groups ??= []; meta.prompts ??= {};
@@ -31,13 +34,21 @@ export function transferPresetGroup(source, target, groupId, beforeId = null) {
   const groupOf = item => { const id = String(meta.prompts[idOf(item)]?.groupId); return known.has(id) ? id : null; };
   const left = new Set(rest.slice(0,index).map(groupOf).filter(Boolean));
   if (rest.slice(index).some(item => left.has(groupOf(item)))) throw new Error('整组只能放到分组之间');
-  const reserved = new Set([...target.prompts.map(p=>p.identifier), ...sourceOrder]);
+  const targetReserved = new Set([...targetMap.keys(), ...Object.keys(meta.prompts)]);
+  for(const node of target.prompt_order||[])for(const item of Array.isArray(node?.order)?node.order:[])targetReserved.add(idOf(item));
+  const reserved = new Set([...targetReserved, ...sourceMap.keys(), ...Object.keys(sourceMeta.prompts||{})]);
+  for(const node of source.prompt_order||[])for(const item of Array.isArray(node?.order)?node.order:[])reserved.add(idOf(item));
+  const targetNames=new Set(target.prompts.map(p=>String(p.name??'')).filter(name=>name.trim()));
   const mapping = new Map(sourceOrder.map(id=>[id,id]));
-  if (!sameSide) for (const id of sourceOrder) if (target.prompts.some(p=>p.identifier===id)) { let fresh; do { fresh=createIdentifier(); } while(reserved.has(fresh));reserved.add(fresh);mapping.set(id,fresh); }
+  if (!sameSide) for (const id of sourceOrder) {
+    const name=String(sourceMap.get(id).name??'');
+    if(targetReserved.has(id)||(overwriteSameIdOnDrop===false&&name.trim()&&targetNames.has(name))){
+      let fresh;do{fresh=createIdentifier();}while(!fresh||reserved.has(fresh));
+      reserved.add(fresh);mapping.set(id,fresh);
+    }
+  }
   const incoming = srcOrder.filter(item => sourceIds.has(idOf(item))).map(item=>typeof item==='string'?mapping.get(item):{...clone(item),identifier:mapping.get(idOf(item))});
   entry.order = [...rest.slice(0,index), ...incoming, ...rest.slice(index)];
-  const sourceMap = new Map(source.prompts.map(p => [p.identifier,p]));
-  const targetMap = new Map(target.prompts.map(p => [p.identifier,p]));
   let destinationGroupId=groupId;
   const newGroup=clone(group);
   if(!sameSide){
@@ -48,7 +59,15 @@ export function transferPresetGroup(source, target, groupId, beforeId = null) {
     const base=String(group.name||groupId).trim();let name=base,n=1;
     while(names.has(name))name=base+'（'+n+++'）';newGroup.name=name;
   }
-  for (const id of sourceOrder) { const mapped=mapping.get(id);targetMap.set(mapped, sameSide ? sourceMap.get(id) : {...clone(sourceMap.get(id)),identifier:mapped});Object.defineProperty(meta.prompts,mapped,{value:{...clone(sourceMeta.prompts[id]),groupId:destinationGroupId},enumerable:true,writable:true,configurable:true}); }
+  // 整组迁移保持独立复制；关闭覆盖时，原目标同 ID 或完整同名的成员都使用编号副本。
+  const copyNames={...target,prompts:[...target.prompts,...sourceOrder.filter(id=>!targetMap.has(id)).map(id=>sourceMap.get(id))]};
+  for (const id of sourceOrder) {
+    const mapped=mapping.get(id),original=sourceMap.get(id);
+    const numbered=!sameSide&&mapped!==id?createSameIdDropCopy(original,copyNames,overwriteSameIdOnDrop,()=>mapped):null;
+    const incoming=sameSide?original:numbered||{...clone(original),identifier:mapped};
+    targetMap.set(mapped,incoming);if(numbered)copyNames.prompts.push(numbered);
+    Object.defineProperty(meta.prompts,mapped,{value:{...clone(sourceMeta.prompts[id]),groupId:destinationGroupId},enumerable:true,writable:true,configurable:true});
+  }
   if(!sameSide)meta.groups.push(newGroup);
   const allIds = [...new Set([...entry.order.map(idOf), ...target.prompts.map(p=>p.identifier), ...sourceOrder.map(id=>mapping.get(id))])];
   result.prompts = allIds.map(id => targetMap.get(id)).filter(Boolean);
