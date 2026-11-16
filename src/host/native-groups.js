@@ -1,6 +1,7 @@
 // 宿主原生列表分组适配：保留原生条目与事件，柏宝箱启用时让出列表所有权。
 import { clone } from '../shared/clone.js';
 import { groupModel, memberGroup, changeGroups, installGroupGate, UNGROUPED } from '../features/preset/native-groups.js';
+import { captureNativeGroupLayout, nativeGroupLayoutIntact } from './native-group-layout.js';
 
 const PREF = 'preset_compare_native_groups';
 const ROOT = 'pcm-native-groups';
@@ -73,6 +74,7 @@ export function installNativeGroups(env) {
     let busy = false, scheduled = 0, observer, fast = null;
     const signatures = new WeakMap();
     const toolbarSignatures = new WeakMap();
+    const retainedToolbars = new Map();
     const prefs = () => settings[PREF] || {};
     const baiOwns = kind => Boolean(globalThis.__baiBaiToolkitExtensionInstalled) && settings.baiBaiToolkit?.[kind === 'preset' ? 'presetGroupingEnabled' : 'regexQuickOperationOptimizationEnabled'] !== false;
     const owns = kind => prefs()[kind] !== false && !baiOwns(kind) && (kind !== 'preset'
@@ -247,7 +249,8 @@ export function installNativeGroups(env) {
             ? (toolkitHost?.isConnected && toolkitHost.contains?.(list) ? toolkitHost : list.closest('.bai-bai-preset-vue-list-host')) || list
             : list;
         const toolbars = [...document.querySelectorAll('.pcm-ng-toolbar')].filter(el => el.dataset.pcmNgList === list.id);
-        let toolbar = toolbars[0];
+        // 原生整栏重绘会临时移除工具栏；保留原控件及事件，不重建总开关。
+        let toolbar = toolbars[0] || retainedToolbars.get(list.id);
         for (const duplicate of toolbars.slice(1)) duplicate.remove();
         if (!toolbar) {
             toolbar = node('div', 'pcm-ng-toolbar'); toolbar.dataset.pcmNgList = list.id; anchor.before(toolbar);
@@ -274,6 +277,7 @@ export function installNativeGroups(env) {
             });
             label.append(toggle, document.createTextNode('酒馆盒子分组')); toolbar.append(label, node('span', 'pcm-ng-toolbar-actions'));
         }
+        retainedToolbars.set(list.id, toolbar);
         // Reuse the same checkbox when ownership moves between native and Vue lists.
         // Do not force adjacency: another extension may insert its own sibling control.
         if (toolbar.parentElement !== anchor.parentElement) anchor.before(toolbar);
@@ -292,12 +296,36 @@ export function installNativeGroups(env) {
             }
         }
         for (const control of actions.querySelectorAll('button')) control.disabled = busy || Boolean(fast);
-        const signature = JSON.stringify([context.key, context.value, context.entries, owner, enabled, busy, Boolean(fast)]);
+        const updateControls = () => {
+            for (const control of [...toolbar.querySelectorAll('button,input'), ...list.querySelectorAll('[data-pcm-ng] button,[data-pcm-ng] input,[data-pcm-ng="assign"]')]) {
+                control.disabled = busy || (Boolean(fast) && !(kind === 'preset' && control.hasAttribute('data-pcm-fast')));
+            }
+        };
+        // 保存忙碌状态只更新控件，不能因保存开始／结束重建相同的分组显示。
+        const signature = JSON.stringify([context.key, context.value, context.entries, owner, enabled]);
         const rows = [...list.children].filter(el => kind === 'preset' ? el.hasAttribute('data-pm-identifier') : el.classList.contains('regex-script-label'));
         const old = signatures.get(list);
-        if (old?.toolbar === toolbar && old.signature === signature && old.rows.length === rows.length && old.rows.every((r, i) => r === rows[i])) return;
-        signatures.set(list, { signature, rows, toolbar }); clean(list);
-        if (!enabled) return;
+        const unchanged = old?.toolbar === toolbar && old.signature === signature && old.rows.length === rows.length && old.rows.every((r, i) => r === rows[i]);
+        let repairs = 0;
+        if (unchanged) {
+            if (old.suspended || nativeGroupLayoutIntact(list, old.layout)) { updateControls(); return; }
+            repairs = (old.repairs || 0) + 1;
+            if (repairs > 1) {
+                // 同一批原生行连续丢控件时停止争抢 DOM；展开行并保留数据，避免微任务死循环。
+                clean(list);
+                const notice = node('span', 'pcm-ng-recovery');
+                notice.append(node('small', '', '分组显示暂时无法保持，已展开条目；分组设置仍保留。'),
+                    button('恢复分组', '重新显示分组', () => { signatures.delete(list); refresh(); }));
+                toolbar.append(notice);
+                signatures.set(list, { signature, rows, toolbar, suspended: true });
+                updateControls(); return;
+            }
+        }
+        toolbar.querySelector('.pcm-ng-recovery')?.remove();
+        // 仅在完整绘制成功后提交缓存，异常不能把半成品标为已完成。
+        signatures.delete(list); clean(list);
+        const remember = () => signatures.set(list, { signature, rows, toolbar, repairs, layout: captureNativeGroupLayout(list, rows) });
+        if (!enabled) { remember(); updateControls(); return; }
         const model = groupModel(context.value, kind);
         list.classList.add(ROOT);
         const groups = new Map(model.groups.map(g => [g.id, g])), displayed = new Set(); let last = null;
@@ -344,7 +372,7 @@ export function installNativeGroups(env) {
             }
         }
         for (const g of model.groups) if (!displayed.has(g.id)) list.append(makeHeader(g.id));
-        for (const control of [...toolbar.querySelectorAll('button,input'), ...list.querySelectorAll('[data-pcm-ng] button,[data-pcm-ng] input,[data-pcm-ng="assign"]')]) control.disabled = busy || (Boolean(fast) && !(kind === 'preset' && control.hasAttribute('data-pcm-fast')));
+        remember(); updateControls();
     }
     function refresh() {
         clearTimeout(scheduled); scheduled = 0; observer.disconnect();

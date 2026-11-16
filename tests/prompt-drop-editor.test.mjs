@@ -28,6 +28,79 @@ function renameId(h,side,from,to){
   const meta=p.extensions.baibaiToolkit.presetPromptGroups.prompts;meta[to]=meta[from];delete meta[from];h.rebuildCache();
 }
 
+const orderedIds=h=>h.state.new.prompt_order[0].order.map(p=>typeof p==='string'?p:p.identifier);
+function batchFixture({sameIds=false,overwrite=true}={}){
+  const h=harness({overwrite,counterpart:(_side,id)=>sameIds?id:null});
+  const make=(id,name,content)=>({identifier:id,name,content,enabled:true,unknown:{keep:id}});
+  h.state.old.prompts=[make(sameIds?'ta':'a','甲','source A'),make(sameIds?'tb':'b','乙','source B'),make('c','丙','source C')];
+  h.state.new.prompts=[make('head','前','keep head'),make('ta','甲','target A'),make('gap','间','keep gap'),make('tb','乙','target B'),make('end','后','keep end')];
+  for(const side of ['old','new']){
+    const p=h.state[side];p.prompt_order=[{character_id:100001,order:p.prompts.map((x,i)=>({identifier:x.identifier,enabled:i!==0,extra:x.identifier}))},{character_id:7,order:['untouched']}];
+    p.extensions.baibaiToolkit.presetPromptGroups.prompts=Object.fromEntries(p.prompts.map(x=>[x.identifier,{groupId:'g',extra:'keep'}]));
+  }
+  h.rebuildCache();return h;
+}
+
+for(const sameIds of [true,false])for(const [beforeId,want] of [
+  ['ta',['head','ta','tb','c','gap','end']],
+  ['tb',['head','gap','ta','tb','c','end']],
+  ['head',['ta','tb','c','head','gap','end']],
+  ['end',['head','gap','ta','tb','c','end']],
+  [null,['head','gap','end','ta','tb','c']],
+])test(`multi-select ${sameIds?'same-ID':'same-name'} overwrite before ${beforeId} keeps source order and one complete undo`,()=>{
+  const h=batchFixture({sameIds}),ids=sameIds?['ta','tb','c']:['a','b','c'];
+  const before=structuredClone(h.state.new),sourceBefore=structuredClone(h.state.old),originals=h.state.new.prompts.slice(),drafts=new WeakMap(originals.map(p=>[p,{content:'draft '+p.identifier}]));
+  const moved=h.placeDroppedPrompts('old','new',ids,beforeId,'h');
+  assert.deepEqual([...moved.values()],['ta','tb','c']);assert.deepEqual(orderedIds(h),want);
+  assert.deepEqual(h.state.cache.ordered.new.map(p=>p.identifier),want);assert.deepEqual(h.state.new.prompts.map(p=>p.identifier),want);
+  assert.deepEqual(h.state.old,sourceBefore);assert.deepEqual(h.state.new.prompt_order[1],before.prompt_order[1]);
+  for(const id of ['ta','tb','c'])assert.equal(h.state.new.extensions.baibaiToolkit.presetPromptGroups.prompts[id].groupId,'h');
+  assert.equal(h.state.new.prompts.find(p=>p.identifier==='ta').enabled,false);
+  assert.equal(h.state.new.prompt_order[0].order.find(p=>p.identifier==='ta').enabled,false);
+  for(const id of ['head','gap','end'])assert.equal(h.state.new.prompts.find(p=>p.identifier===id),originals.find(p=>p.identifier===id));
+  assert.equal(h.state.history.length,1);h.undoLast();assert.deepEqual(h.state.new,before);
+  for(const p of originals){assert.equal(h.state.new.prompts.find(x=>x.identifier===p.identifier),p);assert.equal(drafts.get(p).content,'draft '+p.identifier);}
+  assert.deepEqual([...h.state.dragged.new],[]);
+});
+
+test('batch ending at an overwritten final row stays ordered when no surviving boundary follows',()=>{
+  const h=batchFixture();h.state.new.prompts=h.state.new.prompts.filter(p=>!['gap','end'].includes(p.identifier));
+  h.state.new.prompt_order[0].order=['head','tb','ta'];h.rebuildCache();
+  h.movePrompts('old','new',['a','b','c'],'ta');
+  assert.deepEqual(orderedIds(h),['head','ta','tb','c']);
+});
+
+test('mixed insertion, overwrite and ambiguous copy keep batch order and the ambiguous original',()=>{
+  const h=batchFixture(),original=h.state.new.prompts.find(p=>p.identifier==='tb');
+  h.state.old.prompts.push({identifier:'duplicate',name:'乙',content:'unselected duplicate'});h.rebuildCache();
+  const moved=h.placeDroppedPrompts('old','new',['c','a','b'],'ta','h'),copy=moved.get('b');
+  assert(!['b','tb'].includes(copy));assert.deepEqual(orderedIds(h),['head','c','ta',copy,'gap','tb','end']);
+  assert.equal(h.state.new.prompts.find(p=>p.identifier==='tb'),original);
+  assert.equal(h.state.new.prompts.find(p=>p.identifier===copy).name,'乙（1）');
+  assert.equal(h.state.new.extensions.baibaiToolkit.presetPromptGroups.prompts.tb.groupId,'g');
+  assert.equal(h.notices.filter(n=>n.level==='warning').length,1);
+});
+
+test('disabled overwrite leaves the original boundary in place and inserts numbered copies before it',()=>{
+  const h=batchFixture({sameIds:true,overwrite:false}),originals=h.state.new.prompts.slice();
+  const moved=h.movePrompts('old','new',['ta','tb'],'ta'),a=moved.get('ta'),b=moved.get('tb');
+  assert.notEqual(a,'ta');assert.notEqual(b,'tb');assert.deepEqual(orderedIds(h),['head',a,b,'ta','gap','tb','end']);
+  for(const p of originals)assert.equal(h.state.new.prompts.find(x=>x.identifier===p.identifier),p);
+});
+
+test('same-side batch reorder preserves object drafts, source order and undo at an overlapping boundary',()=>{
+  const h=batchFixture(),originals=h.state.new.prompts.slice(),before=structuredClone(h.state.new);
+  h.placeDroppedPrompts('new','new',['ta','tb'],'ta','h');
+  assert.deepEqual(orderedIds(h),['head','ta','tb','gap','end']);
+  for(const p of originals)assert.equal(h.state.new.prompts.find(x=>x.identifier===p.identifier),p);
+  assert.equal(h.state.history.length,1);h.undoLast();assert.deepEqual(h.state.new,before);
+});
+
+test('single overwrite on its own boundary keeps its position',()=>{
+  const h=batchFixture();h.placeDroppedPrompts('old','new',['a'],'ta','h');
+  assert.deepEqual(orderedIds(h),['head','ta','gap','tb','end']);assert.equal(h.state.history.length,1);
+});
+
 test('unique exact-name row overwrite keeps target ID and undo restores target draft object',()=>{
   const h=harness({overwrite:true,counterpart:null});renameId(h,'old','same','source-id');
   const original=h.state.new.prompts[0],sourcePrompt=h.state.old.prompts[0],before=structuredClone(h.state.new),drafts=new WeakMap([[original,{content:'target draft'}],[sourcePrompt,{content:'source draft'}]]);

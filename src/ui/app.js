@@ -443,7 +443,14 @@ function notifyDroppedPrompts(plan,message){const ambiguous=[...(plan?.values()|
 function movePrompts(sourceSide,targetSide,ids,beforeId){
   const moved=new Map(),validIds=[...new Set(ids)].filter(id=>byId(sourceSide).has(id));
   if(!state[targetSide]||!validIds.length)return moved;
-  const plan=planDroppedPrompts(sourceSide,targetSide,validIds);pushUndo(moveSnapshot(targetSide));
+  const plan=planDroppedPrompts(sourceSide,targetSide,validIds);
+  // 落点若也在本批移动／覆盖中，先固定到其后第一个未移动的目标；使用规划后的目标 ID，副本不排除原条目。
+  const movingIds=new Set(validIds.map(id=>plan?.get(id)?.prompt.identifier??id));
+  if(movingIds.has(beforeId)){
+    const ordered=state.cache.ordered[targetSide],index=ordered.findIndex(p=>p.identifier===beforeId);
+    if(index>=0)beforeId=ordered.slice(index+1).find(p=>!movingIds.has(p.identifier))?.identifier??null;
+  }
+  pushUndo(moveSnapshot(targetSide));
   for(const id of validIds){const targetId=movePrompt(sourceSide,targetSide,id,beforeId,true,true,plan?.get(id));if(targetId)moved.set(id,targetId);}
   notifyDroppedPrompts(plan,'已批量放置 '+moved.size+' 个条目');return moved;
 }
