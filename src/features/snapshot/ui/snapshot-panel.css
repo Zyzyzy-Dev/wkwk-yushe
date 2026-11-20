@@ -145,3 +145,34 @@
 .pcm-snapshot-preset-regex-option[hidden]{display:none}
 .pcm-snapshot-preset-regex-option small{display:block;margin:4px 0;overflow-wrap:anywhere}
 @media(max-width:650px){.pcm-snapshot-search{flex:1;width:0}}
+
+/* 分享预览单独滚动内容，长依赖清单在窄屏也能直接取消或确认。 */
+.pcm-snapshot-manager .pcm-snapshot-card .pcm-snapshot-actions {grid-template-columns:repeat(3,minmax(0,1fr)) minmax(44px,.65fr)}
+.pcm-snapshots .pcm-snapshot-share-dialog[open] {
+  display:flex;flex-direction:column;gap:12px;width:min(560px,calc(100% - 24px));
+  max-height:calc(100vh - 28px);max-height:calc(100dvh - 28px);
+  margin:auto;padding:16px;overflow:auto;line-height:1.5;
+}
+.pcm-snapshot-share-dialog :is(h3,h4,p) {margin:0;overflow-wrap:anywhere}
+.pcm-snapshot-share-dialog h3 {font-size:18px}
+.pcm-share-body {display:grid;gap:12px;min-height:0;overflow:auto;overscroll-behavior:contain;font-size:14px}
+.pcm-share-choices {display:grid;gap:4px}
+.pcm-share-choices label {display:flex;gap:10px;align-items:center;padding:5px 8px;min-height:34px;cursor:pointer;border-radius:7px;background:var(--snap-soft)}
+.pcm-api-manager .pcm-share-choices input {flex:none;width:18px;height:18px;min-height:0;margin:0;padding:0;accent-color:var(--snap-accent)}
+.pcm-share-item {display:block;min-width:0;padding:10px;border:1px solid var(--snap-border);border-radius:10px}
+.pcm-share-item summary {cursor:pointer}
+.pcm-share-item summary small {display:block;margin:3px 0 0 15px;color:var(--snap-muted)}
+.pcm-share-item p {margin-top:4px;font-size:13px}
+.pcm-snapshot-manager .pcm-snapshot-card .pcm-snapshot-retarget {margin-inline-start:4px;vertical-align:middle;width:30px;height:30px;min-height:30px;padding:5px;border:0;background:transparent;color:color-mix(in srgb,var(--snap-fg) 50%,#cb8015)}
+.pcm-snapshot-manager .pcm-snapshot-card .pcm-snapshot-retarget:hover {background:var(--snap-soft)}
+.pcm-snapshot-retarget svg {width:19px;height:19px}
+.pcm-snapshot-catalog-notice {grid-column:1/-1;margin:0}
+.pcm-share-checks {display:grid;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+.pcm-share-checks li {display:flex;align-items:baseline;gap:8px;min-width:0;font-size:13px}
+.pcm-share-checks li strong {flex:none}
+.pcm-share-checks li:is([data-share-status=missing],[data-share-status=conflict]) strong {border-inline-start:2px solid #b17753;padding-inline-start:5px}
+.pcm-share-checks li span {min-width:0;overflow-wrap:anywhere}
+.pcm-share-item button {margin-top:8px}
+.pcm-snapshot-share-dialog .pcm-snapshot-status {font-size:13px}
+.pcm-share-actions {display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+.pcm-share-actions button:last-child:not(:first-child) {border-color:var(--snap-accent);font-weight:600}

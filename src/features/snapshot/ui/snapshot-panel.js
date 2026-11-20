@@ -1,6 +1,8 @@
 // 设置快照页面：保存、恢复与聊天/角色绑定；区分保存失败与回读未确认，支持只读重新核验。
 import { chooseApiSnapshotBinding } from '../../api/ui/api-snapshot-bind.js';
 import { createSnapshotEditor } from './snapshot-editor.js';
+import { createSnapshotSharing } from './snapshot-share-dialog.js';
+import {chooseSnapshotPreset} from './snapshot-preset-dialog.js';
 import { createSnapshotReasoningForm } from './snapshot-reasoning-form.js';
 import { snapshotScope, sortSnapshotFavorites } from '../snapshot.js';
 import { createSnapshotScopePicker, snapshotScopeText } from './snapshot-scope.js';
@@ -56,6 +58,24 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
   }
   const grouping=createLibraryGrouping({parent:element,toolbar,list,label:'快照',read:()=>data&&({folders:data.folders,items:data.snapshots}),isBusy:()=>busy||disposed||pendingFavorites.size>0,render,
     onSave:p=>saveFolders('snapshot-folders',p),onRemove:p=>saveFolders('snapshot-folder-delete',p)});
+  const sharing = createSnapshotSharing({
+    parent:element, toolbar, host, read:() => data?.snapshots || [],
+    canOpen:() => !!data && !busy && !disposed && !editor && !pendingFavorites.size,
+    onOpen:() => setBusy(true),
+    onClose() {
+      if (disposed) return;
+      setBusy(false);
+      if (refreshPending) { refreshPending = false; void refresh(); }
+    },
+    onImported(result, count) {
+      data = result; render();
+      reportResult(result, '已导入 ' + count + ' 份快照');
+    },
+    onDownload(state) {
+      showStatus(state === 'saved' ? '分享文件已保存' : state === 'cancelled' ? '已取消导出' : '已发起分享文件下载');
+    },
+  });
+  sharing.update();
   const unsubscribe = host.on('snapshots-changed', change => {
     if (change?.favoriteId && pendingFavorites.has(change.favoriteId)) return;
     if (busy || editor || pendingFavorites.size) refreshPending = true; else void refresh();
@@ -68,7 +88,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
   }
   function iconButton(label, icon, action) {
     const b=button('',action);b.className='pcm-snapshot-icon pcm-api-icon';b.title=label;b.setAttribute('aria-label',label);
-    const paths={close:'m6 6 12 12M6 18 18 6',home:'m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9',refresh:'M20 7v5h-5 M4 17v-5h5 M6.1 7a7 7 0 0 1 11.5-1L20 9 M4 15l2.4 3A7 7 0 0 0 18 17',rename:'m14 5 5 5 M4 20l4-1L20 7a2.1 2.1 0 0 0-3-3L5 16l-1 4Z',delete:'M3 6h18 M9 6V3h6v3 M6 6l1 15h10l1-15 M10 10v7 M14 10v7'};
+    const paths={close:'m6 6 12 12M6 18 18 6',home:'m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9',refresh:'M20 7v5h-5 M4 17v-5h5 M6.1 7a7 7 0 0 1 11.5-1L20 9 M4 15l2.4 3A7 7 0 0 0 18 17',rename:'m14 5 5 5 M4 20l4-1L20 7a2.1 2.1 0 0 0-3-3L5 16l-1 4Z',delete:'M3 6h18 M9 6V3h6v3 M6 6l1 15h10l1-15 M10 10v7 M14 10v7',warning:'m12 3 10 17H2L12 3Z M12 9v5 M12 17h.01'};
     b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+paths[icon]+'"/></svg>';
     return b;
   }
@@ -97,7 +117,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
   function setBusy(value) {
     busy = value;
     for (const b of element.querySelectorAll('button')) {
-      if(b.closest('.pcm-library-dialog'))continue;
+      if(b.closest('.pcm-library-dialog,.pcm-snapshot-share-dialog,.pcm-snapshot-preset-dialog'))continue;
       if ([back, close, theme].includes(b)) continue;
       b.disabled = value || b.dataset.unavailable === 'true' || b.dataset.favoritePending === 'true';
     }
@@ -105,6 +125,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     for (const input of scopePicker.querySelectorAll('input')) input.disabled=value;
     verify.disabled = value || pendingFavorites.size > 0;
     grouping.update();
+    sharing.update();
   }
   function bindingName(id) {return data.snapshots.find(s => s.id === id)?.name || (id ? '快照已删除' : '未绑定');}
   function favoriteValue(snapshot) {return pendingFavorites.get(snapshot.id)?.favorite ?? (snapshot.favorite === true);}
@@ -131,6 +152,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     }
     if(focused?.isConnected&&list.contains(focused)&&!focused.disabled&&document.activeElement!==focused)focused.focus({preventScroll:true});
     grouping.update();
+    sharing.update();
   }
   function render() {
     if (disposed || !data) return;
@@ -166,6 +188,10 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
       list.append(empty);
     }
     const visible=visibleSnapshots();
+    const presetNames = c.presetNames && new Set(c.presetNames);
+    if (c.presetNames===null && visible.some(s=>snapshotScope(s).preset)) {
+      list.append(node('p','pcm-snapshot-notice pcm-snapshot-catalog-notice','暂时无法核对预设目录，请在酒馆加载或导入预设后刷新快照列表。'));
+    }
     if(data.snapshots.length&&!visible.length)list.append(node('p','pcm-snapshot-empty','没有匹配的快照，请调整搜索或当前预设筛选。'));
     const cardTarget=folderCardTargets(list,data.folders,visible,folded,!!search.value.trim()||currentOnly,[],grouping.actions);
     for (const snapshot of visible) {
@@ -179,6 +205,10 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
       const books = snapshot.resources?.worlds?.global || snapshot.worldNames || [];
       const included=snapshotScope(snapshot);
       const summary = node('p', 'pcm-snapshot-summary', included.preset ? '当前预设：'+(snapshot.presetName || '无效预设') : '预设：保持当前');
+      if (included.preset && presetNames && !presetNames.has(snapshot.presetName)) {
+        const warning = iconButton('找不到预设「'+snapshot.presetName+'」，点击重新指定预设','warning',()=>execute('retarget',snapshot));
+        warning.classList.add('pcm-snapshot-retarget'); summary.append(warning);
+      }
       const mounts = node('p', 'pcm-snapshot-books', !included.worlds ? '全局世界书：保持当前' : books.length ? '全局世界书：'+books.join('、') : '全局世界书：不挂载');
       const range=node('p','pcm-snapshot-saved-scope','保存范围：'+snapshotScopeText(included));
       const actions = node('div', 'pcm-snapshot-actions');
@@ -187,7 +217,7 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
       const character = button('绑定此角色', () => execute('bind', {...snapshot, target: 'character'}));
       chat.dataset.unavailable = String(!c.canBindChat); character.dataset.unavailable = String(!c.canBindCharacter);
       top.append(apply);
-      actions.append(button('绑定api',async()=>{try{await chooseApiSnapshotBinding({host,parent:element,snapshotId:snapshot.id});}catch(error){showStatus(error.message,true);}}), chat, character);
+      actions.append(button('绑定api',async()=>{try{await chooseApiSnapshotBinding({host,parent:element,snapshotId:snapshot.id});}catch(error){showStatus(error.message,true);}}), chat, character, sharing.single(snapshot));
       card.append(top, favoriteStatus, range, summary, mounts);
       if(included.reasoning)card.append(node('p','pcm-snapshot-summary','推理设置：'+(snapshot.reasoning?.name||'自定义格式')+(snapshot.reasoning?.version===1?'（旧版解析绑定）':'')));
       card.append(actions);cardTarget(snapshot.id).append(card);
@@ -298,6 +328,18 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
         if (name === null || disposed) return;
         result = await host.request(action === 'save' ? 'snapshot-save' : 'snapshot-rename', {id: action === 'rename' ? snapshot.id : undefined, name, contextKey,scope:action==='save'?{...saveScope}:undefined});
         message = action === 'save' ? '快照已保存' : '名称已更新';
+      } else if (action === 'retarget') {
+        const names = await host.request('snapshot-preset-options');
+        if (disposed) return;
+        if (names.includes(snapshot.presetName)) {
+          data.context.presetNames = names; render();
+          showStatus('原预设「'+snapshot.presetName+'」已可用，快照可以直接应用。');
+          return;
+        }
+        const newName = await chooseSnapshotPreset(element,snapshot,names,lifetime.signal);
+        if (!newName || disposed) return;
+        result = await host.request('snapshot-retarget-preset',{id:snapshot.id,oldName:snapshot.presetName,newName,contextKey});
+        message = '快照已指向「'+newName+'」';
       } else if (action === 'update') {
         const scope=snapshotScope(snapshot),range=snapshotScopeText(scope);
         if (!(await confirm('用酒馆当前设置覆盖「'+snapshot.name+'」？\n覆盖范围：'+range+'。\n保留方案名称和绑定关系；绑定此方案的聊天和角色以后会使用覆盖后的设置。')) || disposed) return;
@@ -325,5 +367,5 @@ export function createSnapshotPanel({host, onBack, onClose, onCycleTheme, themeI
     } catch (error) {if (!disposed) {showStatus(error.message, true); toast.error(error.message);}}
     finally {if (!disposed) {setBusy(false); if (refreshPending) {refreshPending = false; void refresh();}}}
   }
-  return {element, refresh, destroy() {disposed = true; grouping.destroy();lifetime.abort(); revision++; unsubscribe(); editor?.destroy(); element.remove();}};
+  return {element, refresh, destroy() {disposed = true; sharing.destroy(); grouping.destroy();lifetime.abort(); revision++; unsubscribe(); editor?.destroy(); element.remove();}};
 }

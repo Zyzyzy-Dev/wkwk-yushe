@@ -261,7 +261,8 @@ export function createSnapshotEditor({host, model, existingId, onCancel, onSaved
     await run(async()=>{
       snapshotScope(draft);
       const value=name.value.trim();if(!value)throw new Error('请输入快照名称');
-      const result=await host.request('snapshot-save-draft',{id:overwrite?existingId:undefined,name:value,draft:copy(draft),contextKey:context.key});
+      const result=await host.request('snapshot-save-draft',{id:overwrite?existingId:undefined,name:value,draft:copy(draft),contextKey:context.key,
+        originalPresetName:snapshotScope(model.draft).preset ? model.draft.presetName : null});
       if(!disposed){
         if(result?.persistence?.verified===false)toast.warning(result.persistence.message||'保存请求已提交，当前页面保留改动，请稍后重新核验，勿重复创建快照。');
         else toast.success(overwrite?'快照已更新':'快照已保存');

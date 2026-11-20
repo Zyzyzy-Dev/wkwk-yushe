@@ -22,7 +22,14 @@ export function openWorkbenchEntryEditor({parent, entry, title, onSave}) {
     const value=draft[key]??defaultValue;if(type==='checkbox')input.checked=Boolean(value);else input.value=Array.isArray(value)?value.join(', '):String(value);
     const initialInputValue=input.value;
     // Read controls only on save: typing does not normalize untouched optional metadata.
-    bindings.push(()=>{if(type==='checkbox'){if(input.checked!==Boolean(value))draft[key]=input.checked;}else if(input.value!==initialInputValue){draft[key]=type==='number'||options?Number(input.value):key==='key'||key==='keysecondary'?input.value.split(/[,，]/).map(s=>s.trim()).filter(Boolean):input.value;}});
+    bindings.push(()=>{
+      if(input.disabled)return;
+      if(type==='checkbox'){
+        if(input.checked!==Boolean(value))draft[key]=input.checked;
+      }else if(input.value!==initialInputValue){
+        draft[key]=type==='number'||options?Number(input.value):key==='key'||key==='keysecondary'?input.value.split(/[,，]/).map(s=>s.trim()).filter(Boolean):input.value;
+      }
+    });
     label.append(input);parent.append(label);return {input,label};
   }
   field(basic,'标题（备忘）','comment').label.classList.add('pcm-wb-entry-title');
@@ -34,7 +41,13 @@ export function openWorkbenchEntryEditor({parent, entry, title, onSave}) {
   for(const [value,text] of [['0','角色定义前（↑Char）'],['1','角色定义后（↓Char）'],['5','示例消息前（↑EM）'],['6','示例消息后（↓EM）'],['2','作者注释前（↑AN）'],['3','作者注释后（↓AN）'],['4:0','[系统⚙] 插入深度 @D'],['4:1','[用户👤] 插入深度 @D'],['4:2','[AI🤖] 插入深度 @D'],['7','➡️ 锚点']]){const option=node('option','',text);option.value=value;positionInput.append(option);}
   positionInput.value=Number(draft.position??0)===4?'4:'+Number(draft.role??0):String(draft.position??0);position.append(positionInput);basic.append(position);
   const depth=field(basic,'深度','depth',{type:'number',defaultValue:4,min:0});field(basic,'顺序','order',{type:'number',defaultValue:100});field(basic,'触发频率 %','probability',{type:'number',defaultValue:100,min:0,max:100});
-  const syncPosition=()=>{depth.input.disabled=Number(draft.position??0)!==4;depth.input.dataset.unavailable=String(depth.input.disabled);depth.input.value=depth.input.disabled?'':String(draft.depth??4);};
+  let depthText=depth.input.value;
+  const syncPosition=()=>{
+    if(!depth.input.disabled)depthText=depth.input.value;
+    depth.input.disabled=Number(draft.position??0)!==4;
+    depth.input.dataset.unavailable=String(depth.input.disabled);
+    depth.input.value=depth.input.disabled?'':depthText;
+  };
   positionInput.addEventListener('change',()=>{const [position,role]=positionInput.value.split(':').map(Number);draft.position=position;if(position===4)draft.role=role;syncPosition();});syncPosition();
   field(keywords,'主要关键字','key',{defaultValue:[]});
   field(keywords,'逻辑','selectiveLogic',{options:[[0,'任一匹配'],[1,'非全部匹配'],[2,'全不匹配'],[3,'全部匹配']],defaultValue:0});

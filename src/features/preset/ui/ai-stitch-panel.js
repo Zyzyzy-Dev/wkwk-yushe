@@ -24,13 +24,55 @@ export function createAiStitchPanel({session:s,host,isCurrent,onBack,onSave,onAr
  root.append(head);
  const select=node('select');select.setAttribute('aria-label','AI 来源');select.addEventListener('change',()=>{s.profileId=select.value;s.model=undefined;s.overrides={};void refreshConnection();});
  const apiRow=node('div');apiRow.className='pcm-ai-api-row';apiRow.append(node('span','API:'),select);controls.append(apiRow);
- let connectionRevision=0;s.overrides??={};
- const connectionInfo=node('div'),urlInput=node('input'),keyInput=node('input');connectionInfo.className='pcm-ai-connection';for(const [input,label] of [[urlInput,'URL'],[keyInput,'密钥（打码）']]){input.placeholder=label;input.setAttribute('aria-label',label);connectionInfo.append(input);}const modelField=field('本次使用的模型',s.model||'',value=>{s.model=value;}),modelInput=modelField.querySelector('input'),modelList=node('datalist');
- keyInput.type='password';keyInput.autocomplete='new-password';keyInput.value=s.overrides.key||'';urlInput.addEventListener('input',()=>{s.overrides.url=urlInput.value;connectionRevision++;});keyInput.addEventListener('input',()=>{if(keyInput.value)s.overrides.key=keyInput.value;else delete s.overrides.key;connectionRevision++;});keyInput.title='填写临时密钥，仅用于本次缝合；留空沿用方案密钥';
- modelList.id='pcm-stitch-models-'+s.id;modelInput.setAttribute('list',modelList.id);modelInput.setAttribute('aria-label','本次使用的模型');
- async function refreshConnection(){const revision=++connectionRevision;urlInput.value=s.overrides.url||'';urlInput.placeholder='正在读取…';keyInput.value=s.overrides.key||'';modelList.replaceChildren();modelInput.value=s.model||'';try{const info=await host.request('ai-stitch-connection',{profileId:s.profileId});if(disposed||revision!==connectionRevision)return;urlInput.value=s.overrides.url??info.url??'';urlInput.placeholder='URL';urlInput.title='本次URL：'+urlInput.value;keyInput.placeholder=info.maskedSecret||'密钥（打码）';keyInput.value=s.overrides.key||'';s.model??=info.model;modelInput.value=s.model??'';}catch(e){if(revision===connectionRevision){urlInput.placeholder='连接读取失败';report(e);}}}
- const fetchModels=button('拉取模型',async()=>{const revision=connectionRevision,profileId=s.profileId;fetchModels.disabled=true;try{const models=await host.request('ai-stitch-models',{profileId,overrides:s.overrides});if(disposed||revision!==connectionRevision)return;modelList.replaceChildren(...models.map(id=>{const option=node('option');option.value=id;return option;}));status.textContent='已拉取 '+models.length+' 个模型，可在模型输入框选择或手动填写；只用于本次缝合。';}catch(e){if(revision===connectionRevision)report(e);}finally{fetchModels.disabled=false;}});
- fetchModels.setAttribute('aria-label','拉取模型');apiRow.append(connectionInfo,modelField,modelList,fetchModels);modelInput.placeholder='模型名称';modelField.querySelector('span').hidden=true;apiRow.title='模型修改仅用于本次缝合，不修改 API 方案和聊天连接。';
+ let connectionRevision=0,modelRevision=0;s.overrides??={};
+ const connectionInfo=node('div'),urlInput=node('input'),keyInput=node('input');connectionInfo.className='pcm-ai-connection';
+ for(const [input,label] of [[urlInput,'URL'],[keyInput,'密钥（打码）']]){input.placeholder=label;input.setAttribute('aria-label',label);connectionInfo.append(input);}
+ keyInput.type='password';keyInput.autocomplete='new-password';keyInput.value=s.overrides.key||'';
+ keyInput.title='填写临时密钥，仅用于本次缝合；留空沿用方案密钥';
+ urlInput.addEventListener('input',()=>{s.overrides.url=urlInput.value;clearModelList();});
+ keyInput.addEventListener('input',()=>{if(keyInput.value)s.overrides.key=keyInput.value;else delete s.overrides.key;clearModelList();});
+
+ const modelRow=node('div'),modelStatus=node('small'),modelList=node('select');
+ modelRow.className='pcm-ai-model-picker';modelRow.hidden=true;
+ modelStatus.setAttribute('role','status');modelList.setAttribute('aria-label','已拉取的模型');modelList.hidden=true;
+ modelRow.append(modelStatus,modelList);controls.append(modelRow);
+ const modelField=field('本次使用的模型',s.model||'',value=>{s.model=value;syncModelList();});
+ const modelInput=modelField.querySelector('input');modelInput.setAttribute('aria-label','本次使用的模型');
+ function syncModelList(){
+  modelList.value=modelInput.value;
+  if(modelList.selectedIndex<0)modelList.selectedIndex=0;
+ }
+ modelList.addEventListener('change',()=>{if(modelList.value){s.model=modelList.value;modelInput.value=s.model;}});
+ function clearModelList(){
+  modelRevision++;modelList.replaceChildren();modelList.hidden=true;
+  modelStatus.textContent='';modelRow.hidden=true;fetchModels.disabled=false;
+ }
+ async function refreshConnection(){
+  const revision=++connectionRevision;clearModelList();
+  urlInput.value=s.overrides.url??'';urlInput.placeholder='正在读取…';
+  urlInput.title='';keyInput.placeholder='密钥（打码）';keyInput.value=s.overrides.key||'';modelInput.value=s.model??'';
+  try{
+   const info=await host.request('ai-stitch-connection',{profileId:s.profileId});
+   if(disposed||revision!==connectionRevision)return;
+   urlInput.value=s.overrides.url??info.url??'';urlInput.placeholder='URL';urlInput.title='本次URL：'+urlInput.value;
+   keyInput.placeholder=info.maskedSecret||'密钥（打码）';s.model??=info.model;modelInput.value=s.model??'';syncModelList();
+  }catch(e){if(!disposed&&revision===connectionRevision){urlInput.placeholder='连接读取失败';report(e);}}
+ }
+ const fetchModels=button('拉取模型',async()=>{
+  clearModelList();const revision=modelRevision;
+  fetchModels.disabled=true;modelRow.hidden=false;modelStatus.textContent='正在拉取模型…';
+  try{
+   const models=await host.request('ai-stitch-models',{profileId:s.profileId,overrides:{...s.overrides}});
+   if(disposed||revision!==modelRevision)return;
+   if(!models.length){modelStatus.textContent='此连接未返回模型，可手动填写模型名称。';return;}
+   const placeholder=new Option('选择模型','');placeholder.disabled=true;
+   modelList.replaceChildren(placeholder,...models.map(id=>new Option(id,id)));
+   syncModelList();modelList.hidden=false;modelStatus.textContent='已拉取 '+models.length+' 个模型';
+  }catch(e){
+   if(!disposed&&revision===modelRevision){modelStatus.textContent='拉取模型失败：'+(e.message||String(e));diagnostics.hidden=false;}
+  }finally{if(!disposed&&revision===modelRevision)fetchModels.disabled=false;}
+ });
+ fetchModels.setAttribute('aria-label','拉取模型');apiRow.append(connectionInfo,modelField,fetchModels);modelInput.placeholder='模型名称';modelField.querySelector('span').hidden=true;apiRow.title='模型修改仅用于本次缝合，不修改 API 方案和聊天连接。';
  s.timeoutMinutes??=15;
  const waitField=field('生成等待时间（分钟）',s.timeoutMinutes,value=>{s.timeoutMinutes=Number(value);}),waitInput=waitField.querySelector('input');waitInput.type='number';waitInput.min='1';waitInput.max='60';waitInput.step='1';apiRow.append(waitField);waitField.querySelector('span').textContent='分钟';waitField.append(waitField.querySelector('span'));waitInput.title='等待时间（分钟）';waitInput.setAttribute('aria-label','生成等待时间（分钟）');
  s.outputTokens??=16384;const outputSettings=node('details'),outputSummary=node('summary','生成选项'),outputField=field('输出上限（tokens）',s.outputTokens,value=>{s.outputTokens=Number(value);});outputSettings.className='pcm-ai-output-options';const outputInput=outputField.querySelector('input');outputInput.type='number';outputInput.min='1024';outputInput.max='131072';outputInput.step='1';outputSettings.append(outputSummary,outputField,node('small','默认16384。完整正文需要更多输出空间；实际允许上限由所用模型及接口决定。'));controls.append(outputSettings);

@@ -1,6 +1,7 @@
 // 预设更新编辑器 · 导出可分享的编辑快照，保留绑定脚本与分组，移除 API 连接资料。
 // 浏览器只报告已发起下载；只有宿主明确回报保存完成才允许清除修改标记。
 import { clone } from '../shared/clone.js';
+import {downloadJsonFile} from './json-download.js';
 import {withPresetHelperBinding} from './preset-helper-binding.js';
 
 // SillyTavern settingsToUpdate 中 isConnection=true 的字段。宿主表还可补充未来字段；
@@ -50,9 +51,6 @@ function prepareHelperExport(helper) {
 export async function exportPresetFile(payload, download, {settingsToUpdate, readSourcePreset} = {}) {
   if (!payload?.preset || !Array.isArray(payload.preset.prompts)) throw new Error('预设数据无效，未导出');
   if (typeof payload.name !== 'string' || !payload.name.trim()) throw new Error('导出文件名不能为空');
-  if (typeof download !== 'function') throw new Error('当前酒馆不支持导出文件，请更新酒馆后重试');
-  const name = payload.name.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').replace(/[. ]+$/g, '').trim();
-  if (!name) throw new Error('导出文件名无效');
   let preset = clone(payload.preset);
   if (typeof payload.tavernSource === 'string' && payload.tavernSource.length > 0) {
     if (typeof readSourcePreset !== 'function') throw new Error('无法读取来源预设的绑定脚本，请重新载入后导出');
@@ -63,9 +61,5 @@ export async function exportPresetFile(payload, download, {settingsToUpdate, rea
   }
   prepareHelperExport(preset.extensions?.tavern_helper);
   removeConnectionFields(preset, settingsToUpdate);
-  const content = JSON.stringify(preset, null, 2);
-  const result = await download(content, name, 'application/json;charset=utf-8', {throwOnFailure: true});
-  if (result?.mode === 'failed') throw new Error('酒馆未能导出文件，请检查下载提示后重试');
-  if (result?.cancelled === true || result?.mode === 'cancelled' || result?.completed === false) return {status: 'cancelled'};
-  return {status: result?.savedPath || result?.completed === true ? 'saved' : 'started'};
+  return downloadJsonFile(download, preset, payload.name, 2);
 }

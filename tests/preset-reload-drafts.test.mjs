@@ -9,11 +9,12 @@ const start=source.indexOf('function applyTavernPreset('),end=source.indexOf('/*
 const watchStart=source.indexOf('function watchTavernPresetEvents('),watchEnd=source.indexOf('\n',watchStart);
 const code=source.slice(start,end)+'\n'+source.slice(watchStart,watchEnd);
 function harness(){
-  const state={old:null,new:{prompts:[{identifier:'a',content:'original'}]},newName:'bound.json',tavernSource:{old:null,new:'bound'},dirty:{old:false,new:false},modified:{old:new Set(),new:new Set()},dragged:{old:new Set(),new:new Set()},showDraftMarkers:{old:false,new:false}};
+  const state={old:null,new:{prompts:[{identifier:'a',content:'original'}]},newName:'bound.json',tavernSource:{old:null,new:'bound'},dirty:{old:false,new:false},modified:{old:new Set(),new:new Set()},dragged:{old:new Set(),new:new Set()},showDraftMarkers:{old:false,new:false},history:[]};
   const inlineDrafts=new WeakMap(),requests=[],handlers=new Map(),notices=[],confirmations=[];
   const host={on:(type,fn)=>handlers.set(type,fn),request:(type,payload)=>new Promise((resolve,reject)=>requests.push({type,payload,resolve,reject}))};
   const deps={state,inlineDrafts,host,isPendingPromptDraft,buildPresetDraftSnapshot,clone:structuredClone,validate:p=>p,rebuildCache(){},renderAll(){},pcmToast:(...args)=>notices.push(args),console:{error(){},warn(){}},shell:()=>({}),choosePresetSave:()=>new Promise(resolve=>confirmations.push({resolve})),syncDraftControls(){},refreshDraftIndicators(){},saveUiPrefs:async()=>{}};
-  const api=new Function(...Object.keys(deps),code+'\nfunction requestSideReload(side,name){void reloadSideFromTavern(side,name);}watchTavernPresetEvents();return {save:saveSideToTavern,reload:reloadSideFromTavern};')(...Object.values(deps));
+  const discard=source.match(/^function discardSideUndo\(side\)\{[^\n]+/m)[0];
+  const api=new Function(...Object.keys(deps),discard+'\nfunction updateUndoButton(){}\n'+code+'\nfunction requestSideReload(side,name){void reloadSideFromTavern(side,name);}watchTavernPresetEvents();return {save:saveSideToTavern,reload:reloadSideFromTavern};')(...Object.values(deps));
   return {state,inlineDrafts,requests,notices,confirmations,confirm:async choice=>{confirmations.at(-1).resolve(choice);await Promise.resolve();},...api,changed:()=>handlers.get('preset-changed')({apiId:'openai',name:'bound'})};
 }
 test('native change event cannot reload an unsubmitted form whose dirty flag is false',()=>{
@@ -42,6 +43,17 @@ test('native read started before save cannot replace the model during that save'
 test('native read cannot apply after the user switches the source binding',async()=>{
   const e=harness(),original=e.state.new,reading=e.reload('new','bound');e.state.tavernSource.new='other';
   e.requests[0].resolve({prompts:[{identifier:'a',content:'wrong source'}]});await reading;assert.equal(e.state.new,original);
+});
+test('external replacement of a clean bound preset removes only its undo actions',async()=>{
+  const e=harness();e.state.history.push({side:'old'},{side:'new'});
+  const reading=e.reload('new','bound');
+  e.requests[0].resolve({prompts:[{identifier:'a',content:'external changes'}]});await reading;
+  assert.equal(e.state.new.prompts[0].content,'external changes');assert.deepEqual(e.state.history,[{side:'old'}]);
+});
+test('native event with the same preset data retains the document and its undo references',async()=>{
+  const e=harness(),original=e.state.new;e.state.history.push({side:'new',preset:original});
+  const reading=e.reload('new','bound');e.requests[0].resolve(structuredClone(original));await reading;
+  assert.equal(e.state.new,original);assert.equal(e.state.history[0].preset,e.state.new);
 });
 test('an unchanged form permits normal native reload',async()=>{
   const e=harness();e.inlineDrafts.set(e.state.new.prompts[0],{content:'original',name:'',role:'system',trigger:'',injection_position:'0'});

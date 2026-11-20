@@ -49,7 +49,7 @@ export function restoreWorldEntries(saved, current) {
 }
 function regexId(script) {return String(script?.id || (script?.scriptName ? 'name:'+script.scriptName : ''));}
 // 旧正则兼容标识：正常 ID 保持原样，冲突/缺失时按定义生成局部键，不改写宿主正则。
-function regexRecords(scripts) {
+export function regexRecords(scripts) {
   if (!Array.isArray(scripts) || scripts.some(script=>!object(script))) throw new Error('正则列表格式无效');
   const counts=new Map(), fingerprints=new Map();
   const canonical=value=>Array.isArray(value)?value.map(canonical):object(value)?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;

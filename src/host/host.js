@@ -3,6 +3,10 @@ import {EDITOR_PREFERENCES_KEY,normalizeEditorPreferences} from '../features/pre
 import { installNativeGroups } from './native-groups.js';
 import { handleAiStitch } from './ai-stitch.js';
 import { exportPresetFile } from './preset-export.js';
+import {downloadJsonFile} from './json-download.js';
+import {buildSnapshotShare, readSnapshotShare, makeImportedSnapshots, MAX_SNAPSHOT_SHARE_COUNT} from '../features/snapshot/snapshot-share.js';
+import {previewSnapshotShare, shareBookIndex, shareBookChecks, assertNoShareConflicts, assertSharedSwitches, sharePresetIndexes, sharePresetChecks} from './snapshot-share-checks.js';
+import {snapshotPresetNames, saveRetargetedSnapshots, watchSnapshotPresetRenames} from './snapshot-preset-rename.js';
 import {withPresetHelperBinding} from './preset-helper-binding.js';
 import { readSnapshotReasoning, snapshotReasoningEnvironment } from './snapshot-reasoning.js';
 import { manageReasoningTemplate } from './reasoning-templates.js';
@@ -159,6 +163,13 @@ async function handleRequest(method, payload) {
     tauri: Boolean(globalThis.__TAURITAVERN__),
     versionText: document.getElementById('version_display')?.textContent || document.getElementById('version_display_welcome')?.textContent || '',
   });
+  if (method === 'snapshot-share-download') {
+    const bundle = payload?.bundle;
+    const snapshots = readSnapshotShare(bundle);
+    const title = snapshots.length === 1 ? Array.from(snapshots[0].name).slice(0,50).join('') : snapshots.length+'份快照';
+    const {download} = await import('/scripts/utils.js');
+    return downloadJsonFile(download, {format:bundle.format,version:bundle.version,snapshots}, '酒馆盒子-'+title+'.json');
+  }
   if (method === 'export-preset') {
     // 下载必须在主窗口调用酒馆接口，由 ST/TT 选择各自的下载实现。
     const [{download}, openai] = await Promise.all([
@@ -694,7 +705,7 @@ function snapshotStore(env) {
   return store;
 }
 
-function snapshotContext(env) {
+function snapshotLocation(env) {
   const ctx = globalThis.SillyTavern?.getContext?.() || {};
   const group = ctx.groupId;
   const character = !group ? (env.script.characters || ctx.characters || [])[env.script.this_chid ?? ctx.characterId] : null;
@@ -702,6 +713,11 @@ function snapshotContext(env) {
   const chatId = env.script.getCurrentChatId?.() ?? ctx.chatId;
   const scope = JSON.stringify([group || '', characterKey, chatId ?? '', snapshotEpoch]);
   const presetName = String(env.manager.getSelectedPresetName?.() || env.openai.oai_settings?.preset_settings_openai || '');
+  return {ctx,group,character,characterKey,chatId,scope,presetName};
+}
+
+function snapshotContext(env) {
+  const {ctx,group,character,characterKey,chatId,scope,presetName}=snapshotLocation(env);
   const metadata = env.script.chat_metadata || ctx.chatMetadata;
   const store = snapshotStore(env);
   const context = {
@@ -874,7 +890,7 @@ function baiBaiState() {
 function snapshotGroups(env) {
   if (nativeGroupController?.owns('preset')) return env.openai.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups || null;
   const bai = baiBaiState();
-  const name = snapshotContext(env).presetName;
+  const name = snapshotLocation(env).presetName;
   if (bai?.presetPromptGroupRuntimePresetName === name && Array.isArray(bai.presetPromptGroupRuntimeState?.groups)) return bai.presetPromptGroupRuntimeState;
   return env.openai.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups || null;
 }
@@ -888,6 +904,7 @@ function selectedSnapshotWorlds(env) {
 async function snapshotList(env) {
   const store = snapshotStore(env), context = snapshotContext(env);
   try {context.reasoning=(await readSnapshotReasoning()).current;} catch(error) {context.reasoningError=error.message;}
+  try {context.presetNames = snapshotPresetNames(env.manager);} catch {context.presetNames = null;}
   const active = resolveSnapshotBinding(store, context.canBindChat ? context.chatBindingId : null, context.characterKey);
   return clone({snapshots: store.snapshots, folders:store.folders||[], context, activeBinding: active ? {id: active.snapshot.id, name: active.snapshot.name, source: active.source} : null, busy: snapshotBusy > 0, persistence: snapshotPersistenceStatus.get(store) || null});
 }
@@ -1100,6 +1117,7 @@ async function prepareSnapshotResources(env, snapshot, context, allowMissingWorl
       if (Date.now()>=deadline) throw new Error('世界书「'+saved.name+'」仍有未保存修改，请保存后重试');
       await new Promise(resolve=>setTimeout(resolve,100));
     } while (true);
+    if (snapshot.importedShare===true) assertNoShareConflicts(shareBookChecks(saved,shareBookIndex(current)));
     const plan=restoreWorldEntries(saved,current);syncSnapshotOriginalBook(env,plan.data);
     if (plan.missing.length) warnings.push(saved.name+' 已跳过缺失条目：'+plan.missing.join('、'));
     books.push({name:saved.name,before:clone(current),after:plan.data});
@@ -1201,7 +1219,7 @@ async function selectSnapshotPreset(env, name, scope, waitRegex = false) {
   if (snapshotContext(env).presetName === name) return;
   const {preset_names: names} = env.manager.getPresetList();
   const value = Array.isArray(names) ? names.indexOf(name) : (Object.hasOwn(names || {}, name) ? names[name] : undefined);
-  if (value === undefined || value === -1) throw new Error('找不到预设「'+name+'」，请更新快照');
+  if (value === undefined || value === -1) throw new Error('找不到预设「'+name+'」，请点击快照卡片上预设名称旁的警示标志重新指定预设');
   const complete=waitRegex&&typeof env.openai.getPresetApplicationPromise==='function';
   const events = env.script.eventSource, type = waitRegex&&!complete?env.script.event_types?.PRESET_CHANGED:env.script.event_types?.OAI_PRESET_CHANGED_AFTER;
   if (!events?.on || !type || !env.manager.selectPreset) throw new Error('当前酒馆不支持等待预设切换，请手动选择预设后重试');
@@ -1375,7 +1393,8 @@ async function applySettingsSnapshot(env, snapshot, payload, automatic = false) 
   assertSnapshotIdle(env);
   const targetName = included.preset ? snapshot.presetName : context.presetName;
   const targetPreset = included.preset ? readPresetByName(env.manager, targetName) : current.settings;
-  if (included.preset && !targetPreset) throw new Error('找不到预设「'+snapshot.presetName+'」，请更新快照');
+  if (included.preset && !targetPreset) throw new Error('找不到预设「'+snapshot.presetName+'」，请点击快照卡片上预设名称旁的警示标志重新指定预设');
+  if (snapshot.importedShare===true) assertSharedSwitches(env,snapshot,context.presetName,()=>snapshotGroups(env),current.orderCharacterId);
   if (included.worlds && !Array.isArray(env.world.world_names)) throw new Error('全局世界书列表尚未就绪');
   if(included.presetRegex)restorePresetRegex(snapshot.presetRegex,(context.presetName===targetName?current.settings:targetPreset)?.extensions?.regex_scripts||[],{apiId:'openai',presetName:targetName});
   // 先在当前/目标数据上验证节点，不能先切换预设再发现这份快照不可恢复。
@@ -1394,6 +1413,7 @@ async function applySettingsSnapshot(env, snapshot, payload, automatic = false) 
   await waitSnapshotPreset(env, target);
   await settleBaiBai(env, target);
   const {settings, orderCharacterId} = included.preset ? snapshotSettings(env) : {settings:env.openai.oai_settings};
+  if (snapshot.importedShare===true) assertSharedSwitches(env,snapshot,targetName,()=>snapshotGroups(env),orderCharacterId);
   const plan = planSnapshotRestore(snapshot, {settings, orderCharacterId, groupState: snapshotGroups(env), worldNames: env.world.world_names});
   assertSnapshotIdle(env);
   const worldsBefore = selectedSnapshotWorlds(env);
@@ -1450,6 +1470,14 @@ async function applyLinkedSnapshot(env, snapshot, payload, automatic = false) {
   }
 }
 
+function shareDestination(env) {
+  const {scope,presetName}=snapshotLocation(env), manager=env.openai.promptManager;
+  const order=manager?.activeCharacter?.id ?? manager?.configuration?.promptOrder?.dummyId;
+  const hasOrder=typeof order==='string' && order!=='' || Number.isFinite(order);
+  const orderId=hasOrder ? order : 100001;
+  return {activeName:presetName,hasOrder,orderId,key:JSON.stringify([scope,presetName,hasOrder,orderId,env.script.main_api])};
+}
+
 async function handleSnapshotRequest(method, payload) {
   // User recovery actions invalidate queued automatic work before joining the queue.
   if (method === 'snapshot-delete' || (method === 'snapshot-folder-delete'&&payload.deleteItems===true) || method === 'snapshot-apply' || (method === 'snapshot-bind' && payload.id === null)) {
@@ -1458,6 +1486,39 @@ async function handleSnapshotRequest(method, payload) {
     clearTimeout(snapshotAutoTimer);
   }
   if (method === 'snapshot-list') {await snapshotQueue; return snapshotList(await snapshotEnvironment());}
+  if (method === 'snapshot-preset-options') {
+    await snapshotQueue;
+    return snapshotPresetNames((await snapshotEnvironment()).manager);
+  }
+  if (method === 'snapshot-share-export') {
+    await snapshotQueue;
+    const ids=payload.ids;
+    if (!Array.isArray(ids) || !ids.length || ids.length>MAX_SNAPSHOT_SHARE_COUNT || new Set(ids).size!==ids.length) throw new Error('请选择 1–'+MAX_SNAPSHOT_SHARE_COUNT+' 份不同的快照');
+    const snapshots=snapshotStore(await snapshotEnvironment()).snapshots;
+    const byId=new Map(snapshots.map(item=>[item.id,item]));
+    return buildSnapshotShare(ids.map(id=>{
+      if (!byId.has(id)) throw new Error('所选快照已删除，请刷新列表');
+      return byId.get(id);
+    }));
+  }
+  if (method === 'snapshot-share-preview') {
+    const snapshots=readSnapshotShare(payload.bundle);
+    await snapshotQueue;
+    const env=await snapshotEnvironment(), destination=shareDestination(env);
+    const checkContext=()=>{
+      if (shareDestination(env).key!==destination.key) throw new Error('聊天、预设或条目节点已切换，请重新预检分享文件');
+    };
+    const result=await previewSnapshotShare(snapshots,env,{
+      ...destination,checkContext,
+      activeGroups:()=>{
+        if (snapshotPresetLoads>0) throw new Error('当前预设仍在加载');
+        return snapshotGroups(env);
+      },
+      readReasoning:readSnapshotReasoning,
+      readBook:(name,remaining)=>withSnapshotTimeout(env.world.loadWorldInfo(name),'世界书读取超时',remaining),
+    });
+    return {...result,contextKey:destination.key};
+  }
   if (method === 'snapshot-reasoning-read') {
     await snapshotQueue;
     const existing = snapshotStore(await snapshotEnvironment()).snapshots.find(item => item.id === payload.id);
@@ -1485,9 +1546,36 @@ async function handleSnapshotRequest(method, payload) {
       snapshotAutoToken++;
       return applyLinkedSnapshot(env, existing, payload);
     }
-    if (method === 'snapshot-save' || method === 'snapshot-save-draft') {
+    if (method === 'snapshot-retarget-preset') {
+      assertSnapshotContext(env,payload.contextKey);
+      const {oldName,newName} = payload;
+      if (!existing || existing.presetName!==oldName || !snapshotScope(existing).preset) throw Error('快照的预设已变化，请刷新后重新选择');
+      const active = context.presetName===newName && env.script.main_api==='openai';
+      if (active) {await waitSnapshotPreset(env,context);await settleBaiBai(env,context);assertSnapshotContext(env,payload.contextKey);}
+      const names = snapshotPresetNames(env.manager);
+      if (names.includes(oldName)) throw Error('原预设「'+oldName+'」已可用，快照可以直接应用。');
+      const preset = readPresetByName(env.manager,newName);
+      if (!preset || names.filter(name=>name===newName).length!==1) throw Error('目标预设已不存在或名称重复，请重新选择');
+      const settings = active ? env.openai.oai_settings : preset;
+      const groups = active ? snapshotGroups(env) : settings.extensions?.baibaiToolkit?.presetPromptGroups;
+      await saveRetargetedSnapshots(store,new Set([existing.id]),oldName,newName,
+        ()=>saveSnapshotSettings(env,false,null,{allowUnverified:true}),candidate=>{
+          assertNoShareConflicts(sharePresetChecks(candidate,sharePresetIndexes(settings,groups,candidate.orderCharacterId)),'目标预设的条目或分组有冲突，请核对后重新选择。');
+          if (snapshotScope(candidate).presetRegex) restorePresetRegex(candidate.presetRegex,settings.extensions?.regex_scripts||[],{apiId:'openai',presetName:newName});
+        });
+    } else if (method === 'snapshot-share-import') {
+      const destination=shareDestination(env);
+      if (payload.contextKey!=null && destination.key!==payload.contextKey) throw new Error('聊天、预设或条目节点已切换，请重新预检分享文件');
+      const previous=store.snapshots;
+      const imported=makeImportedSnapshots(payload.bundle,previous,destination.orderId);
+      store.snapshots=[...previous,...imported.map(snapshot=>({...snapshot,importedShare:true}))];
+      try {await saveSnapshotSettings(env,false,null,{allowUnverified:true});}
+      catch (error) {store.snapshots=previous;throw error;}
+    } else if (method === 'snapshot-save' || method === 'snapshot-save-draft') {
       assertSnapshotContext(env, payload.contextKey);
       if (payload.id && !existing) throw new Error('快照已删除，请重新保存');
+      if (method==='snapshot-save-draft' && existing && Object.hasOwn(payload,'originalPresetName') &&
+          payload.originalPresetName!==(snapshotScope(existing).preset ? existing.presetName : null)) throw Error('快照所需预设已更改，请重新打开详情后保存');
       await waitSnapshotPreset(env, context);
       await settleBaiBai(env, context);
       assertSnapshotContext(env, payload.contextKey);
@@ -1531,6 +1619,7 @@ async function handleSnapshotRequest(method, payload) {
       assertSnapshotContext(env,payload.contextKey);
       if (existing) snapshot.createdAt = existing.createdAt;
       if (existing?.favorite === true) snapshot.favorite = true;
+      if (method==='snapshot-save-draft' && existing?.importedShare===true) snapshot.importedShare=true;
       const previous = store.snapshots;
       store.snapshots = existing ? previous.map(s => s.id === existing.id ? snapshot : s) : [...previous, snapshot];
       try {await saveSnapshotSettings(env, false, null, {allowUnverified:true});} catch (error) {store.snapshots = previous; throw error;}
@@ -1614,6 +1703,25 @@ async function installSnapshotBindings(controller) {
   if (!script.eventSource?.on) return;
   snapshotInstalled = true;
   snapshotNotify = detail => controller.sendEvent('snapshots-changed', detail);
+  for (const key of ['PRESET_DELETED','PRESET_RENAMED']) {
+    const type = script.event_types?.[key];
+    if (type) script.eventSource.on(type, event => {if (event?.apiId==='openai') snapshotNotify();});
+  }
+  watchSnapshotPresetRenames({
+    script, environment:snapshotEnvironment, storeFor:env=>env.extensions.extension_settings?.[SNAPSHOT_KEY],
+    diskNames:async (env,expectedStore)=>{
+      const data = await readSnapshotPersistence(env,'/api/settings/get',{}, {label:'预设目录'});
+      if (data?.bootstrap?.partial || !Array.isArray(data?.openai_setting_names) || !data.openai_setting_names.every(n=>typeof n==='string')) throw Error('预设目录不完整');
+      if (expectedStore) {
+        const settings = typeof data.settings==='string' ? JSON.parse(data.settings) : data.settings;
+        if (libraryFingerprint(settings?.extension_settings?.[SNAPSHOT_KEY])!==libraryFingerprint(expectedStore)) throw Error('本页快照库与服务器不一致，请刷新后核对');
+      }
+      return data.openai_setting_names;
+    },
+    serial:snapshotSerial, save:env=>saveSnapshotSettings(env,false,null,{allowUnverified:true}),
+    pendingSave:store=>snapshotPersistenceStatus.get(store),
+    notify:(level,message)=>globalThis.toastr?.[level]?.(message,'设置快照',{escapeHtml:true}),
+  });
   const before = script.event_types?.OAI_PRESET_CHANGED_BEFORE;
   const after = script.event_types?.OAI_PRESET_CHANGED_AFTER;
   const first = (name, handler) => (script.eventSource.makeFirst || script.eventSource.on).call(script.eventSource, name, handler);
@@ -1623,7 +1731,10 @@ async function installSnapshotBindings(controller) {
     first(after, () => {
       snapshotPresetLoads = Math.max(0, snapshotPresetLoads - 1);
       if (snapshotPresetLoads === 0) {for (const resolve of snapshotPresetWaiters) resolve(); snapshotPresetWaiters.clear();}
+      snapshotNotify();
     });
+  } else if (script.event_types?.PRESET_CHANGED) {
+    script.eventSource.on(script.event_types.PRESET_CHANGED,event=>{if (event?.apiId==='openai') snapshotNotify();});
   }
   const identity = () => {
     const ctx = globalThis.SillyTavern?.getContext?.() || {};
