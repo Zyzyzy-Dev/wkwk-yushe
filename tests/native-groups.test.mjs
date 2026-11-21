@@ -63,3 +63,19 @@ test('原生收集抛错也必须恢复成员状态，重复安装不叠加', ()
     installGroupGate(manager, () => state, () => true); assert.equal(installed, manager.getPromptCollection);
     assert.throws(() => manager.getPromptCollection(), /生成失败/); assert.equal(order[0].enabled, true);
 });
+
+test('逐条检查开关只查询该成员，原地换组或改组开关立即生效', () => {
+    const { manager } = fixture();
+    const prompts = new Proxy({ a: { groupId: 'closed' } }, {
+        ownKeys() { throw Error('逐条检查不应遍历所有成员'); },
+    });
+    const state = { groups: [{ id: 'closed', enabled: false }, { id: 'open', enabled: true }], prompts };
+    installGroupGate(manager, () => state, () => true);
+    assert.equal(manager.isPromptDisabledForActiveCharacter('a'), true);
+    prompts.a.groupId = 'open';
+    assert.equal(manager.isPromptDisabledForActiveCharacter('a'), false);
+    state.groups[1].enabled = false;
+    assert.equal(manager.isPromptDisabledForActiveCharacter('a'), true);
+    delete prompts.a;
+    assert.equal(manager.isPromptDisabledForActiveCharacter('a'), false);
+});

@@ -89,11 +89,22 @@ export function installNativeGroups(env) {
         const name = manager.getSelectedPresetName();
         if (!name) return null;
         const order = pm.getPromptOrderForCharacter(pm.activeCharacter) || [];
-        return { kind: 'preset', key: `preset:${name}:${pm.activeCharacter.identifier ?? pm.activeCharacter.id ?? ''}`, manager, name,
+        return { kind: 'preset', key: presetKey(name, pm), manager, name,
             list: pm.listElement, path: PRESET_PATH,
             value: clone(openai.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups),
             entries: order.map(e => ({ id: String(e.identifier), name: pm.getPromptById(e.identifier)?.name || e.identifier, enabled: e.enabled })),
         };
+    }
+    function presetKey(name, pm) {
+        return name && pm?.listElement && pm.activeCharacter
+            ? `preset:${name}:${pm.activeCharacter.identifier ?? pm.activeCharacter.id ?? ''}` : null;
+    }
+    function readGateState() {
+        if (fast) {
+            const name = presetManager.getPresetManager('openai')?.getSelectedPresetName();
+            if (fast.key === presetKey(name, openai.promptManager)) return fast.value;
+        }
+        return openai.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups;
     }
     function regexContext(scope, list) {
         const type = regex.SCRIPT_TYPES[scope], manager = presetManager.getPresetManager();
@@ -302,7 +313,7 @@ export function installNativeGroups(env) {
             }
         };
         // 保存忙碌状态只更新控件，不能因保存开始／结束重建相同的分组显示。
-        const signature = JSON.stringify([context.key, context.value, context.entries, owner, enabled]);
+        const signature = toolbarSignature;
         const rows = [...list.children].filter(el => kind === 'preset' ? el.hasAttribute('data-pm-identifier') : el.classList.contains('regex-script-label'));
         const old = signatures.get(list);
         const unchanged = old?.toolbar === toolbar && old.signature === signature && old.rows.length === rows.length && old.rows.every((r, i) => r === rows[i]);
@@ -328,21 +339,35 @@ export function installNativeGroups(env) {
         if (!enabled) { remember(); updateControls(); return; }
         const model = groupModel(context.value, kind);
         list.classList.add(ROOT);
+        if (kind === 'preset' && !model.groups.length) { remember(); updateControls(); return; }
         const groups = new Map(model.groups.map(g => [g.id, g])), displayed = new Set(); let last = null;
+        // 保存后酒馆会重建原生行；一次整理成员和计数，分组有多个显示段时也可复用。
+        const byId = new Map(), totals = new Map();
+        const membership = kind === 'preset' ? model.prompts : model.scripts;
+        for (const entry of context.entries) {
+            const assigned = membership[entry.id]?.groupId;
+            const groupId = groups.has(assigned) ? assigned : UNGROUPED;
+            if (!byId.has(entry.id)) byId.set(entry.id, { entry, groupId });
+            if (!groups.has(groupId)) continue;
+            const count = totals.get(groupId) || { total: 0, enabled: 0 };
+            count.total++;
+            if (entry.enabled) count.enabled++;
+            totals.set(groupId, count);
+        }
         const makeHeader = (groupId, continuation = false) => {
             const g = groups.get(groupId), header = node(kind === 'preset' ? 'li' : 'div', 'pcm-ng-header'); header.dataset.pcmNg = 'header';
             if (!g) { header.append(node('span', '', '未分组')); return header; }
-            const members = context.entries.filter(e => memberGroup(model, kind, e.id) === groupId);
+            const count = totals.get(groupId) || { total: 0, enabled: 0 };
             const collapse = iconButton('chevron', g.collapsed ? '展开分组' : '折叠分组', () => act(context, { type: 'collapse', groupId }));
             collapse.classList.add('pcm-ng-chevron'); collapse.dataset.pcmFast = '';
             collapse.setAttribute('aria-expanded', String(!g.collapsed));
             const title = button(`${g.name || g.id}${continuation ? '（续）' : ''}`, '展开或折叠分组', () => act(context, { type: 'collapse', groupId }));
-            title.append(node('small', 'pcm-ng-count', `(${members.filter(e=>e.enabled).length}/${members.length})`));
+            title.append(node('small', 'pcm-ng-count', `(${count.enabled}/${count.total})`));
             title.dataset.pcmFast = '';title.classList.add('pcm-ng-title');header.append(collapse,title);
-            const checked = kind === 'preset' ? g.enabled !== false : members.length > 0 && members.every(e => e.enabled);
+            const checked = kind === 'preset' ? g.enabled !== false : count.total > 0 && count.enabled === count.total;
             const check = button('', kind === 'preset' ? '组总开关（保留成员自身开关）' : '批量切换组内正则（不改变原生授权）', () => act(context, { type: 'toggle', groupId, enabled: !checked }));
             check.dataset.pcmFast = '';check.classList.add('pcm-ng-switch'); check.setAttribute('role', 'switch'); check.setAttribute('aria-checked', String(checked)); check.setAttribute('aria-label', check.title);
-            check.classList.toggle('pcm-ng-mixed', kind === 'regex' && members.some(e => e.enabled) && members.some(e => !e.enabled));
+            check.classList.toggle('pcm-ng-mixed', kind === 'regex' && count.enabled > 0 && count.enabled < count.total);
             const track = node('span', 'pcm-ng-track'); track.append(node('span', 'pcm-ng-knob')); check.append(track); header.append(check);
             header.append(iconButton('pencil', '重命名分组', async () => { const name = await askName('分组名称', g.name); if (name) act(context, { type: 'rename', groupId, name }); }),
                 iconButton('trash', '仅解散分组，保留全部条目', async () => {
@@ -353,13 +378,14 @@ export function installNativeGroups(env) {
         };
         for (const row of rows) {
             const id = kind === 'preset' ? row.getAttribute('data-pm-identifier') : row.id;
-            if (!context.entries.some(e => e.id === id)) continue;
-            const groupId = memberGroup(model, kind, id), group = groups.get(groupId);
+            const member = byId.get(id);
+            if (!member) continue;
+            const { entry, groupId } = member, group = groups.get(groupId);
             if (groupId !== last && (group || (kind !== 'preset' && model.groups.length))) { row.before(makeHeader(groupId, displayed.has(groupId))); displayed.add(groupId); }
             last = groupId;
             row.classList.toggle('pcm-ng-hidden', Boolean(group?.collapsed)); row.classList.toggle('pcm-ng-off', kind === 'preset' && group?.enabled === false);
             if (model.groups.length && kind !== 'preset') {
-                const select = node('select', 'pcm-ng-select'); select.dataset.pcmNg = 'assign'; select.title = `调整“${context.entries.find(e => e.id === id)?.name}”所属分组`;
+                const select = node('select', 'pcm-ng-select'); select.dataset.pcmNg = 'assign'; select.title = `调整“${entry.name}”所属分组`;
                 select.setAttribute('aria-label', select.title); select.append(new Option('未分组', UNGROUPED));
                 for (const g of model.groups) select.append(new Option(g.name || g.id, g.id)); select.value = groupId;
                 select.addEventListener('change', e => { e.stopPropagation(); act(context, { type: 'assign', groupId: select.value, ids: [id] }); });
@@ -367,7 +393,7 @@ export function installNativeGroups(env) {
                 row.append(select);
             }
             if (kind === 'regex') {
-                const checkbox = row.querySelector('.disable_regex'), entry = context.entries.find(e => e.id === id);
+                const checkbox = row.querySelector('.disable_regex');
                 if (checkbox) checkbox.checked = !entry.enabled;
             }
         }
@@ -379,9 +405,9 @@ export function installNativeGroups(env) {
         try {
             const pm = openai.promptManager;
             const ready = owns('preset')
-                ? installGroupGate(pm, () => fast && fast.key === presetContext()?.key ? fast.value : openai.oai_settings?.extensions?.baibaiToolkit?.presetPromptGroups, () => owns('preset'))
+                ? installGroupGate(pm, readGateState, () => owns('preset'))
                 : typeof pm?.getPromptCollection === 'function';
-            const preset = ready ? presetContext() : null; if (preset?.list?.isConnected) render(preset);
+            const preset = ready && pm.listElement?.isConnected ? presetContext() : null; if (preset) render(preset);
             for (const [scope, id] of [['GLOBAL', 'saved_regex_scripts'], ['PRESET', 'saved_preset_scripts'], ['SCOPED', 'saved_scoped_scripts']]) {
                 const list = document.getElementById(id); if (!list) continue;
                 const context = regexContext(scope, list);
@@ -404,7 +430,12 @@ export function installNativeGroups(env) {
             r.target.matches?.('[id$="prompt_manager"],[id$="prompt_manager_list"]')
             || [...r.addedNodes].some(n => n.nodeType === 1 && (n.matches?.('[id$="prompt_manager"],[id$="prompt_manager_list"]') || n.querySelector?.('[id$="prompt_manager_list"]')))
         ));
-        if (nativeStructureChanged) { refresh(); return; }
+        if (nativeStructureChanged) {
+            // 酒馆先清空再异步填行。空容器先合并刷新；首批原生行出现时立即补分组。
+            const list = openai.promptManager?.listElement;
+            if (list?.isConnected && list.childElementCount) refresh(); else schedule();
+            return;
+        }
         if (records.some(r => !r.target.closest?.('.pcm-ng-dialog') && (r.target.closest?.('#regex_container,[id$="prompt_manager"]')
             || [...r.addedNodes].some(n => n.nodeType === 1 && (n.matches?.('#regex_container,[id$="prompt_manager"],[id$="prompt_manager_list"]') || n.querySelector?.('#regex_container,[id$="prompt_manager_list"]')))))) schedule();
     });

@@ -70,6 +70,7 @@ export function changeGroups(value, kind, action, entries = []) {
 }
 export function blockedPrompts(state) {
     const off = new Set((state?.groups || []).filter(g => g.enabled === false).map(g => g.id));
+    if (!off.size) return off;
     return new Set(Object.entries(state?.prompts || {}).filter(([, m]) => off.has(m?.groupId)).map(([id]) => id));
 }
 
@@ -101,7 +102,12 @@ export function installGroupGate(manager, readState, owns) {
     gated.pcmGroupGate = true;
     manager.getPromptCollection = gated;
     manager.isPromptDisabledForActiveCharacter = function (id, ...args) {
-        return Reflect.apply(disabled, this, [id, ...args]) || (owns() && blockedPrompts(readState()).has(id));
+        if (Reflect.apply(disabled, this, [id, ...args])) return true;
+        if (!owns()) return false;
+        const state = readState();
+        if (typeof id !== 'string' || !state?.prompts || !Object.hasOwn(state.prompts, id)) return false;
+        const groupId = state.prompts[id]?.groupId;
+        return (state.groups || []).some(g => g.id === groupId && g.enabled === false);
     };
     return true;
 }
